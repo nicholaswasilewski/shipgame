@@ -97,7 +97,7 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
     return programID;
 }
 
-void printMatrix(Matrix4x4 m)
+void PrintMatrix(Matrix4x4 m)
 {
     printf("%.4f %.4f %.4f %.4f\n"
            "%.4f %.4f %.4f %.4f\n"
@@ -110,13 +110,13 @@ void printMatrix(Matrix4x4 m)
 }
 
 
-float elapsedMsec(timeval *start, timeval *stop)
+float ElapsedMsec(timeval *start, timeval *stop)
 {
     return ((stop->tv_sec - start->tv_sec) * 1000.0f +
 	    (stop->tv_usec - start->tv_usec) / 1000.0f);
 }
 
-GLXFBConfig chooseFBConfig(Display *display, int screen)
+GLXFBConfig ChooseFBConfig(Display *display, int screen)
 {   
     static const int visualAttributes[] =
     {
@@ -151,7 +151,7 @@ GLXFBConfig chooseFBConfig(Display *display, int screen)
     return ret;
 }
 
-GLXContext createContext(Display *display, int screen,
+GLXContext CreateContext(Display *display, int screen,
 			 GLXFBConfig fbConfig, XVisualInfo *visinfo, Window window)
 {
 #define GLX_CONTEXT_MAJOR_VERSION_ARB 0x2091
@@ -228,7 +228,7 @@ void GLErrorShow()
     }
 }
 
-void keyboardCB(KeySym sym, unsigned char key, int x, int y, int* setting_change)
+void KeyboardCB(KeySym sym, unsigned char key, int x, int y, int* setting_change)
 {
     switch(tolower(key))
     {
@@ -255,7 +255,7 @@ void keyboardCB(KeySym sym, unsigned char key, int x, int y, int* setting_change
     }
 }
 
-void reshapeCB(int width, int height)
+void ReshapeCB(int width, int height)
 {
     glViewport(0, 0, width, height);
     glMatrixMode(GL_PROJECTION);
@@ -264,7 +264,7 @@ void reshapeCB(int width, int height)
     glMatrixMode(GL_MODELVIEW);
 }
 
-void processXEvents(Atom wm_protocols, Atom wm_delete_window, int* displayed, Display* display, Window window)
+void ProcessXEvents(Atom wm_protocols, Atom wm_delete_window, int* displayed, Display* display, Window window)
 {
     int setting_change = 0;
     while (XEventsQueued(display, QueuedAfterFlush))
@@ -285,7 +285,7 @@ void processXEvents(Atom wm_protocols, Atom wm_delete_window, int* displayed, Di
 	   case ConfigureNotify:
 	   {
 	       XConfigureEvent cevent = event.xconfigure;
-	       reshapeCB(cevent.width, cevent.height);
+	       ReshapeCB(cevent.width, cevent.height);
 	   } break;
 	   case KeyPress:
 	   {
@@ -293,7 +293,7 @@ void processXEvents(Atom wm_protocols, Atom wm_delete_window, int* displayed, Di
 	       KeySym symbol;
 	       XComposeStatus status;
 	       XLookupString(&event.xkey, &chr, 1, &symbol, &status);
-	       keyboardCB(symbol, chr, event.xkey.x, event.xkey.y, &setting_change);
+	       KeyboardCB(symbol, chr, event.xkey.x, event.xkey.y, &setting_change);
 	   } break;
 	   case ClientMessage:
 	   {
@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
 //	printf("X Server doesn't support GLX extension\n");
     }
 
-    GLXFBConfig fbconfig = chooseFBConfig(display, screen);
+    GLXFBConfig fbconfig = ChooseFBConfig(display, screen);
     if (!fbconfig)
     {
 	printf("Failed to get GLXFBConfig\n");
@@ -350,11 +350,11 @@ int main(int argc, char *argv[])
     unsigned int mask = CWBackPixmap | CWBorderPixel | CWColormap | CWEventMask;
     Window window = XCreateWindow(display, root,
 				  0, 0,
-				  800, 600, 0,
+				  800, 800, 0,
 				  visinfo->depth, InputOutput,
 				  visinfo->visual, mask, &winAttr);
     XStoreName(display, window, "GLX");
-    GLXContext context = createContext(display, screen, fbconfig, visinfo, window);
+    GLXContext context = CreateContext(display, screen, fbconfig, visinfo, window);
     if (!glXMakeCurrent(display, window, context))
     {
 	printf("glxMakeCurrent failed.\n");
@@ -406,16 +406,10 @@ int main(int argc, char *argv[])
     m4x4 Projection = Identity4x4();
     m4x4 View = Identity4x4();
     m4x4 Model = Identity4x4();
+    m4x4 Rotation = MakeRotation(QuaternionFromAxisAngle(V3(0.0f, 0.0f, 1.0f), 3.14159*.5f));
     m4x4 Scale = MakeScale(V3(0.25f, 0.25f, 0.25f));
-    m4x4 Translation = MakeTranslation(V3(1.0f, 1.0f, 1.0f));
-#if 1
-    printf("Scale\n");
-    Model = Model * Scale;
-
-    printf("Translation\n");
-    Model = Model * Translation;
-#endif
-    printMatrix(Model);
+    m4x4 Translation = MakeTranslation(V3(0.0f, 0.0f, 0.0f));
+    Model = Model * Rotation * Scale * Translation;
     
     m4x4 MVP = Projection*View*Model;
     while(1)
@@ -443,28 +437,21 @@ int main(int argc, char *argv[])
 	    glXSwapBuffers(display, window);
 	}
 
-	processXEvents(wm_protocols, wm_delete_window, &displayed, display, window);
+	ProcessXEvents(wm_protocols, wm_delete_window, &displayed, display, window);
 	float elapsedTime = 0;
 
 	while(elapsedTime < msPerFrame)
 	{
 	    gettimeofday(&now, 0);
-	    elapsedTime = elapsedMsec(&last_xcheck, &now);
+	    elapsedTime = ElapsedMsec(&last_xcheck, &now);
 	    if (elapsedTime <= msPerFrame)
 	    {
 		sleep((msPerFrame - elapsedTime)/1000.0f);
 	    }
 	}
-/*
-	if (frameCount++ % 60 == 0)
-	    printf("%d\n", frameCount);
-*/
+
 	last_xcheck = now;
     }
 
-/*
-    XDestroyWindow(display, window);
-    XCloseDisplay(display);
-*/
     return EXIT_SUCCESS;
 }
