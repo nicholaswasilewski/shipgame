@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
     timeval now;
     int frameCount = 0;
 	
-    gameData GameData;
+    gameData GameData = {0};
     while(1)
     {
 	if (displayed)
