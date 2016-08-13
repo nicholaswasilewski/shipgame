@@ -1,4 +1,5 @@
 #include "matrixMath.cpp"
+#include "game.cpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,95 +14,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 
-#define GL_GLEXT_PROTOTYPES
-#define GLX_GLXEXT_PROTOTYPES
-
-#include <GL/glx.h>
-
 typedef unsigned int uint;
-
-GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
-{
-    GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-    FILE* vertexShaderFile = fopen(vertexShaderFilePath, "r");
-    fseek(vertexShaderFile, 0L, SEEK_END);
-    int vertexShaderFileLength = ftell(vertexShaderFile);
-    rewind(vertexShaderFile);
- 
-    char* vertexShaderCode = (char*)malloc(vertexShaderFileLength+1);
-    fread(vertexShaderCode, 1, vertexShaderFileLength+1, vertexShaderFile);
-    vertexShaderCode[vertexShaderFileLength] = '\0';
-    fclose(vertexShaderFile);
-
-    GLint result = GL_FALSE;
-    int infoLogLength;
-    
-    glShaderSource(vertexShaderID, 1, &vertexShaderCode, 0);
-    glCompileShader(vertexShaderID);
-    free(vertexShaderCode);
-
-    glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    if (infoLogLength > 0)
-    {
-	char* error = (char*)malloc(infoLogLength);
-	glGetShaderInfoLog(vertexShaderID, infoLogLength, 0, error);
-	printf("%s\n", error);
-	free(error);
-    }
-    char* fragmentShaderCode = 0;
-    FILE* fragmentShaderFile = fopen(fragmentShaderFilePath, "r");
-    fseek(fragmentShaderFile, 0L, SEEK_END);
-    int fragmentShaderFileLength = ftell(fragmentShaderFile);
-    rewind(fragmentShaderFile);
-
-    fragmentShaderCode = (char*)malloc(fragmentShaderFileLength+1);
-    fread(fragmentShaderCode, 1, fragmentShaderFileLength+1, fragmentShaderFile);
-    fragmentShaderCode[fragmentShaderFileLength] = '\0';
-    fclose(fragmentShaderFile);
-
-    glShaderSource(fragmentShaderID, 1, &fragmentShaderCode, 0);
-    glCompileShader(fragmentShaderID);
-    free(fragmentShaderCode);
-
-    glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    if (infoLogLength > 0)
-    {
-	char* error = (char*)malloc(infoLogLength+1);
-	glGetShaderInfoLog(fragmentShaderID, infoLogLength, 0, error);
-	printf("%s\n", error);
-    }
-
-    GLuint programID = glCreateProgram();
-    glAttachShader(programID, vertexShaderID);
-    glAttachShader(programID, fragmentShaderID);
-    glLinkProgram(programID);
-
-    glGetProgramiv(programID, GL_LINK_STATUS, &result);
-    glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    if (infoLogLength > 0)
-    {
-	char* error = (char*)malloc(infoLogLength+1);
-	glGetProgramInfoLog(programID, infoLogLength, 0, error);
-	printf("%s\n", error);
-	free(error);
-    }
-
-    glDetachShader(programID, vertexShaderID);
-    glDetachShader(programID, fragmentShaderID);
-    glDeleteShader(vertexShaderID);
-    glDeleteShader(fragmentShaderID);
-
-    return programID;
-}
-
-float ElapsedMsec(timeval *start, timeval *stop)
-{
-    return ((stop->tv_sec - start->tv_sec) * 1000.0f +
-	    (stop->tv_usec - start->tv_usec) / 1000.0f);
-}
 
 GLXFBConfig ChooseFBConfig(Display *display, int screen)
 {   
@@ -136,6 +49,12 @@ GLXFBConfig ChooseFBConfig(Display *display, int screen)
 	XFree(fbc);
     }
     return ret;
+}
+
+float ElapsedMsec(timeval *start, timeval *stop)
+{
+    return ((stop->tv_sec - start->tv_sec) * 1000.0f +
+	    (stop->tv_usec - start->tv_usec) / 1000.0f);
 }
 
 GLXContext CreateContext(Display *display, int screen,
@@ -365,92 +284,13 @@ int main(int argc, char *argv[])
     gettimeofday(&last_xcheck, 0);
     timeval now;
     int frameCount = 0;
-
-
-    glClearColor(0.0, 0.0, 0.4, 0.0);
-    glFrontFace(GL_CCW); 
-    GLuint VertexArrayID;
-    glGenVertexArrays(1, &VertexArrayID);
-    glBindVertexArray(VertexArrayID);
-    GLfloat vertexBufferData[] =
-    {
-	-1.0f, -1.0f, 0.0f,
-	1.0f, -1.0f, 0.0f,
-	-1.0f, 1.0f, 0.0f,
-    };
-
-    GLfloat colorBufferData[] = {
-	1.0f, 0.0f, 0.0f,
-	0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 1.0f,
 	
-    };
-    GLuint vertexbuffer;
-    glGenBuffers(1, &vertexbuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexBufferData), vertexBufferData, GL_STATIC_DRAW);
-
-    GLuint colorBuffer;
-    glGenBuffers(1, &colorBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colorBufferData), colorBufferData, GL_STATIC_DRAW);
-    
-    GLuint programID = LoadShaders("vertexShader.vert", "fragmentShader.frag");
-    GLuint matrixID = glGetUniformLocation(programID, "MVP");
-
-//    mat4 Projection = MakeOrthoProjection(2.0f, 2.0f, 0.1f, 1000.0f);
-    mat4 Projection = MakePerspectiveProjection(3.14f*0.25f, 1.0f, 0.1f, 1000.0f);
-
-    v3 CameraPosition = V3(0.0f,0.0f,5.0f);
-    v3 CameraTarget = V3(0,0,-1);
-    v3 CameraUp = V3(0,1,0);
-    mat4 View = LookAtView(CameraPosition, CameraTarget, CameraUp);
-
-    mat4 Model = Identity4x4();
-    v3 ModelAxis = V3(0.0f, 1.0f, 0.0f);
-    float Angle = 3.14159 * .25f;
-    mat4 Rotation = MakeRotation(ModelAxis, Angle);
-    mat4 Scale = MakeScale(V3(1.0f, 1.0f, 1.0f));
-    mat4  Translation = MakeTranslation(V3(0.0f, 0.0f, 0.0f));
-    Model = Translation * Rotation * Scale;
-    mat4 MyMVP = Projection * View * Model;
-	
+    gameData GameData;
     while(1)
     {
 	if (displayed)
 	{
-	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	    
-	    glUseProgram(programID);
-#define ME 1
-#if !ME
-	    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-#else
-	    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MyMVP.E[0][0]);
-#endif
-	    glEnableClientState(GL_VERTEX_ARRAY);
-	    glEnableVertexAttribArray(0);
-	    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	    glVertexPointer(3, GL_FLOAT, 0, 0);
-	    glVertexAttribPointer(0,
-				  3,
-				  GL_FLOAT,
-				  GL_FALSE,
-				  0,
-				  (void*)0
-		);
-
-	    glEnableVertexAttribArray(1);
-	    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	    glVertexAttribPointer(1,
-				  3,
-				  GL_FLOAT,
-				  GL_FALSE,
-				  0,
-				  (void*)0);
-
-	    glDrawArrays(GL_TRIANGLES, 0, 3);
-	    glDisableVertexAttribArray(0);
+	    UpdateAndRender(&GameData);
 	    glXSwapBuffers(display, window);
 	}
 
