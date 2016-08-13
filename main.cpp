@@ -8,6 +8,10 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <X11/Xlib.h>
 #include <X11/Xmd.h>
 #include <X11/Xatom.h>
@@ -96,19 +100,6 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 
     return programID;
 }
-
-void PrintMatrix(Matrix4x4 m)
-{
-    printf("%.4f %.4f %.4f %.4f\n"
-           "%.4f %.4f %.4f %.4f\n"
-           "%.4f %.4f %.4f %.4f\n"
-           "%.4f %.4f %.4f %.4f\n",
-	   (double)m.x0, (double)m.y0, (double)m.z0, (double)m.w0,
-	   (double)m.x1, (double)m.y1, (double)m.z1, (double)m.w1,
-	   (double)m.x2, (double)m.y2, (double)m.z2, (double)m.w2,
-	   (double)m.x3, (double)m.y3, (double)m.z3, (double)m.w3);
-}
-
 
 float ElapsedMsec(timeval *start, timeval *stop)
 {
@@ -258,10 +249,6 @@ void KeyboardCB(KeySym sym, unsigned char key, int x, int y, int* setting_change
 void ReshapeCB(int width, int height)
 {
     glViewport(0, 0, width, height);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glFrustum(-1.0, 1.0, -1.0, 1.0, 1.5, 20.0);
-    glMatrixMode(GL_MODELVIEW);
 }
 
 void ProcessXEvents(Atom wm_protocols, Atom wm_delete_window, int* displayed, Display* display, Window window)
@@ -385,7 +372,7 @@ int main(int argc, char *argv[])
 
 
     glClearColor(0.0, 0.0, 0.4, 0.0);
-    //glFrontFace(GL_CCW);
+    glFrontFace(GL_CCW); 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
@@ -393,25 +380,45 @@ int main(int argc, char *argv[])
     {
 	-1.0f, -1.0f, 0.0f,
 	1.0f, -1.0f, 0.0f,
-	0.0f, 1.0f, 0.0f,
+	-1.0f, 1.0f, 0.0f,
     };
-    GLushort elementBufferData[] = {0, 1, 2};
+
+    GLfloat colorBufferData[] = {
+	1.0f, 0.0f, 0.0f,
+	0.0f, 1.0f, 0.0f,
+	0.0f, 0.0f, 1.0f,
+	
+    };
     GLuint vertexbuffer;
     glGenBuffers(1, &vertexbuffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertexBufferData), vertexBufferData, GL_STATIC_DRAW);
+
+    GLuint colorBuffer;
+    glGenBuffers(1, &colorBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colorBufferData), colorBufferData, GL_STATIC_DRAW);
+    
     GLuint programID = LoadShaders("vertexShader.vert", "fragmentShader.frag");
     GLuint matrixID = glGetUniformLocation(programID, "MVP");
 
-    m4x4 Projection = Identity4x4();
-    m4x4 View = Identity4x4();
-    m4x4 Model = Identity4x4();
-    m4x4 Rotation = MakeRotation(QuaternionFromAxisAngle(V3(0.0f, 0.0f, 1.0f), 3.14159*.5f));
-    m4x4 Scale = MakeScale(V3(0.25f, 0.25f, 0.25f));
-    m4x4 Translation = MakeTranslation(V3(0.0f, 0.0f, 0.0f));
-    Model = Model * Rotation * Scale * Translation;
-    
-    m4x4 MVP = Projection*View*Model;
+//    mat4 Projection = MakeOrthoProjection(2.0f, 2.0f, 0.1f, 1000.0f);
+    mat4 Projection = MakePerspectiveProjection(3.14f*0.25f, 1.0f, 0.1f, 1000.0f);
+
+    v3 CameraPosition = V3(0.0f,0.0f,5.0f);
+    v3 CameraTarget = V3(0,0,-1);
+    v3 CameraUp = V3(0,1,0);
+    mat4 View = LookAtView(CameraPosition, CameraTarget, CameraUp);
+
+    mat4 Model = Identity4x4();
+    v3 ModelAxis = V3(0.0f, 1.0f, 0.0f);
+    float Angle = 3.14159 * .25f;
+    mat4 Rotation = MakeRotation(ModelAxis, Angle);
+    mat4 Scale = MakeScale(V3(1.0f, 1.0f, 1.0f));
+    mat4  Translation = MakeTranslation(V3(0.0f, 0.0f, 0.0f));
+    Model = Translation * Rotation * Scale;
+    mat4 MyMVP = Projection * View * Model;
+	
     while(1)
     {
 	if (displayed)
@@ -419,8 +426,12 @@ int main(int argc, char *argv[])
 	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	    
 	    glUseProgram(programID);
-
-	    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP.E[0]);
+#define ME 1
+#if !ME
+	    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+#else
+	    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MyMVP.E[0][0]);
+#endif
 	    glEnableClientState(GL_VERTEX_ARRAY);
 	    glEnableVertexAttribArray(0);
 	    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
@@ -432,6 +443,16 @@ int main(int argc, char *argv[])
 				  0,
 				  (void*)0
 		);
+
+	    glEnableVertexAttribArray(1);
+	    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+	    glVertexAttribPointer(1,
+				  3,
+				  GL_FLOAT,
+				  GL_FALSE,
+				  0,
+				  (void*)0);
+
 	    glDrawArrays(GL_TRIANGLES, 0, 3);
 	    glDisableVertexAttribArray(0);
 	    glXSwapBuffers(display, window);
