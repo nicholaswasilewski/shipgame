@@ -200,7 +200,7 @@ quaternion QuaternionFromAxisAngle(v3 Axis, float Angle)
 	b
     };
     
-    return Normalize(Result);
+    return Result;
 }
 
 mat4 MakeRotation(quaternion q)
@@ -321,8 +321,9 @@ mat4 MakeOrthoProjection(float HalfWidth, float HalfHeight, float Near, float Fa
 
 mat4 MakePerspectiveProjection(float Fov, float Aspect, float Near, float Far)
 {
+    
     mat4 Result = {
-	1 / tan(Fov/2.0f), 0.0f, 0.0f, 0.0f,
+	1 / tan(Fov*Aspect/2.0f), 0.0f, 0.0f, 0.0f,
 	0.0f, 1 / tan(Fov/2.0f), 0.0f, 0.0f,
 	0.0f, 0.0f, -(Far+Near)/(Far-Near), -1.0f,
 	0.0f, 0.0f, -2*(Near*Far)/(Far-Near), 1.0f

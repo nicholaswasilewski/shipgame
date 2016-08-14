@@ -1,4 +1,3 @@
-#include "matrixMath.cpp"
 #include "game.cpp"
 
 #include <stdio.h>
@@ -252,7 +251,7 @@ int main(int argc, char *argv[])
     unsigned int mask = CWBackPixmap | CWBorderPixel | CWColormap | CWEventMask;
     Window window = XCreateWindow(display, root,
 				  0, 0,
-				  800, 800, 0,
+				  800, 600, 0,
 				  visinfo->depth, InputOutput,
 				  visinfo->visual, mask, &winAttr);
     XStoreName(display, window, "GLX");
