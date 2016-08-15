@@ -1,7 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 
-typedef struct Matrix4x4
+typedef struct
 {
     union
     {
@@ -13,7 +13,20 @@ typedef struct Matrix4x4
 	};
 	float E[4][4];
     };
-} matrix4x4, m4x4, mat4;
+} mat4;
+
+typedef struct
+{
+    union
+    {
+	struct {
+	    float x0, y0, z0,
+		x1, y1, z1,
+		x2, y2, z2;
+	};
+	float E[3][3];
+    };
+} mat3;
 
 typedef struct
 {
@@ -53,17 +66,17 @@ v3 V3(float x, float y, float z)
     return Result;
 }
 
-float Magnitude(v3 v)
+float Length(v3 v)
 {
     return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 }
 
-v3 operator+(v3 v1, v3 v2)
+v3 operator+(v3 u, v3 v)
 {
     v3 Result = {
-	v1.x + v2.x,
-	v1.y + v2.y,
-	v1.z + v2.z
+	u.x + v.x,
+	u.y + v.y,
+	u.z + v.z
     };
 
     return Result;
@@ -77,6 +90,21 @@ v3 operator-(v3 v1, v3 v2)
 	v1.z - v2.z
     };
     return Result;
+}
+
+v3 operator*(float s, v3 v)   
+{
+    return V3(v.x*s, v.y*s, v.z*s);
+}
+
+v3 operator*(v3 v, float s)
+{
+    return s*v;
+}
+
+v3 operator-(v3 v)   
+{
+    return -1.0f*v;
 }
 
 v3 operator/(v3 v, float s)
@@ -99,9 +127,9 @@ quaternion operator/(quaternion q, float s)
     };
 }
 
-v3 Length(v3 v)
+v3 Normalize(v3 v)
 {
-    return v / Magnitude(v);
+    return v / Length(v);
 }
 
 float Length(quaternion q)
@@ -114,9 +142,9 @@ quaternion Normalize(quaternion q)
     return q / Length(q);
 }
 
-float Dot(v3 v1, v3 v2)
+float Dot(v3 u, v3 v)
 {
-    return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+    return u.x*v.x + u.y*v.y + u.z*v.z;
 }
 
 v3 Cross(v3 u, v3 v)
@@ -138,6 +166,30 @@ v4 V4(float x, float y, float z, float w)
 v4 V4(v3 v, float w)
 {
     return V4(v.x, v.y, v.z, w);
+}
+
+v4 operator*(float s, v4 v)
+{
+    return V4(-v.x, -v.y, -v.z, -v.w);
+}
+
+v4 operator*(v4 v, float s)   
+{
+    return s*v;
+}
+
+v4 operator-(v4 v)
+{
+    return -1*v;
+}
+
+v3 operator*(mat3 m, v3 v)
+{
+    v3 Result;
+    Result.x = m.x0*v.x + m.y0*v.y + m.z0*v.z;
+    Result.y = m.x1*v.x + m.y1*v.y + m.z1*v.z;
+    Result.z = m.x2*v.x + m.y2*v.y + m.z2*v.z;
+    return Result;
 }
 
 mat4 operator*(mat4 m1, mat4 m2)
@@ -190,6 +242,7 @@ v4 operator*(mat4 m, v4 v)
 
 quaternion QuaternionFromAxisAngle(v3 Axis, float Angle)
 {
+    Axis = Normalize(Axis);
     float halfAngle = Angle/2.0f;
     float a = sin(halfAngle);
     float b = cos(halfAngle);
@@ -205,6 +258,7 @@ quaternion QuaternionFromAxisAngle(v3 Axis, float Angle)
 
 mat4 MakeRotation(quaternion q)
 {
+    q = Normalize(q);
     float xx2 = q.x*q.x*2;
     float xy2 = q.x*q.y*2;
     float xz2 = q.x*q.z*2;
@@ -230,6 +284,7 @@ mat4 MakeRotation(quaternion q)
 
 mat4 MakeRotation(v3 u, float theta)
 {
+    u = Normalize(u);
     float cost = cos(theta);
     float sint = sin(theta);
 
@@ -292,20 +347,25 @@ mat4 Identity4x4() {
     return Result;
 }
 
-mat4 LookAtView(v3 Position, v3 Target, v3 Up)
+mat4 DirectionView(v3 Position, v3 Direction, v3 Up)
 {
-    v3 Z = Length(Position - Target);
-    v3 X = Length(Cross(Up, Z));
+    v3 Z = Normalize(-Direction);
+    v3 X = Normalize(Cross(Up, Z));
     v3 Y = Cross(Z, X);
-
+    
     mat4 View = {
 	X.x, Y.x, Z.x, 0,
 	X.y, Y.y, Z.y, 0,
 	X.z, Y.z, Z.z, 0,
-	-Dot(X, Position),   -Dot(Y, Position),   -Dot(Z, Position), 1
+	-Dot(X, Position), -Dot(Y, Position), -Dot(Z, Position), 1
     };
 
     return View;
+}
+
+mat4 LookAtView(v3 Position, v3 Target, v3 Up)
+{
+    return DirectionView(Position, Target-Position, Up);
 }
 
 mat4 MakeOrthoProjection(float HalfWidth, float HalfHeight, float Near, float Far)
@@ -331,7 +391,7 @@ mat4 MakePerspectiveProjection(float Fov, float Aspect, float Near, float Far)
     return Result;
 }
 
-void PrintMatrix(Matrix4x4 m)
+void PrintMatrix(mat4 m)
 {
     printf("%.4f %.4f %.4f %.4f\n"
            "%.4f %.4f %.4f %.4f\n"

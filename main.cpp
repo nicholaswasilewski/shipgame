@@ -9,6 +9,7 @@
 #include <sys/time.h>
 
 #include <X11/Xlib.h>
+#include <X11/XKBlib.h>
 #include <X11/Xmd.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
@@ -50,7 +51,7 @@ GLXFBConfig ChooseFBConfig(Display *display, int screen)
     return ret;
 }
 
-float ElapsedMsec(timeval *start, timeval *stop)
+float ElapsedMilliseconds(timeval *start, timeval *stop)
 {
     return ((stop->tv_sec - start->tv_sec) * 1000.0f +
 	    (stop->tv_usec - start->tv_usec) / 1000.0f);
@@ -103,60 +104,60 @@ GLXContext CreateContext(Display *display, int screen,
     return context;
 }
 
-void GLErrorShow()
-{
-    GLenum error;
-    while ((error = glGetError()) != GL_NO_ERROR)
-    {
-	char* msg;
-	if (error == GL_INVALID_OPERATION)
-	{
-	    msg = "Invalid Operation";
-	}
-	else if (error == GL_INVALID_ENUM)
-	{
-	    msg = "Invalid enum";
-	}
-	else if (error = GL_INVALID_VALUE)
-	{
-	    msg = "Invalid value";
-	}
-	else if (error == GL_OUT_OF_MEMORY)
-	{
-	    msg = "Out of memory";
-	}
-	else if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
-	{
-	    msg = "Invalid framebuffer operation";
-	}
-	printf("OpenGL error: %d - %s\n", error, msg);
-    }
-}
-
-void KeyboardCB(KeySym sym, unsigned char key, int x, int y, int* setting_change)
+void KeyboardCB(KeySym sym, unsigned char key, bool32 Press, int x, int y, controller* Keyboard)
 {
     switch(tolower(key))
     {
-        case 27:
+    //esc key
+    case 27:
+    {
+	exit(EXIT_SUCCESS);
+    } break;
+    case 'k':
+    {
+	break;
+    }
+    case 'w':
+    {
+	Keyboard->Up.Down = Press;
+    } break;
+    case 'a':
+    {
+	Keyboard->Left.Down = Press;
+    } break;
+    case 's':
+    {
+	Keyboard->Down.Down = Press;
+    } break;
+    case 'd':
+    {
+	Keyboard->Right.Down = Press;
+    } break;
+    case 0:
+    {
+	switch (sym)
 	{
-	    exit(EXIT_SUCCESS);
+	case XK_Left:
+	{
+	    Keyboard->Left.Down = Press;
 	} break;
-        case 'k':
-        {
-	    break;
+	case XK_Right:
+	{
+	    Keyboard->Right.Down = Press;
+	} break;
+	case XK_Up:
+	{
+	    Keyboard->Up.Down = Press;
+	} break;
+        case XK_Down:
+	{
+	    Keyboard->Down.Down = Press;
+        } break;
         }
-        case 0:
-        {
-	    switch (sym)
-	    {
-	        case XK_Left:
-	        {
-	        } break;
-	        case XK_Right:
-	        {
-	        } break;
-	    }
-	} break;
+    } break;
+    default:
+    {
+    } break;
     }
 }
 
@@ -165,7 +166,7 @@ void ReshapeCB(int width, int height)
     glViewport(0, 0, width, height);
 }
 
-void ProcessXEvents(Atom wm_protocols, Atom wm_delete_window, int* displayed, Display* display, Window window)
+void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int* displayed, Display* display, Window window)
 {
     int setting_change = 0;
     while (XEventsQueued(display, QueuedAfterFlush))
@@ -179,30 +180,38 @@ void ProcessXEvents(Atom wm_protocols, Atom wm_delete_window, int* displayed, Di
 
 	switch(event.type)
 	{
-	   case MapNotify:
-	   {
-	       *displayed = 1;
-	   } break;
-	   case ConfigureNotify:
-	   {
-	       XConfigureEvent cevent = event.xconfigure;
-	       ReshapeCB(cevent.width, cevent.height);
-	   } break;
-	   case KeyPress:
-	   {
-	       char chr;
-	       KeySym symbol;
-	       XComposeStatus status;
-	       XLookupString(&event.xkey, &chr, 1, &symbol, &status);
-	       KeyboardCB(symbol, chr, event.xkey.x, event.xkey.y, &setting_change);
-	   } break;
-	   case ClientMessage:
-	   {
-	       if (event.xclient.message_type == wm_protocols && (Atom)event.xclient.data.l[0] == wm_delete_window)
-	       {
-		   exit(EXIT_SUCCESS);
-	       }
-	   } break;
+	case MapNotify:
+	{
+	    *displayed = 1;
+	} break;
+	case ConfigureNotify:
+	{
+	    XConfigureEvent cevent = event.xconfigure;
+	    ReshapeCB(cevent.width, cevent.height);
+	} break;
+	case KeyPress:
+	{
+	    char chr;
+	    KeySym symbol;
+	    XComposeStatus status;
+	    XLookupString(&event.xkey, &chr, 1, &symbol, &status);
+	    KeyboardCB(symbol, chr, 1, event.xkey.x, event.xkey.y, &Input->Keyboard);
+	} break;
+	case KeyRelease:
+	{
+	    char chr;
+	    KeySym symbol;
+	    XComposeStatus status;
+	    XLookupString(&event.xkey, &chr, 1, &symbol, &status);
+	    KeyboardCB(symbol, chr, 0, event.xkey.x, event.xkey.y, &Input->Keyboard);
+	}
+	case ClientMessage:
+	{
+	    if (event.xclient.message_type == wm_protocols && (Atom)event.xclient.data.l[0] == wm_delete_window)
+	    {
+		exit(EXIT_SUCCESS);
+	    }
+	} break;
 	}
     }
 }
@@ -221,6 +230,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Cannot open display\n");
 	exit(1);
     }
+    XkbSetDetectableAutoRepeat(display, 0, 0);
 
     int screen = DefaultScreen(display);
     Window root = RootWindow(display, screen);
@@ -243,7 +253,8 @@ int main(int argc, char *argv[])
 	exit(EXIT_FAILURE);
     }
     XSetWindowAttributes winAttr;
-    winAttr.event_mask = StructureNotifyMask | KeyPressMask | ButtonPressMask;
+    winAttr.event_mask = StructureNotifyMask | KeyPressMask | KeyReleaseMask
+	| ButtonPressMask | ButtonRelease | PointerMotionMask;
     winAttr.background_pixmap = None;
     winAttr.background_pixel = 0;
     winAttr.border_pixel = 0;
@@ -283,29 +294,46 @@ int main(int argc, char *argv[])
     gettimeofday(&last_xcheck, 0);
     timeval now;
     int frameCount = 0;
-	
-    gameData GameData = {0};
-    while(1)
-    {
-	if (displayed)
-	{
-	    UpdateAndRender(&GameData);
-	    glXSwapBuffers(display, window);
-	}
 
-	ProcessXEvents(wm_protocols, wm_delete_window, &displayed, display, window);
+
+    input Input0 = {0};
+    input Input1 = {0};
+    
+    platform_data PlatformData = {0};
+    PlatformData.LastInput = &Input0;
+    PlatformData.NewInput = &Input1;
+
+    PlatformData.MainMemorySize = GIGABYTES(1);
+    PlatformData.MainMemory = calloc(1, PlatformData.MainMemorySize);
+    PlatformData.TempMemorySize = MEGABYTES(512);
+    PlatformData.TempMemory = malloc(PlatformData.TempMemorySize);
+    while(1)
+    { 
+	ProcessXEvents(PlatformData.NewInput,
+		       wm_protocols,
+		       wm_delete_window,
+		       &displayed,
+		       display,
+		       window);
+	
+	UpdateAndRender(&PlatformData);
+	glXSwapBuffers(display, window);
+	
 	float elapsedTime = 0;
 
 	while(elapsedTime < msPerFrame)
 	{
 	    gettimeofday(&now, 0);
-	    elapsedTime = ElapsedMsec(&last_xcheck, &now);
+	    elapsedTime = ElapsedMilliseconds(&last_xcheck, &now);
 	    if (elapsedTime <= msPerFrame)
 	    {
 		sleep((msPerFrame - elapsedTime)/1000.0f);
 	    }
 	}
 
+	
+	*PlatformData.LastInput = *PlatformData.NewInput;
+	PlatformData.NewInput->dT = elapsedTime/1000.0f;
 	last_xcheck = now;
     }
 

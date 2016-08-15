@@ -1,4 +1,4 @@
-#include "game.h"
+#include "platform.h"
 #include "matrixMath.cpp"
 
 #include <stdlib.h>
@@ -9,8 +9,100 @@
 
 #define PI 3.14159
 
+struct camera
+{
+    //Projection Stuff
+    float FOV;
+    float Aspect;
+    float Near;
+    float Far;
+    
+    //View stuff
+    v3 Position;
+    v3 Forward;
+    v3 Up;
+};
 
-//TODO(NICK): This reads things in backwards for some reason, endianness?
+struct game_data
+{
+    bool Initialized;
+
+    //A model?
+    uint32 VertexBufferID;
+    uint32 ColorBufferID;
+    uint32 UVBufferID;
+    uint32 ProgramID;
+    uint32 MatrixID;
+
+    uint32 TextureID;
+
+    float BoxRotation;
+
+    camera Camera;
+};
+
+void CameraStrafeLeft(float dT, float speed, camera* Camera)
+{
+    Camera->Position = Camera->Position - speed*dT*Normalize(Cross(Camera->Forward, Camera->Up));
+}
+
+void CameraStrafeRight(float dT, float speed, camera* Camera)
+{
+    Camera->Position = Camera->Position + speed*dT*Normalize(Cross(Camera->Forward, Camera->Up));   
+}
+
+void CameraWalkForward(float dT, float speed, camera* Camera)
+{
+    Camera->Position = Camera->Position + speed*dT*Camera->Forward;
+}
+
+void CameraWalkBackward(float dT, float speed, camera* Camera)   
+{
+    Camera->Position = Camera->Position - speed*dT*Camera->Forward;
+}
+
+void GLErrorShow()
+{
+    GLenum error;
+    while ((error = glGetError()) != GL_NO_ERROR)
+    {
+	char* msg;
+	if (error == GL_INVALID_OPERATION)
+	{
+	    msg = "Invalid Operation";
+	}
+	else if (error == GL_INVALID_ENUM)
+	{
+	    msg = "Invalid enum";
+	}
+	else if (error = GL_INVALID_VALUE)
+	{
+	    msg = "Invalid value";
+	}
+	else if (error == GL_OUT_OF_MEMORY)
+	{
+	    msg = "Out of memory";
+	}
+	else if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
+	{
+	    msg = "Invalid framebuffer operation";
+	}
+	printf("OpenGL error: %d - %s\n", error, msg);
+    }
+}
+
+mat4 GenerateCameraPerspective(camera Camera)
+{
+    mat4 Projection = MakePerspectiveProjection(Camera.FOV, Camera.Aspect, Camera.Near, Camera.Far);
+    return Projection;
+}
+
+mat4 GenerateCameraView(camera Camera)
+{  
+    mat4 View = DirectionView(Camera.Position, Camera.Forward, Camera.Up);
+    return View;
+}
+
 GLuint LoadDDS(const char * filePath)
 {
     int8 header[124];
@@ -230,8 +322,14 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
     return programID;
 }
 
-void UpdateAndRender(gameData* Game)
-{
+void UpdateAndRender(platform_data* Platform)
+{    
+    game_data* Game = (game_data*)(((char*)Platform->MainMemory)+0);
+    input *LastInput = Platform->LastInput;
+    input *Input = Platform->NewInput;
+    controller OldKeyboard = LastInput->Keyboard;
+    controller Keyboard = Input->Keyboard;
+    
     if (!Game->Initialized)
     {
 	glClearColor(0.0, 0.0, 0.4, 0.0);
@@ -373,25 +471,48 @@ void UpdateAndRender(gameData* Game)
 	    
 	Game->ProgramID = LoadShaders("textureShader.vert", "textureShader.frag");
 	Game->MatrixID = glGetUniformLocation(Game->ProgramID, "MVP");
-//	Game->TextureID = LoadBMP("uvtemplate.bmp");
 	Game->TextureID = LoadDDS("uvtemplate.dds");
 
+	camera Camera = {0};
+	Camera.FOV = PI*0.25f;
+	Camera.Aspect = 800.0f/600.0f;
+	Camera.Near = 0.01f;
+	Camera.Far = 1000.0f;
+
+	Camera.Position = V3(0.0f, 5.0f, 5.0f);
+	Camera.Forward = V3(0, -1.0f,-1.0f);
+	Camera.Up = V3(0,1,0);
+	
+	Game->Camera = Camera;
 	Game->Initialized = true;
     }
 
+    if (Keyboard.Left.Down)
+    {
+	CameraStrafeLeft(Input->dT, 3.0f, &Game->Camera);
+    }
+    else if (Keyboard.Right.Down)	
+    {
+	CameraStrafeRight(Input->dT, 3.0f, &Game->Camera);
+    }
+
+    if (Keyboard.Up.Down)
+    {
+	CameraWalkForward(Input->dT, 3.0f, &Game->Camera);
+    }
+    else if (Keyboard.Down.Down)
+    {
+	CameraWalkBackward(Input->dT, 3.0f, &Game->Camera);
+    }
+    
     Game->BoxRotation += PI*(1.0f/120.0f);
 
-//    mat4 Projection = MakeOrthoProjection(2.0f, 2.0f, 0.1f, 1000.0f);
-    mat4 Projection = MakePerspectiveProjection(3.14f*0.25f, 800.0f/600.0f, 0.1f, 1000.0f);
-
-    v3 CameraPosition = V3(0.0f,-3.0f,4.0f);
-    v3 CameraTarget = V3(0,0,-1);
-    v3 CameraUp = V3(0,1,0);
-    mat4 View = LookAtView(CameraPosition, CameraTarget, CameraUp);
+    mat4 Projection = GenerateCameraPerspective(Game->Camera);
+    mat4 View = GenerateCameraView(Game->Camera);
 
     mat4 Model = Identity4x4();
-    v3 ModelAxis = V3(0.0f, 1.0f, 0.0f);
-    mat4 Rotation = MakeRotation(QuaternionFromAxisAngle(ModelAxis, Game->BoxRotation));
+    v3 ModelAxis = V3(0.25f, 1.0f, .5f);
+    mat4 Rotation = MakeRotation(ModelAxis, Game->BoxRotation);
     mat4 Scale = MakeScale(V3(1.0f, 1.0f, 1.0f));
     mat4  Translation = MakeTranslation(V3(0.0f, 0.0f, 0.0f));
     Model = Translation * Rotation * Scale;
