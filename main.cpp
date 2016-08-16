@@ -16,6 +16,35 @@
 
 typedef unsigned int uint;
 
+Cursor getInvisibleCursor(Display* display, Window window)
+{
+    static Cursor cursorNone = None;
+    if( cursorNone == None ) {
+        char cursorNoneBits[ 32 ] = {0};
+        XColor dontCare = {0};
+        Pixmap cursorNonePixmap;
+//        memset( cursorNoneBits, 0, sizeof( cursorNoneBits ) );
+//       memset( &dontCare, 0, sizeof( dontCare ) );
+        cursorNonePixmap = XCreateBitmapFromData ( display,
+                                                   window,
+                                                   cursorNoneBits, 16, 16 );
+        if( cursorNonePixmap != None ) {
+            cursorNone = XCreatePixmapCursor( display,
+                                              cursorNonePixmap, cursorNonePixmap,
+                                              &dontCare, &dontCare, 0, 0 );
+            XFreePixmap( display, cursorNonePixmap );
+        }
+    }
+    return cursorNone;
+}
+
+void HideCursor(Display* display, Window window)
+{
+    Cursor invisibleCursor = getInvisibleCursor(display, window);
+    XDefineCursor(display, window, invisibleCursor);
+    XFreeCursor(display, invisibleCursor);
+}
+
 GLXFBConfig ChooseFBConfig(Display *display, int screen)
 {
     static const int visualAttributes[] =
@@ -263,6 +292,7 @@ int main(int argc, char *argv[])
 //	printf("X Server doesn't support GLX extension\n");
     }
 
+
     GLXFBConfig fbconfig = ChooseFBConfig(display, screen);
     if (!fbconfig)
     {
@@ -291,6 +321,7 @@ int main(int argc, char *argv[])
 				  visinfo->depth, InputOutput,
 				  visinfo->visual, mask, &winAttr);
     XStoreName(display, window, "GLX");
+    HideCursor(display, window);
     GLXContext context = CreateContext(display, screen, fbconfig, visinfo, window);
     if (!glXMakeCurrent(display, window, context))
     {
