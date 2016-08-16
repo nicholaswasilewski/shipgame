@@ -116,7 +116,6 @@ mat4 GenerateCameraPerspective(camera Camera)
 
 mat4 GenerateCameraView(camera Camera)
 {
-    PrintVector(Camera.Up);
     mat4 View = DirectionView(Camera.Position, Camera.Forward, Camera.Up);
     return View;
 }

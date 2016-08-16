@@ -350,7 +350,6 @@ int main(int argc, char *argv[])
     gettimeofday(&last_xcheck, 0);
     timeval now;
 
-
     input Input0 = {0};
     input Input1 = {0};
     
@@ -363,7 +362,7 @@ int main(int argc, char *argv[])
     PlatformData.TempMemorySize = MEGABYTES(512);
     PlatformData.TempMemory = malloc(PlatformData.TempMemorySize);
 
-    XWarpPointer(display, 0, window, 0, 0, 0, 0,
+    XWarpPointer(display, 0, 0, 0, 0, 0, 0,
 		 WindowWidth/2, WindowHeight/2);
     while(1)
     {
