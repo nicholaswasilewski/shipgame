@@ -61,6 +61,23 @@ void CameraWalkBackward(float dT, float speed, camera* Camera)
     Camera->Position = Camera->Position - speed*dT*Camera->Forward;
 }
 
+void RotateCamera(camera* Camera, float dX, float dY, float CameraSpeed)
+{
+    {
+	mat3 XRot = MakeRotation3x3(Camera->Up, PI*dX*CameraSpeed);
+	v3 NewForward = XRot*Camera->Forward;
+	Camera->Forward = NewForward;
+    }
+
+    {
+	mat3 YRot = MakeRotation3x3(Cross(Camera->Forward, Camera->Up), PI*dY*CameraSpeed);
+	v3 NewForward = YRot*Camera->Forward;
+	v3 NewUp = YRot*Camera->Up;
+	Camera->Forward = NewForward;
+	Camera->Up = NewUp;
+    }
+}
+
 void GLErrorShow()
 {
     GLenum error;
@@ -75,7 +92,7 @@ void GLErrorShow()
 	{
 	    msg = "Invalid enum";
 	}
-	else if (error = GL_INVALID_VALUE)
+	else if (error == GL_INVALID_VALUE)
 	{
 	    msg = "Invalid value";
 	}
@@ -98,7 +115,8 @@ mat4 GenerateCameraPerspective(camera Camera)
 }
 
 mat4 GenerateCameraView(camera Camera)
-{  
+{
+    PrintVector(Camera.Up);
     mat4 View = DirectionView(Camera.Position, Camera.Forward, Camera.Up);
     return View;
 }
@@ -138,29 +156,27 @@ GLuint LoadDDS(const char * filePath)
     
     uint32 bufferSize = mipMapCount > 1 ? linearSize * 2 : linearSize;
     uint8* buffer = (uint8*)malloc(bufferSize * sizeof(uint8));
-    int bytesRead = fread(buffer, 1, bufferSize, fp);
+    fread(buffer, 1, bufferSize, fp);
     fclose(fp);
-    
-    printf("Height:%d\nWidth:%d\nSize:%d\nMipMapCount:%d\nFormat:%s\n", height, width, linearSize, mipMapCount, fourCC);
 
-    uint32 components;
+//    uint32 components;
     uint32 format;
     
     format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
     if (strncmp(fourCC, "DXT1", 4) == 0)
     {
 	format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-	components = 3;
+//	components = 3;
     }
     else if (strncmp (fourCC, "DXT3", 4) == 0)
     {
 	format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-	components = 4;
+//	components = 4;
     }
     else if (strncmp(fourCC, "DXT5", 4) == 0)
     {
 	format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-	components = 4;
+//	components = 4;
     }
     else
     {
@@ -325,9 +341,9 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 void UpdateAndRender(platform_data* Platform)
 {    
     game_data* Game = (game_data*)(((char*)Platform->MainMemory)+0);
-    input *LastInput = Platform->LastInput;
+//    input *LastInput = Platform->LastInput;
     input *Input = Platform->NewInput;
-    controller OldKeyboard = LastInput->Keyboard;
+//    controller OldKeyboard = LastInput->Keyboard;
     controller Keyboard = Input->Keyboard;
     
     if (!Game->Initialized)
@@ -505,6 +521,15 @@ void UpdateAndRender(platform_data* Platform)
 	CameraWalkBackward(Input->dT, 3.0f, &Game->Camera);
     }
     
+
+    RotateCamera(&Game->Camera,
+		 Keyboard.RStick.X / 100.0f,
+		 Keyboard.RStick.Y / 100.0f,
+		 Input->dT*1.0f);
+
+    if (Keyboard.RStick.X != 0.0f || Keyboard.RStick.Y != 0.0f) {
+    }
+
     Game->BoxRotation += PI*(1.0f/120.0f);
 
     mat4 Projection = GenerateCameraPerspective(Game->Camera);

@@ -30,6 +30,17 @@ typedef struct
 
 typedef struct
 {
+    float x,y;
+} v2;
+
+v2 V2(float x, float y)
+{
+    v2 Result = {x, y};
+    return Result;
+}
+
+typedef struct
+{
     union
     {
 	struct
@@ -65,6 +76,11 @@ v3 V3(float x, float y, float z)
     Result.z = z;
     return Result;
 }
+     
+
+const v3 Vec3UnitX = V3(1.0f,0.0f,0.0f);
+const v3 Vec3UnitY = V3(0.0f,1.0f,0.0f);
+const v3 Vec3UnitZ = V3(0.0f,1.0f,0.0f);
 
 float Length(v3 v)
 {
@@ -107,6 +123,16 @@ v3 operator-(v3 v)
     return -1.0f*v;
 }
 
+v2 operator/(v2 v, float s)
+{
+    v2 Result = {
+	v.x / s,
+	v.y / s
+    };
+
+    return Result;
+}
+
 v3 operator/(v3 v, float s)
 {
     v3 Result = {
@@ -125,11 +151,22 @@ quaternion operator/(quaternion q, float s)
 	q.z / s,
 	q.w / s
     };
+    return Result;
 }
 
 v3 Normalize(v3 v)
 {
     return v / Length(v);
+}
+
+float Length(v2 v)
+{
+    return sqrt(v.x*v.x + v.y*v.y);
+}
+
+v2 Normalize(v2 v)
+{
+    return v/Length(v);
 }
 
 float Length(quaternion q)
@@ -155,6 +192,38 @@ v3 Cross(v3 u, v3 v)
     s.z = u.x*v.y - u.y*v.x;
 
     return s;
+}
+
+v3 MakeRotationVector(v2 dM, v3 f, v3 u)
+{
+    //return Cross(dM.x*Cross(f, u) + dM.y*u, f);
+    v3 Result;
+    Result.x = 
+    dM.x*f.y*f.y*u.x + 
+    dM.x*f.z*f.z*u.x - 
+    dM.x*f.x*f.y*u.y + 
+    dM.y*f.z*u.y - 
+    dM.y*f.y*u.z - 
+    dM.x*f.x*f.z*u.z;
+    
+    Result.y = 
+    -(dM.x*f.x*f.y*u.x) -
+    dM.y*f.z*u.x + 
+    dM.x*f.x*f.x*u.y + 
+    dM.x*f.z*f.z*u.y + 
+    dM.y*f.x*u.z - 
+    dM.x*f.y*f.z*u.z;
+    
+    Result.z = 
+    -dM.y*f.y*u.x - 
+    dM.x*f.x*f.z*u.x - 
+    dM.y*f.x*u.y - 
+    dM.x*f.y*f.z*u.y + 
+    dM.x*f.x*f.x*u.z + 
+    dM.x*f.y*f.y*u.z;
+    
+//    dM = Normalize(dM);
+    return Result;
 }
 
 v4 V4(float x, float y, float z, float w)
@@ -189,6 +258,32 @@ v3 operator*(mat3 m, v3 v)
     Result.x = m.x0*v.x + m.y0*v.y + m.z0*v.z;
     Result.y = m.x1*v.x + m.y1*v.y + m.z1*v.z;
     Result.z = m.x2*v.x + m.y2*v.y + m.z2*v.z;
+    return Result;
+}
+
+mat3 operator*(mat3 m1, mat3 m2)
+{
+    float x0, x1, x2,
+	y0, y1, y2,
+	z0, z1, z2;
+
+    x0 = m1.x0*m2.x0 + m1.x1*m2.y0 + m1.x2*m2.z0;
+    x1 = m1.x0*m2.x1 + m1.x1*m2.y1 + m1.x2*m2.z1;
+    x2 = m1.x0*m2.x2 + m1.x1*m2.y2 + m1.x2*m2.z2;
+
+    y0 = m1.y0*m2.x0 + m1.y1*m2.y0 + m1.y2*m2.z0;
+    y1 = m1.y0*m2.x1 + m1.y1*m2.y1 + m1.y2*m2.z1;
+    y2 = m1.y0*m2.x2 + m1.y1*m2.y2 + m1.y2*m2.z2;
+
+    z0 = m1.z0*m2.x0 + m1.z1*m2.y0 + m1.z2*m2.z0;
+    z1 = m1.z0*m2.x1 + m1.z1*m2.y1 + m1.z2*m2.z1;
+    z2 = m1.z0*m2.x2 + m1.z1*m2.y2 + m1.z2*m2.z2;
+    
+    mat3 Result = {
+	x0, y0, z0,
+	x1, y1, z1,
+	x2, y2, z2
+    };
     return Result;
 }
 
@@ -270,14 +365,42 @@ mat4 MakeRotation(quaternion q)
 
     float zz2 = q.z*q.z*2;
     float zw2 = q.z*q.w*2;
-
-    float ww2 = q.w*q.w*2;
     
     mat4 Result = {
 	1-yy2-zz2, xy2 - zw2, xz2 + yw2, 0,
 	xy2 + zw2, 1-xx2-zz2, yz2 - xw2, 0,
         xz2 - yw2, yz2 + xw2, 1-xx2-yy2, 0,
 	        0,         0,         0, 1
+    };
+    return Result;
+}
+
+mat3 MakeRotation3x3(v3 u, float theta)
+{
+    u = Normalize(u);
+    float cost = cos(theta);
+    float sint = sin(theta);
+
+    float x0,x1,x2,
+	y0, y1, y2,
+	z0, z1, z2;
+    x0 = cost + u.x*u.x*(1.0f-cost);
+    x1 = u.x*u.y*(1.0f-cost)-u.z*sint;
+    x2 = u.x*u.z*(1.0f-cost)+u.y*sint;
+    
+    y0 = u.y*u.x*(1.0f-cost)+u.z*sint;
+    y1 = cost + u.y*u.y*(1.0f-cost);
+    y2 = u.y*u.z*(1.0f-cost)-u.x*sint;
+
+    z0 = u.z*u.x*(1.0f-cost)-u.y*sint;
+    z1 = u.z*u.y*(1.0f-cost)+u.x*sint;
+    z2 = cost + u.z*u.z*(1-cost);
+    
+
+    mat3 Result = {
+	x0, y0, z0,
+	x1, y1, z1,
+	x2, y2, z2,
     };
     return Result;
 }
@@ -312,12 +435,6 @@ mat4 MakeRotation(v3 u, float theta)
     };
 
     return Result;
-}
-
-mat4 MakeRotation2(v3 Axis, float Angle)
-{
-    quaternion q = QuaternionFromAxisAngle(Axis, Angle);
-    return MakeRotation(q);
 }
 
 mat4 MakeTranslation(v3 v)
@@ -383,12 +500,17 @@ mat4 MakePerspectiveProjection(float Fov, float Aspect, float Near, float Far)
 {
     
     mat4 Result = {
-	1 / tan(Fov*Aspect/2.0f), 0.0f, 0.0f, 0.0f,
-	0.0f, 1 / tan(Fov/2.0f), 0.0f, 0.0f,
+	1.0f / (float)tan(Fov*Aspect/2.0f), 0.0f, 0.0f, 0.0f,
+	0.0f, 1.0f / (float)tan(Fov/2.0f), 0.0f, 0.0f,
 	0.0f, 0.0f, -(Far+Near)/(Far-Near), -1.0f,
 	0.0f, 0.0f, -2*(Near*Far)/(Far-Near), 1.0f
     };
     return Result;
+}
+
+void PrintVector(v3 v)
+{
+    printf("X:%f, Y:%f, Z:%f\n", v.x, v.y, v.z); 
 }
 
 void PrintMatrix(mat4 m)

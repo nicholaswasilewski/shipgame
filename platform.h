@@ -33,12 +33,21 @@ struct button_state
     bool32 Down;
 };
 
+struct stick_state
+{
+    float X;
+    float Y;
+};
+
 struct controller
 {
     button_state Up;
     button_state Down;
     button_state Left;
     button_state Right;
+
+    stick_state LStick;
+    stick_state RStick;
 };
 
 struct input

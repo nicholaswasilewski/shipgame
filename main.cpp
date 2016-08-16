@@ -17,7 +17,7 @@
 typedef unsigned int uint;
 
 GLXFBConfig ChooseFBConfig(Display *display, int screen)
-{   
+{
     static const int visualAttributes[] =
     {
 	GLX_X_RENDERABLE, True,
@@ -104,7 +104,7 @@ GLXContext CreateContext(Display *display, int screen,
     return context;
 }
 
-void KeyboardCB(KeySym sym, unsigned char key, bool32 Press, int x, int y, controller* Keyboard)
+void KeyboardCB(KeySym sym, unsigned char key, bool32 Press, controller* Keyboard)
 {
     switch(tolower(key))
     {
@@ -166,9 +166,8 @@ void ReshapeCB(int width, int height)
     glViewport(0, 0, width, height);
 }
 
-void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int* displayed, Display* display, Window window)
+void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int* displayed, Display* display, Window window, int WindowWidth, int WindowHeight)
 {
-    int setting_change = 0;
     while (XEventsQueued(display, QueuedAfterFlush))
     {
 	XEvent event;
@@ -195,7 +194,7 @@ void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int*
 	    KeySym symbol;
 	    XComposeStatus status;
 	    XLookupString(&event.xkey, &chr, 1, &symbol, &status);
-	    KeyboardCB(symbol, chr, 1, event.xkey.x, event.xkey.y, &Input->Keyboard);
+	    KeyboardCB(symbol, chr, 1, &Input->Keyboard);
 	} break;
 	case KeyRelease:
 	{
@@ -203,8 +202,34 @@ void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int*
 	    KeySym symbol;
 	    XComposeStatus status;
 	    XLookupString(&event.xkey, &chr, 1, &symbol, &status);
-	    KeyboardCB(symbol, chr, 0, event.xkey.x, event.xkey.y, &Input->Keyboard);
-	}
+	    KeyboardCB(symbol, chr, 0, &Input->Keyboard);
+	} break;
+	case MotionNotify:
+	{
+	    XMotionEvent motionEvent = event.xmotion;
+	    
+	    Window focus_return;
+	    int revert_to_return;
+	    XGetInputFocus(display, &focus_return, &revert_to_return);
+	    if (focus_return == window)
+	    {
+		if (motionEvent.x != WindowWidth/2 || motionEvent.y != WindowHeight/2)
+		{
+		    Input->Keyboard.RStick.X = motionEvent.x - WindowWidth/2;
+		    Input->Keyboard.RStick.Y = motionEvent.y - WindowHeight/2;
+		    XWarpPointer(display, 0, window, 0, 0, 0, 0,
+				 WindowWidth/2, WindowHeight/2);
+		}
+	    }
+	} break;
+	case FocusIn:
+	{
+	    
+	} break;
+	case FocusOut:
+	{
+	    
+	} break;
 	case ClientMessage:
 	{
 	    if (event.xclient.message_type == wm_protocols && (Atom)event.xclient.data.l[0] == wm_delete_window)
@@ -219,10 +244,9 @@ void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int*
 int main(int argc, char *argv[])
 {
     Display *display;
-    XEvent e;
 
-    int WindowWidth = 500;
-    int WindowHeight = 500;
+    int WindowWidth = 800;
+    int WindowHeight = 600;
 
     display = XOpenDisplay(0);
     if (!display) 
@@ -254,7 +278,8 @@ int main(int argc, char *argv[])
     }
     XSetWindowAttributes winAttr;
     winAttr.event_mask = StructureNotifyMask | KeyPressMask | KeyReleaseMask
-	| ButtonPressMask | ButtonRelease | PointerMotionMask;
+	| ButtonPressMask | ButtonRelease | PointerMotionMask
+	| FocusChangeMask;
     winAttr.background_pixmap = None;
     winAttr.background_pixel = 0;
     winAttr.border_pixel = 0;
@@ -262,7 +287,7 @@ int main(int argc, char *argv[])
     unsigned int mask = CWBackPixmap | CWBorderPixel | CWColormap | CWEventMask;
     Window window = XCreateWindow(display, root,
 				  0, 0,
-				  800, 600, 0,
+				  WindowWidth, WindowHeight, 0,
 				  visinfo->depth, InputOutput,
 				  visinfo->visual, mask, &winAttr);
     XStoreName(display, window, "GLX");
@@ -293,7 +318,6 @@ int main(int argc, char *argv[])
     timeval last_xcheck;
     gettimeofday(&last_xcheck, 0);
     timeval now;
-    int frameCount = 0;
 
 
     input Input0 = {0};
@@ -307,14 +331,21 @@ int main(int argc, char *argv[])
     PlatformData.MainMemory = calloc(1, PlatformData.MainMemorySize);
     PlatformData.TempMemorySize = MEGABYTES(512);
     PlatformData.TempMemory = malloc(PlatformData.TempMemorySize);
+
+    XWarpPointer(display, 0, window, 0, 0, 0, 0,
+		 WindowWidth/2, WindowHeight/2);
     while(1)
-    { 
+    {
+	PlatformData.NewInput->Keyboard.RStick.X = 0.0f;
+	PlatformData.NewInput->Keyboard.RStick.Y = 0.0f;
 	ProcessXEvents(PlatformData.NewInput,
 		       wm_protocols,
 		       wm_delete_window,
 		       &displayed,
 		       display,
-		       window);
+		       window,
+		       WindowWidth,
+		       WindowHeight);
 	
 	UpdateAndRender(&PlatformData);
 	glXSwapBuffers(display, window);
