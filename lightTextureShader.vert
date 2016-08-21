@@ -1,12 +1,20 @@
 #version 330 core
 
+struct light {
+    float Power;
+    vec3 Position;
+    
+    vec3 Ambient;
+    vec3 Diffuse;
+    vec3 Specular;
+};
+
+uniform light Light;
+
 //Model
 uniform mat4 MVP;
 uniform mat4 V;
 uniform mat4 M;
-
-//Light
-uniform vec3 LightPosition;
 
 layout(location = 0) in vec3 vertexPosition_model;
 layout(location = 1) in vec2 vertexUV;
@@ -27,7 +35,7 @@ void main()
     vec3 VertexPosition_camera = (V * M * vec4(vertexPosition_model, 1)).xyz;
     EyeDirection_camera = vec3(0,0,0) - VertexPosition_camera;
     
-    vec3 LightPosition_camera = ( V*vec4(LightPosition, 1)).xyz;
+    vec3 LightPosition_camera = ( V*vec4(Light.Position, 1)).xyz;
     LightDirection_camera = LightPosition_camera + EyeDirection_camera;
 
     Normal_camera = (V * M * vec4(vertexNormal, 0)).xyz;

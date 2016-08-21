@@ -151,7 +151,7 @@ void KeyboardCB(KeySym sym, unsigned char key, bool32 Press, controller* Keyboar
     }
     case 'w':
     {
-	Keyboard->Up.Down = Press;
+	Keyboard->Forward.Down = Press;
     } break;
     case 'a':
     {
@@ -159,11 +159,19 @@ void KeyboardCB(KeySym sym, unsigned char key, bool32 Press, controller* Keyboar
     } break;
     case 's':
     {
-	Keyboard->Down.Down = Press;
+	Keyboard->Back.Down = Press;
     } break;
     case 'd':
     {
 	Keyboard->Right.Down = Press;
+    } break;
+    case 'q':	
+    {
+	Keyboard->UpperLeft.Down = Press;
+    } break;
+    case 'e':
+    {
+	Keyboard->UpperRight.Down = Press;
     } break;
     case 0:
     {
@@ -179,12 +187,20 @@ void KeyboardCB(KeySym sym, unsigned char key, bool32 Press, controller* Keyboar
 	} break;
 	case XK_Up:
 	{
-	    Keyboard->Up.Down = Press;
+	    Keyboard->Forward.Down = Press;
 	} break;
         case XK_Down:
 	{
-	    Keyboard->Down.Down = Press;
+	    Keyboard->Back.Down = Press;
         } break;
+	case XK_Control_L:
+	{
+	    Keyboard->Down.Down = Press;
+	} break;
+	case XK_Shift_L:
+	{
+	    Keyboard->Up.Down = Press;
+	} break;
         }
     } break;
     default:

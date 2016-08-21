@@ -43,8 +43,13 @@ struct controller
 {
     button_state Up;
     button_state Down;
+    button_state Forward;
+    button_state Back;
     button_state Left;
     button_state Right;
+
+    button_state UpperLeft;
+    button_state UpperRight;
 
     stick_state LStick;
     stick_state RStick;

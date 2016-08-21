@@ -25,55 +25,91 @@ struct camera
     v3 Up;
 };
 
+struct point_light
+{
+    v3 Position;
+    v3 AmbientColor;
+    v3 DiffuseColor;
+    v3 SpecularColor;
+    float Power;
+};
+
+struct material
+{
+    v3 AmbientColor;
+    v3 DiffuseColor;
+    v3 SpecularColor;
+    float Shininess;
+};
+
 struct game_data
 {
     bool Initialized;
 
     //A model?
-    uint32 VertexBuffer;
-    uint32 NormalBuffer;
-    uint32 IndexBuffer;
-    uint32 ColorBuffer;
-    uint32 UVBuffer;
+    GLuint VertexBuffer;
+    GLuint NormalBuffer;
+    GLuint IndexBuffer;
+    GLuint ColorBuffer;
+    GLuint UVBuffer;
     int IndexCount;
 //Shader Values
-    uint32 Program;    
-    uint32 M;
-    uint32 V;
-    uint32 MVP;
-    uint32 LightPosition;
-    uint32 LightColor;
-    uint32 LightPower;
+    GLuint Program;
+    GLuint M;
+    GLuint V;
+    GLuint MV;
+    GLuint MVP;
+    
+    GLuint LightPosition;
+    GLuint LightAmbient;
+    GLuint LightDiffuse;
+    GLuint LightSpecular;
+    GLuint LightPower;
 
+    GLuint MaterialAmbient;
+    GLuint MaterialDiffuse;
+    GLuint MaterialSpecular;
+    GLuint MaterialShine;
 
-    uint32 Texture;
+    GLuint Texture;
 
     float BoxRotation;
 
     camera Camera;
 };
 
-void CameraStrafeLeft(float dT, float speed, camera* Camera)
+struct light_texture_shader
 {
-    Camera->Position = Camera->Position - speed*dT*Normalize(Cross(Camera->Forward, Camera->Up));
-}
+    GLuint Program;
+    GLuint M;
+    GLuint V;
+    GLuint MV;
+    GLuint MVP;
+    
+    GLuint LightPosition;
+    GLuint DiffuseLight;
+    GLuint LightPower;
+    GLuint AmbientColor;
+    GLuint DiffuseColor;
+    GLuint SpecularColor;
+};
 
-void CameraStrafeRight(float dT, float speed, camera* Camera)
+void CameraStrafe(camera *Camera, float dT, float speed)
 {
     Camera->Position = Camera->Position + speed*dT*Normalize(Cross(Camera->Forward, Camera->Up));   
 }
 
-void CameraWalkForward(float dT, float speed, camera* Camera)
+void CameraMoveForward(camera *Camera, float dT, float speed)
 {
     Camera->Position = Camera->Position + speed*dT*Camera->Forward;
 }
 
-void CameraWalkBackward(float dT, float speed, camera* Camera)   
+void CameraMoveUp(camera *Camera, float dT, float speed)
 {
-    Camera->Position = Camera->Position - speed*dT*Camera->Forward;
+    Camera->Position = Camera->Position + speed*dT*Camera->Up;
 }
 
-void RotateCamera(camera* Camera, float dX, float dY, float CameraSpeed)
+void TurnCamera(camera* Camera, float dX, float dY, float CameraSpeed)
 {
     {
 	mat3 XRot = MakeRotation3x3(Camera->Up, PI*dX*CameraSpeed);
@@ -88,6 +124,13 @@ void RotateCamera(camera* Camera, float dX, float dY, float CameraSpeed)
 	Camera->Forward = NewForward;
 	Camera->Up = NewUp;
     }
+}
+
+void RollCamera(camera *Camera, float dT, float speed)
+{
+    mat3 ZRot = MakeRotation3x3(Camera->Forward, PI*dT*speed);
+    v3 NewUp = ZRot*Camera->Up;
+    Camera->Up = NewUp;
 }
 
 void GLErrorShow()
@@ -170,24 +213,20 @@ GLuint LoadDDS(const char * filePath)
     fread(buffer, 1, bufferSize, fp);
     fclose(fp);
 
-//    uint32 components;
     uint32 format;
     
     format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
     if (strncmp(fourCC, "DXT1", 4) == 0)
     {
 	format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-//	components = 3;
     }
     else if (strncmp (fourCC, "DXT3", 4) == 0)
     {
 	format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-//	components = 4;
     }
     else if (strncmp(fourCC, "DXT5", 4) == 0)
     {
 	format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-//	components = 4;
     }
     else
     {
@@ -499,10 +538,20 @@ void UpdateAndRender(platform_data* Platform)
 	Game->Program = LoadShaders("lightTextureShader.vert", "lightTextureShader.frag");
 	Game->M = glGetUniformLocation(Game->Program, "M");
 	Game->V = glGetUniformLocation(Game->Program, "V");
+	Game->MV = glGetUniformLocation(Game->Program, "MV");
 	Game->MVP = glGetUniformLocation(Game->Program, "MVP");
-	Game->LightPosition = glGetUniformLocation(Game->Program, "LightPosition");
-	Game->LightColor= glGetUniformLocation(Game->Program, "LightColor");
-	Game->LightPower = glGetUniformLocation(Game->Program, "LightPower");
+	
+	Game->LightPower = glGetUniformLocation(Game->Program, "Light.Power");
+	Game->LightPosition = glGetUniformLocation(Game->Program, "Light.Position");
+	Game->LightAmbient = glGetUniformLocation(Game->Program, "Light.Ambient");
+	Game->LightDiffuse = glGetUniformLocation(Game->Program, "Light.Diffuse");
+	Game->LightSpecular = glGetUniformLocation(Game->Program, "Light.Specular");
+
+	Game->MaterialAmbient = glGetUniformLocation(Game->Program, "Material.Ambient");
+	Game->MaterialDiffuse = glGetUniformLocation(Game->Program, "Material.Diffuse");
+	Game->MaterialSpecular = glGetUniformLocation(Game->Program, "Material.Specular");
+	Game->MaterialShine = glGetUniformLocation(Game->Program, "Material.Shine");
+
 	
 	Game->Texture = LoadDDS("uvtemplate.dds");
 
@@ -522,33 +571,46 @@ void UpdateAndRender(platform_data* Platform)
 
     if (Keyboard.Left.Down)
     {
-	CameraStrafeLeft(Input->dT, 3.0f, &Game->Camera);
+	CameraStrafe(&Game->Camera, Input->dT, -3.0f);
     }
     else if (Keyboard.Right.Down)	
     {
-	CameraStrafeRight(Input->dT, 3.0f, &Game->Camera);
+	CameraStrafe(&Game->Camera, Input->dT, 3.0f);
     }
 
+    if (Keyboard.Forward.Down)
+    {
+	CameraMoveForward(&Game->Camera, Input->dT, 3.0f);
+    }
+    else if (Keyboard.Back.Down)
+    {
+	CameraMoveForward(&Game->Camera, Input->dT, -3.0f);
+    }
+    
     if (Keyboard.Up.Down)
     {
-	CameraWalkForward(Input->dT, 3.0f, &Game->Camera);
+	CameraMoveUp(&Game->Camera, Input->dT, 3.0f);
     }
     else if (Keyboard.Down.Down)
     {
-	CameraWalkBackward(Input->dT, 3.0f, &Game->Camera);
+	CameraMoveUp(&Game->Camera, Input->dT, -3.0f);
     }
-    
 
-    RotateCamera(&Game->Camera,
-		 Keyboard.RStick.X / 100.0f,
-		 Keyboard.RStick.Y / 100.0f,
-		 Input->dT*1.0f);
-
-    if (Keyboard.RStick.X != 0.0f || Keyboard.RStick.Y != 0.0f)
+    if (Keyboard.UpperLeft.Down)
     {
+	RollCamera(&Game->Camera, Input->dT, 0.5f);
+    }
+    else if (Keyboard.UpperRight.Down)
+    {
+	RollCamera(&Game->Camera, Input->dT, -0.5f);
     }
 
-    Game->BoxRotation += PI*(1.0f/120.0f);
+    TurnCamera(&Game->Camera,
+	       Keyboard.RStick.X / 100.0f,
+	       Keyboard.RStick.Y / 100.0f,
+	       Input->dT*1.0f);
+
+    //Game->BoxRotation += PI*(1.0f/120.0f);
 
     mat4 Projection = GenerateCameraPerspective(Game->Camera);
     mat4 View = GenerateCameraView(Game->Camera);
@@ -559,17 +621,27 @@ void UpdateAndRender(platform_data* Platform)
     mat4 Scale = MakeScale(V3(1.0f, 1.0f, 1.0f));
     mat4  Translation = MakeTranslation(V3(0.0f, 0.0f, 0.0f));
     Model = Translation * Rotation * Scale;
-    
+    mat4 MV = View * Model;
     mat4 MVP = Projection * View * Model;
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(Game->Program);
     glUniformMatrix4fv(Game->M, 1, GL_FALSE, &Model.E[0][0]);
     glUniformMatrix4fv(Game->V, 1, GL_FALSE, &View.E[0][0]);
+    glUniformMatrix4fv(Game->MV, 1, GL_FALSE, &MV.E[0][0]);
     glUniformMatrix4fv(Game->MVP, 1, GL_FALSE, &MVP.E[0][0]);
+    
     glUniform3f(Game->LightPosition, 4.0f, 4.0f, 4.0f);
-    glUniform3f(Game->LightColor, 1.0f, 1.0f, 1.0f);
+    glUniform3f(Game->LightAmbient, 0.1f, 0.1f, 0.1f);
+    glUniform3f(Game->LightDiffuse, 0.5f, 0.5f, 0.5f);
+    glUniform3f(Game->LightSpecular, 1.0f, 1.0f, 1.0f);
     glUniform1f(Game->LightPower, 40.f);
+
+    glUniform3f(Game->MaterialAmbient, 1.0f, 1.0f, 1.0f);
+    glUniform3f(Game->MaterialDiffuse, 1.0f, 1.0f, 1.0f);
+    glUniform3f(Game->MaterialSpecular, 1.0f, 1.0f, 1.0f);
+    glUniform1f(Game->MaterialShine, 5.0f);
+    
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Game->Texture);
     glUniform1i(Game->Texture, 0);
