@@ -1,3 +1,6 @@
+#if TESTING
+#include "test.cpp"
+#endif
 #include "game.cpp"
 
 #include <stdio.h>
@@ -270,7 +273,7 @@ void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int*
     }
 }
 
-int main(int argc, char *argv[])
+int Main(int argc, char *argv[])
 {
     Display *display;
 
@@ -399,4 +402,13 @@ int main(int argc, char *argv[])
     }
 
     return EXIT_SUCCESS;
+}
+
+int main(int argc, char* argv[])
+{
+#if TESTING
+    return Test(argc, argv);
+#else
+    return Main(argc, argv);
+#endif
 }

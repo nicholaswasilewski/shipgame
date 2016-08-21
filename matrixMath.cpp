@@ -1,3 +1,6 @@
+#ifndef MATRIXMATH_CPP__
+#define MATRIXMATH_CPP__
+
 #include <math.h>
 #include <stdio.h>
 
@@ -524,3 +527,5 @@ void PrintMatrix(mat4 m)
 	   (double)m.x2, (double)m.y2, (double)m.z2, (double)m.w2,
 	   (double)m.x3, (double)m.y3, (double)m.z3, (double)m.w3);
 }
+
+#endif

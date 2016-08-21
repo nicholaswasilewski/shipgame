@@ -1,6 +1,8 @@
 #include "platform.h"
 #include "matrixMath.cpp"
 
+#include "loadFBX.cpp"
+
 #include <stdlib.h>
 #include <string.h>
 #define GL_GLEXT_PROTOTYPES
@@ -28,13 +30,23 @@ struct game_data
     bool Initialized;
 
     //A model?
-    uint32 VertexBufferID;
-    uint32 ColorBufferID;
-    uint32 UVBufferID;
-    uint32 ProgramID;
-    uint32 MatrixID;
+    uint32 VertexBuffer;
+    uint32 NormalBuffer;
+    uint32 IndexBuffer;
+    uint32 ColorBuffer;
+    uint32 UVBuffer;
+    int IndexCount;
+//Shader Values
+    uint32 Program;    
+    uint32 M;
+    uint32 V;
+    uint32 MVP;
+    uint32 LightPosition;
+    uint32 LightColor;
+    uint32 LightPower;
 
-    uint32 TextureID;
+
+    uint32 Texture;
 
     float BoxRotation;
 
@@ -344,149 +356,155 @@ void UpdateAndRender(platform_data* Platform)
     input *Input = Platform->NewInput;
 //    controller OldKeyboard = LastInput->Keyboard;
     controller Keyboard = Input->Keyboard;
-    
+
     if (!Game->Initialized)
     {
 	glClearColor(0.0, 0.0, 0.4, 0.0);
 	glFrontFace(GL_CCW);
 	glEnable(GL_CULL_FACE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	GLuint VertexArrayID;
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
+	
 	GLfloat vertexBufferData[] = {
-	    -1.0f,-1.0f,-1.0f,
-	    -1.0f,-1.0f, 1.0f,
+	    //Front
 	    -1.0f, 1.0f, 1.0f,
-	    1.0f, 1.0f,-1.0f, 
-	    -1.0f,-1.0f,-1.0f,
-	    -1.0f, 1.0f,-1.0f,
-	    1.0f,-1.0f, 1.0f,
-	    -1.0f,-1.0f,-1.0f,
-	    1.0f,-1.0f,-1.0f,
-	    1.0f, 1.0f,-1.0f,
-	    1.0f,-1.0f,-1.0f,
-	    -1.0f,-1.0f,-1.0f,
-	    -1.0f,-1.0f,-1.0f,
+	    -1.0f, -1.0f, 1.0f,
+	    1.0f, 1.0f, 1.0f,
+	    1.0f, -1.0f, 1.0f,
+	    //Back
+	    1.0f, 1.0f, -1.0f,
+	    1.0f, -1.0f, -1.0f,
+	    -1.0f, 1.0f, -1.0f,
+	    -1.0f, -1.0f, -1.0f,
+	    //Top
+	    -1.0f, 1.0f, -1.0f,
 	    -1.0f, 1.0f, 1.0f,
-	    -1.0f, 1.0f,-1.0f,
-	    1.0f,-1.0f, 1.0f,
-	    -1.0f,-1.0f, 1.0f,
-	    -1.0f,-1.0f,-1.0f,
+	    1.0f, 1.0f, -1.0f,
+	    1.0f, 1.0f, 1.0f,
+	    //Bottom
+	    -1.0f, -1.0f, 1.0f,
+	    -1.0f, -1.0f, -1.0f,
+	    1.0f, -1.0f, 1.0f,
+	    1.0f, -1.0f, -1.0f,
+	    //Left
+	    -1.0f, 1.0f, -1.0f,
+	    -1.0f, -1.0f, -1.0f,
 	    -1.0f, 1.0f, 1.0f,
-	    -1.0f,-1.0f, 1.0f,
-	    1.0f,-1.0f, 1.0f,
+	    -1.0f, -1.0f, 1.0f,
+	    //Right
 	    1.0f, 1.0f, 1.0f,
-	    1.0f,-1.0f,-1.0f,
-	    1.0f, 1.0f,-1.0f,
-	    1.0f,-1.0f,-1.0f,
-	    1.0f, 1.0f, 1.0f,
-	    1.0f,-1.0f, 1.0f,
-	    1.0f, 1.0f, 1.0f,
-	    1.0f, 1.0f,-1.0f,
-	    -1.0f, 1.0f,-1.0f,
-	    1.0f, 1.0f, 1.0f,
-	    -1.0f, 1.0f,-1.0f,
-	    -1.0f, 1.0f, 1.0f,
-	    1.0f, 1.0f, 1.0f,
-	    -1.0f, 1.0f, 1.0f,
-	    1.0f,-1.0f, 1.0f
+	    1.0f, -1.0f, 1.0f,
+	    1.0f, 1.0f, -1.0f,
+	    1.0f, -1.0f, -1.0f
 	};
 
-	GLfloat colorBufferData[] = {
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
-	    1.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f,
+	glGenBuffers(1, &Game->VertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER,
+		     Game->VertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER,
+		     sizeof(vertexBufferData),
+		     vertexBufferData,
+		     GL_STATIC_DRAW);
+
+#define FrontNormal 0.0f, 1.0f, 0.0f
+#define UpNormal 0.0f, 1.0f, 0.0f
+#define DownNormal 0.0, -1.0f, 0.0f
+#define LeftNormal -1.0f, 0.0f, 0.0f
+#define RightNormal 1.0f, 0.0f, 0.0f
+#define BackNormal 0.0f, 0.0f, -1.0f
+	GLfloat normalBufferData[] = {
+	    FrontNormal, FrontNormal, FrontNormal,FrontNormal,
+	    BackNormal, BackNormal, BackNormal,BackNormal,
+	    UpNormal, UpNormal, UpNormal,UpNormal,
+	    DownNormal, DownNormal, DownNormal,DownNormal,
+	    LeftNormal, LeftNormal, LeftNormal,LeftNormal,
+	    RightNormal, RightNormal, RightNormal,RightNormal,
 	};
+
+	glGenBuffers(1, &Game->NormalBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER,
+		     Game->NormalBuffer);
+	glBufferData(GL_ARRAY_BUFFER,
+		     sizeof(normalBufferData),
+		     &normalBufferData[0],
+		     GL_STATIC_DRAW);
 	
-	static const GLfloat uvBufferData[] = {
-	    0.000059f, 0.000004f,
-	    0.000103f, 0.336048f,
-	    0.335973f, 0.335903f,
-	    1.000023f, 0.000013f,
-	    0.667979f, 0.335851f,
-	    0.999958f, 0.336064f,
-	    0.667979f, 0.335851f,
-	    0.336024f, 0.671877f,
-	    0.667969f, 0.671889f,
-	    1.000023f, 0.000013f,
-	    0.668104f, 0.000013f,
-	    0.667979f, 0.335851f,
-	    0.000059f, 0.000004f,
-	    0.335973f, 0.335903f,
-	    0.336098f, 0.000071f,
-	    0.667979f, 0.335851f,
-	    0.335973f, 0.335903f,
-	    0.336024f, 0.671877f,
-	    1.000004f, 0.671847f,
-	    0.999958f, 0.336064f,
-	    0.667979f, 0.335851f,
-	    0.668104f, 0.000013f,
-	    0.335973f, 0.335903f,
-	    0.667979f, 0.335851f,
-	    0.335973f, 0.335903f,
-	    0.668104f, 0.000013f,
-	    0.336098f, 0.000071f,
-	    0.000103f, 0.336048f,
-	    0.000004f, 0.671870f,
-	    0.336024f, 0.671877f,
-	    0.000103f, 0.336048f,
-	    0.336024f, 0.671877f,
-	    0.335973f, 0.335903f,
-	    0.667969f, 0.671889f,
-	    1.000004f, 0.671847f,
-	    0.667979f, 0.335851f
+	GLushort indexBufferData[] = {
+	    0,1,2,
+	    1,3,2,
+	    4,5,6,
+	    5,7,6,
+	    8,9,10,
+	    9,11,10,
+	    12,13,14,
+	    13,15,14,
+	    16,17,18,
+	    17,19,18,
+	    20,21,22,
+	    21,23,22
+	};
+	Game->IndexCount = sizeof(indexBufferData)/sizeof(GLushort);
+
+	glGenBuffers(1, &Game->IndexBuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+		     Game->IndexBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+		     sizeof(indexBufferData),
+		     &indexBufferData[0],
+		     GL_STATIC_DRAW);
+
+	GLfloat OneThird = 1.0f/3.0f;
+	GLfloat TwoThirds = 2.0f/3.0f;
+	GLfloat uvBufferData[] = {
+	    0.0f, 0.0f,
+	    0.0f, OneThird,
+	    OneThird, 0.0f,
+	    OneThird, OneThird,
+
+	    TwoThirds, OneThird,
+	    TwoThirds, TwoThirds,
+	    1.0f, OneThird,
+	    1.0f, TwoThirds,
+
+	    OneThird, 0.0f,
+	    OneThird, OneThird,
+	    TwoThirds, 0.0f,
+	    TwoThirds, OneThird,
+
+	    OneThird, OneThird,
+	    OneThird, TwoThirds,
+	    TwoThirds, OneThird,
+	    TwoThirds, TwoThirds,
+
+	    TwoThirds,0.0f,
+	    TwoThirds,OneThird,
+	    1.0f, 0.0f,
+	    1.0f, OneThird,
+
+	    0.0f, OneThird,
+	    0.0f, TwoThirds,
+	    OneThird, OneThird,
+	    OneThird, TwoThirds,
 	};
 
-	glGenBuffers(1, &Game->VertexBufferID);
-	glBindBuffer(GL_ARRAY_BUFFER, Game->VertexBufferID);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexBufferData), vertexBufferData, GL_STATIC_DRAW);
-	
-	glGenBuffers(1, &Game->ColorBufferID);
-	glBindBuffer(GL_ARRAY_BUFFER, Game->ColorBufferID);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(colorBufferData), colorBufferData, GL_STATIC_DRAW);
-
-	glGenBuffers(1, &Game->UVBufferID);
-	glBindBuffer(GL_ARRAY_BUFFER, Game->UVBufferID);
+	glGenBuffers(1, &Game->UVBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, Game->UVBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(uvBufferData), uvBufferData, GL_STATIC_DRAW);
-	    
-	Game->ProgramID = LoadShaders("textureShader.vert", "textureShader.frag");
-	Game->MatrixID = glGetUniformLocation(Game->ProgramID, "MVP");
-	Game->TextureID = LoadDDS("uvtemplate.dds");
+	
+	Game->Program = LoadShaders("lightTextureShader.vert", "lightTextureShader.frag");
+	Game->M = glGetUniformLocation(Game->Program, "M");
+	Game->V = glGetUniformLocation(Game->Program, "V");
+	Game->MVP = glGetUniformLocation(Game->Program, "MVP");
+	Game->LightPosition = glGetUniformLocation(Game->Program, "LightPosition");
+	Game->LightColor= glGetUniformLocation(Game->Program, "LightColor");
+	Game->LightPower = glGetUniformLocation(Game->Program, "LightPower");
+	
+	Game->Texture = LoadDDS("uvtemplate.dds");
 
 	camera Camera = {0};
 	Camera.FOV = PI*0.25f;
@@ -526,7 +544,8 @@ void UpdateAndRender(platform_data* Platform)
 		 Keyboard.RStick.Y / 100.0f,
 		 Input->dT*1.0f);
 
-    if (Keyboard.RStick.X != 0.0f || Keyboard.RStick.Y != 0.0f) {
+    if (Keyboard.RStick.X != 0.0f || Keyboard.RStick.Y != 0.0f)
+    {
     }
 
     Game->BoxRotation += PI*(1.0f/120.0f);
@@ -540,18 +559,23 @@ void UpdateAndRender(platform_data* Platform)
     mat4 Scale = MakeScale(V3(1.0f, 1.0f, 1.0f));
     mat4  Translation = MakeTranslation(V3(0.0f, 0.0f, 0.0f));
     Model = Translation * Rotation * Scale;
+    
     mat4 MVP = Projection * View * Model;
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	    
-    glUseProgram(Game->ProgramID);
-    glUniformMatrix4fv(Game->MatrixID, 1, GL_FALSE, &MVP.E[0][0]);
+    glUseProgram(Game->Program);
+    glUniformMatrix4fv(Game->M, 1, GL_FALSE, &Model.E[0][0]);
+    glUniformMatrix4fv(Game->V, 1, GL_FALSE, &View.E[0][0]);
+    glUniformMatrix4fv(Game->MVP, 1, GL_FALSE, &MVP.E[0][0]);
+    glUniform3f(Game->LightPosition, 4.0f, 4.0f, 4.0f);
+    glUniform3f(Game->LightColor, 1.0f, 1.0f, 1.0f);
+    glUniform1f(Game->LightPower, 40.f);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Game->TextureID);
-    glUniform1i(Game->TextureID, 0);
+    glBindTexture(GL_TEXTURE_2D, Game->Texture);
+    glUniform1i(Game->Texture, 0);
 
     glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, Game->VertexBufferID);
+    glBindBuffer(GL_ARRAY_BUFFER, Game->VertexBuffer);
     glVertexAttribPointer(0,
 			  3,
 			  GL_FLOAT,
@@ -559,29 +583,36 @@ void UpdateAndRender(platform_data* Platform)
 			  0,
 			  (void*)0
 	);
-    /*
-    glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, Game->ColorBufferID;)
-    glVertexAttribPointer(0,
-			  3,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
-    */
     
     glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, Game->UVBufferID);
+    glBindBuffer(GL_ARRAY_BUFFER, Game->UVBuffer);
     glVertexAttribPointer(1,
 			  2,
 			  GL_FLOAT,
 			  GL_FALSE,
 			  0,
 			  (void*)0
-			  );
+	);
     
-    glDrawArrays(GL_TRIANGLES, 0, 12*3);
+    glEnableVertexAttribArray(2);
+    glBindBuffer(GL_ARRAY_BUFFER, Game->NormalBuffer);
+    glVertexAttribPointer(2,
+			  3,
+			  GL_FLOAT,
+			  GL_FALSE,
+			  0,
+			  (void*)0
+	);
+    
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Game->IndexBuffer);
+    glDrawElements(
+	GL_TRIANGLES,
+	Game->IndexCount,
+	GL_UNSIGNED_SHORT,
+	(void*)0);
+    
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
 }

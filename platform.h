@@ -1,5 +1,5 @@
-#ifndef _PLATFORM_H__
-#define _PLATFORM_H__
+#ifndef PLATFORM_H__
+#define PLATFORM_H__
 
 #include <stdint.h>
 
