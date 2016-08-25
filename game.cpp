@@ -1,6 +1,8 @@
 #include "platform.h"
+#include "math.cpp"
 #include "matrixMath.cpp"
 
+#include "camera.cpp"
 #include "loadFBX.cpp"
 
 #include <stdlib.h>
@@ -9,73 +11,39 @@
 #define GLX_GLXEXT_PROTOTYPES
 #include <GL/glx.h>
 
-#define PI 3.14159
-
-struct camera
-{
-    //Projection Stuff
-    float FOV;
-    float Aspect;
-    float Near;
-    float Far;
-    
-    //View stuff
-    v3 Position;
-    v3 Forward;
-    v3 Up;
-};
+#define CONTAINER
 
 struct point_light
 {
     v3 Position;
-    v3 AmbientColor;
-    v3 DiffuseColor;
-    v3 SpecularColor;
+    v3 Ambient;
+    v3 Diffuse;
+    v3 Specular;
     float Power;
+};
+
+struct texture
+{
+    uint32 Height;
+    uint32 Width;
+    GLuint Handle;
+    uint8* Data;
 };
 
 struct material
 {
-    v3 AmbientColor;
-    v3 DiffuseColor;
-    v3 SpecularColor;
+    v3 Ambient;
+    v3 Diffuse;
+    v3 Specular;
     float Shininess;
 };
 
-struct game_data
+struct textured_material
 {
-    bool Initialized;
-
-    //A model?
-    GLuint VertexBuffer;
-    GLuint NormalBuffer;
-    GLuint IndexBuffer;
-    GLuint ColorBuffer;
-    GLuint UVBuffer;
-    int IndexCount;
-//Shader Values
-    GLuint Program;
-    GLuint M;
-    GLuint V;
-    GLuint MV;
-    GLuint MVP;
-    
-    GLuint LightPosition;
-    GLuint LightAmbient;
-    GLuint LightDiffuse;
-    GLuint LightSpecular;
-    GLuint LightPower;
-
-    GLuint MaterialAmbient;
-    GLuint MaterialDiffuse;
-    GLuint MaterialSpecular;
-    GLuint MaterialShine;
-
-    GLuint Texture;
-
-    float BoxRotation;
-
-    camera Camera;
+    //some sort of texture thing
+    GLuint DiffuseMap;
+    v3 Specular;
+    float Shininess;
 };
 
 struct light_texture_shader
@@ -83,55 +51,64 @@ struct light_texture_shader
     GLuint Program;
     GLuint M;
     GLuint V;
-    GLuint MV;
     GLuint MVP;
     
+    GLuint CameraPosition;
     GLuint LightPosition;
-    GLuint DiffuseLight;
+    GLuint LightAmbient;
+    GLuint LightDiffuse;
+    GLuint LightSpecular;
     GLuint LightPower;
-    GLuint AmbientColor;
-    GLuint DiffuseColor;
-    GLuint SpecularColor;
+    
+    GLuint DiffuseTexture;
+    GLuint MaterialSpecular;
+    GLuint MaterialShine;
 };
 
-void CameraStrafe(camera *Camera, float dT, float speed)
+struct model
 {
-    Camera->Position = Camera->Position + speed*dT*Normalize(Cross(Camera->Forward, Camera->Up));   
-}
+    GLfloat *Vertices;
+    GLfloat *Normals;
+    GLushort *Indices;
+    GLfloat *UVs;
+    textured_material *Material;
+    
+    int IndexCount;
+    
+    GLuint VertexBuffer;
+    GLuint NormalBuffer;
+    GLuint IndexBuffer;
+    GLuint ColorBuffer;
+    GLuint UVBuffer;
+};
 
-void CameraMoveForward(camera *Camera, float dT, float speed)
+struct game_object
 {
-    Camera->Position = Camera->Position + speed*dT*Camera->Forward;
-}
+    model *Model;
+    v3 Scale;
+    v3 Position;
+    v3 Axis;
+    float Angle;
+};
 
-void CameraMoveUp(camera *Camera, float dT, float speed)
+struct game_data
 {
-    Camera->Position = Camera->Position + speed*dT*Camera->Up;
-}
+    bool Initialized;
 
-void TurnCamera(camera* Camera, float dX, float dY, float CameraSpeed)
-{
-    {
-	mat3 XRot = MakeRotation3x3(Camera->Up, PI*dX*CameraSpeed);
-	v3 NewForward = XRot*Camera->Forward;
-	Camera->Forward = NewForward;
-    }
+    light_texture_shader LightTextureShader;
+    camera Camera;
 
-    {
-	mat3 YRot = MakeRotation3x3(Cross(Camera->Forward, Camera->Up), PI*dY*CameraSpeed);
-	v3 NewForward = YRot*Camera->Forward;
-	v3 NewUp = YRot*Camera->Up;
-	Camera->Forward = NewForward;
-	Camera->Up = NewUp;
-    }
-}
+    texture BoxTexture;
+    textured_material Material;
+    model BoxModel;
+    
+    //Scene
+    point_light Light;
+    game_object Box;
+    game_object Box2;
 
-void RollCamera(camera *Camera, float dT, float speed)
-{
-    mat3 ZRot = MakeRotation3x3(Camera->Forward, PI*dT*speed);
-    v3 NewUp = ZRot*Camera->Up;
-    Camera->Up = NewUp;
-}
+    float BoxRotation;
+};
 
 void GLErrorShow()
 {
@@ -163,27 +140,16 @@ void GLErrorShow()
     }
 }
 
-mat4 GenerateCameraPerspective(camera Camera)
+texture LoadDDS(const char * filePath)
 {
-    mat4 Projection = MakePerspectiveProjection(Camera.FOV, Camera.Aspect, Camera.Near, Camera.Far);
-    return Projection;
-}
-
-mat4 GenerateCameraView(camera Camera)
-{
-    mat4 View = DirectionView(Camera.Position, Camera.Forward, Camera.Up);
-    return View;
-}
-
-GLuint LoadDDS(const char * filePath)
-{
+    texture NullTexture = {0};
     int8 header[124];
 
     FILE *fp = fopen(filePath, "rb");
     if (fp == 0)
     {
 	printf("File not found: %s", filePath);
-	return 0;
+	return NullTexture;
     }
 
     char fileCode[4];
@@ -192,7 +158,7 @@ GLuint LoadDDS(const char * filePath)
     {
 	fclose(fp);
 	printf("File is not DDS: %s", filePath);
-	return 0;
+	return NullTexture;
     }
 
     fread(&header, 124, 1, fp);
@@ -232,7 +198,7 @@ GLuint LoadDDS(const char * filePath)
     {
 	free(buffer);
 	printf("File not DXT compressed: %s", filePath);
-	return 0;
+	return NullTexture;
     }
 
     GLuint textureID;
@@ -250,33 +216,40 @@ GLuint LoadDDS(const char * filePath)
 	height /= 2;
     }
 
-    free(buffer);
-    return textureID;
+    texture Result = {
+	width,
+	height,
+	textureID,
+	buffer
+    };
+    return Result;
 }
-GLuint LoadBMP(char* filePath)
+
+texture LoadBMP(char* filePath)
 {
+    texture NullTexture = { 0 };
     uint8 header[54];
     uint32 dataPos;
     uint32 width, height;
     uint32 imageSize;
-    char* data;
+    uint8* data;
 
     FILE * file = fopen(filePath, "rb");
     if (!file)
     {
 	printf("File not found: %s\n", filePath);
-	return 0;
+	return NullTexture;
     }
 
     if (fread(header, 1, 54, file) != 54) {
 	printf("Malformed BMP: %s\n", filePath);
-	return 0;
+	return NullTexture;
     }
 
     if (header[0] != 'B' || header[1]!= 'M')
     {
 	printf("Malformed BMP: %s\n", filePath);
-	return 0;
+	return NullTexture;
     }
 
     dataPos = *(int32*)&(header[0x0a]);
@@ -293,7 +266,7 @@ GLuint LoadBMP(char* filePath)
 	dataPos=54;
     }
 
-    data = (char*)malloc(imageSize*sizeof(char));
+    data = (uint8*)malloc(imageSize*sizeof(uint8));
     fread(data, 1, imageSize, file);
     fclose(file);
 
@@ -306,8 +279,14 @@ GLuint LoadBMP(char* filePath)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    free(data);
-    return textureID;
+    //free(data);
+    texture Result = {
+	width,
+	height,
+	textureID,
+	data
+    };
+    return Result;
 }
 
 GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
@@ -388,6 +367,324 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
     return programID;
 }
 
+void Init(platform_data* Platform, game_data *Game)
+{
+    glClearColor(0.0, 0.0, 0.4, 0.0);
+    glFrontFace(GL_CCW);
+    glEnable(GL_CULL_FACE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    GLuint VertexArrayID;
+    glGenVertexArrays(1, &VertexArrayID);
+    glBindVertexArray(VertexArrayID);
+
+    model *BoxModel = &Game->BoxModel;
+	
+    GLfloat vertexBufferData[] = {
+	//Front
+	-1.0f, 1.0f, 1.0f,
+	-1.0f, -1.0f, 1.0f,
+	1.0f, 1.0f, 1.0f,
+	1.0f, -1.0f, 1.0f,
+	//Back
+	1.0f, 1.0f, -1.0f,
+	1.0f, -1.0f, -1.0f,
+	-1.0f, 1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	//Top
+	-1.0f, 1.0f, -1.0f,
+	-1.0f, 1.0f, 1.0f,
+	1.0f, 1.0f, -1.0f,
+	1.0f, 1.0f, 1.0f,
+	//Bottom
+	-1.0f, -1.0f, 1.0f,
+	-1.0f, -1.0f, -1.0f,
+	1.0f, -1.0f, 1.0f,
+	1.0f, -1.0f, -1.0f,
+	//Left
+	-1.0f, 1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, 1.0f, 1.0f,
+	-1.0f, -1.0f, 1.0f,
+	//Right
+	1.0f, 1.0f, 1.0f,
+	1.0f, -1.0f, 1.0f,
+	1.0f, 1.0f, -1.0f,
+	1.0f, -1.0f, -1.0f
+    };
+    size_t vertexBufferSize = sizeof(vertexBufferData);
+    BoxModel->Vertices = (GLfloat*)malloc(vertexBufferSize);
+    memcpy(BoxModel->Vertices, vertexBufferData, vertexBufferSize);
+
+    glGenBuffers(1, &BoxModel->VertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER,
+		 BoxModel->VertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+		 vertexBufferSize,
+		 &BoxModel->Vertices[0],
+		 GL_STATIC_DRAW);
+
+#define FrontNormal 0.0f, 0.0f, 1.0f
+#define BackNormal 0.0f, 0.0f, -1.0f
+#define UpNormal 0.0f, 1.0f, 0.0f
+#define DownNormal 0.0, -1.0f, 0.0f
+#define LeftNormal -1.0f, 0.0f, 0.0f
+#define RightNormal 1.0f, 0.0f, 0.0f
+#define Zero 0.0f, 0.0f, 0.0f
+    GLfloat normalBufferData[] = {
+	FrontNormal, FrontNormal, FrontNormal,FrontNormal,
+	BackNormal, BackNormal, BackNormal,BackNormal,
+	UpNormal, UpNormal, UpNormal,UpNormal,
+	DownNormal, DownNormal, DownNormal,DownNormal,
+	LeftNormal, LeftNormal, LeftNormal,LeftNormal,
+	RightNormal, RightNormal, RightNormal,RightNormal,
+    };
+
+    size_t normalBufferSize = sizeof(normalBufferData);
+    printf("Normal Buffer Size: %ld\n", normalBufferSize);
+    BoxModel->Normals = (GLfloat*)malloc(normalBufferSize);
+    memcpy(BoxModel->Normals, normalBufferData, normalBufferSize);
+	
+    glGenBuffers(1, &BoxModel->NormalBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER,
+		 BoxModel->NormalBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+		 normalBufferSize,
+		 &BoxModel->Normals[0],
+		 GL_STATIC_DRAW);
+	
+    GLushort indexBufferData[] = {
+	0,1,2,
+	1,3,2,
+	4,5,6,
+	5,7,6,
+	8,9,10,
+	9,11,10,
+	12,13,14,
+	13,15,14,
+	16,17,18,
+	17,19,18,
+	20,21,22,
+	21,23,22
+    };
+    BoxModel->IndexCount = sizeof(indexBufferData)/sizeof(GLushort);
+
+    size_t indexBufferSize = sizeof(indexBufferData);
+    BoxModel->Indices = (GLushort*)malloc(indexBufferSize);
+    memcpy(BoxModel->Indices, indexBufferData, indexBufferSize);
+
+    glGenBuffers(1, &BoxModel->IndexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+		 BoxModel->IndexBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+		 indexBufferSize,
+		 &BoxModel->Indices[0],
+		 GL_STATIC_DRAW);
+
+#if DIE
+    GLfloat OneThird = 1.0f/3.0f;
+    GLfloat TwoThirds = 2.0f/3.0f;
+    GLfloat uvBufferData[] = {
+	0.0f, 0.0f,
+	0.0f, OneThird,
+	OneThird, 0.0f,
+	OneThird, OneThird,
+
+	TwoThirds, OneThird,
+	TwoThirds, TwoThirds,
+	1.0f, OneThird,
+	1.0f, TwoThirds,
+
+	OneThird, 0.0f,
+	OneThird, OneThird,
+	TwoThirds, 0.0f,
+	TwoThirds, OneThird,
+
+	OneThird, OneThird,
+	OneThird, TwoThirds,
+	TwoThirds, OneThird,
+	TwoThirds, TwoThirds,
+
+	TwoThirds,0.0f,
+	TwoThirds,OneThird,
+	1.0f, 0.0f,
+	1.0f, OneThird,
+
+	0.0f, OneThird,
+	0.0f, TwoThirds,
+	OneThird, OneThird,
+	OneThird, TwoThirds,
+    };
+#elif defined(CONTAINER)
+#define FACE					\
+    0.0f, 0.0f,					\
+	0.0f, 1.0f,				\
+	1.0f, 0.0f,				\
+	1.0f, 1.0f				\
+	
+	
+    GLfloat uvBufferData[] = {
+	FACE, FACE, FACE, FACE, FACE, FACE
+    };
+#undef FACE
+
+#endif
+    size_t uvBufferSize = sizeof(uvBufferData);
+    BoxModel->UVs = (GLfloat*)malloc(uvBufferSize);
+    memcpy(BoxModel->UVs, uvBufferData, uvBufferSize);
+	
+    glGenBuffers(1, &BoxModel->UVBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, BoxModel->UVBuffer);
+    glBufferData(GL_ARRAY_BUFFER, uvBufferSize, BoxModel->UVs, GL_STATIC_DRAW);
+
+#if DIE
+    Game->BoxTexture = LoadDDS("uvtemplate.dds");
+#elif defined(CONTAINER)
+    Game->BoxTexture = LoadDDS("container.dds");
+#endif
+    textured_material *BoxMaterial = &Game->Material;
+    BoxModel->Material = BoxMaterial;
+    BoxMaterial->DiffuseMap = Game->BoxTexture.Handle;
+    BoxMaterial->Specular = V3(1.0f, 1.0f, 1.0f);
+    BoxMaterial->Shininess = 32.0f;
+
+    light_texture_shader Shader;
+    Shader.Program = LoadShaders("Shaders/lightTextureShader.vert", "Shaders/lightTextureShader.frag");
+    Shader.M = glGetUniformLocation(Shader.Program, "M");
+    Shader.V = glGetUniformLocation(Shader.Program, "V");
+    Shader.MVP = glGetUniformLocation(Shader.Program, "MVP");
+	
+    Shader.CameraPosition = glGetUniformLocation(Shader.Program, "CameraPosition");
+    
+    Shader.LightPower = glGetUniformLocation(Shader.Program, "Light.Power");
+    Shader.LightPosition = glGetUniformLocation(Shader.Program, "Light.Position");
+    Shader.LightAmbient = glGetUniformLocation(Shader.Program, "Light.Ambient");
+    Shader.LightDiffuse = glGetUniformLocation(Shader.Program, "Light.Diffuse");
+    Shader.LightSpecular = glGetUniformLocation(Shader.Program, "Light.Specular");
+	
+    Shader.DiffuseTexture = glGetUniformLocation(Shader.Program, "Material.Diffuse");
+    Shader.MaterialSpecular = glGetUniformLocation(Shader.Program, "Material.Specular");
+    Shader.MaterialShine = glGetUniformLocation(Shader.Program, "Material.Shine");
+
+    Game->LightTextureShader = Shader;
+	
+    camera Camera = {0};
+    Camera.FOV = PI*0.25f;
+    Camera.Aspect = 800.0f/600.0f;
+    Camera.Near = 0.01f;
+    Camera.Far = 1000.0f;
+    Camera.Position = V3(0.0f, 5.0f, 5.0f);
+    Camera.Forward = V3(0, -1.0f,-1.0f);
+    Camera.Up = V3(0,1,0);
+    Game->Camera = Camera;
+
+    point_light Light = { 0 };
+    Light.Position = V3(4.0f, 4.0f, 4.0f);
+    Light.Ambient = V3(0.1f, 0.1f, 0.1f);
+    Light.Diffuse = V3(0.5f, 0.5f, 0.5f);
+    Light.Specular = V3(1.0f, 1.0f, 1.0f);
+    Light.Power = 100.0f;
+    
+    game_object Box = { 0 };
+    Box.Model = &Game->BoxModel;
+
+    Box.Scale = V3(1.0f, 1.0f, 1.0f);
+    Box.Position = V3(0.0f, 0.0f, 0.0f);
+    Box.Axis = V3(0.25f, 1.0f, .5f);
+    Box.Angle = 0.0f;
+    Game->Box = Box;
+
+    game_object Box2 = { 0 };
+    Box2.Model = &Game->BoxModel;
+    Box2.Scale = V3(0.5f, 0.5f, 0.5f);
+    Box2.Position = V3(2.0f, 0.0f, 0.0f);
+    Box2.Axis = V3(0.0f, 1.0f, 0.0f);
+    Box2.Angle = PI*0.25f;
+    Game->Box2 = Box2;
+    
+    Game->Initialized = true;
+}
+
+void LoadLightTextureShader(light_texture_shader Shader, point_light Light)
+{
+//  glUserProgram(Shader.Program);
+//  glUniform3f/
+}
+
+void RenderObject(game_object GameObject, camera Camera, mat4 Projection, mat4 View, light_texture_shader Shader)
+{
+    mat4 Rotation = MakeRotation(GameObject.Axis, GameObject.Angle);
+    mat4 Scale = MakeScale(GameObject.Scale);
+    mat4 Translation = MakeTranslation(GameObject.Position);
+    mat4 Model = Translation * Rotation * Scale;
+    mat4 MVP = Projection * View * Model;
+    
+    glUseProgram(Shader.Program);
+    glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
+    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
+    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+
+    glUniform3f(Shader.CameraPosition, Camera.Position.x, Camera.Position.y, Camera.Position.z);
+    
+    glUniform3f(Shader.LightPosition, 4.0f, 4.0f, 4.0f);
+    glUniform3f(Shader.LightAmbient, 0.1f, 0.1f, 0.1f);
+    glUniform3f(Shader.LightDiffuse, 0.5f, 0.5f, 0.5f);
+    glUniform3f(Shader.LightSpecular, 1.0f, 1.0f, 1.0f);
+    glUniform1f(Shader.LightPower, 100.f);
+	    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, GameObject.Model->Material->DiffuseMap);
+    glUniform1i(Shader.DiffuseTexture, 0);
+
+    textured_material *Material = GameObject.Model->Material;
+    v3 MaterialSpec = Material->Specular;
+    glUniform3f(Shader.MaterialSpecular, MaterialSpec.x, MaterialSpec.y, MaterialSpec.z);
+    glUniform1f(Shader.MaterialShine, Material->Shininess);
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->VertexBuffer);
+    glVertexAttribPointer(0,
+			  3,
+			  GL_FLOAT,
+			  GL_FALSE,
+			  0,
+			  (void*)0
+	);
+    
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->UVBuffer);
+    glVertexAttribPointer(1,
+			  2,
+			  GL_FLOAT,
+			  GL_FALSE,
+			  0,
+			  (void*)0
+	);
+    
+    glEnableVertexAttribArray(2);
+    glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->NormalBuffer);
+    glVertexAttribPointer(2,
+			  3,
+			  GL_FLOAT,
+			  GL_FALSE,
+			  0,
+			  (void*)0
+	);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GameObject.Model->IndexBuffer);
+    glDrawElements(GL_TRIANGLES,
+		   GameObject.Model->IndexCount,
+		   GL_UNSIGNED_SHORT,
+		   (void*)0
+	);
+    
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+}
+
 void UpdateAndRender(platform_data* Platform)
 {    
     game_data* Game = (game_data*)(((char*)Platform->MainMemory)+0);
@@ -398,175 +695,7 @@ void UpdateAndRender(platform_data* Platform)
 
     if (!Game->Initialized)
     {
-	glClearColor(0.0, 0.0, 0.4, 0.0);
-	glFrontFace(GL_CCW);
-	glEnable(GL_CULL_FACE);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
-	
-	GLfloat vertexBufferData[] = {
-	    //Front
-	    -1.0f, 1.0f, 1.0f,
-	    -1.0f, -1.0f, 1.0f,
-	    1.0f, 1.0f, 1.0f,
-	    1.0f, -1.0f, 1.0f,
-	    //Back
-	    1.0f, 1.0f, -1.0f,
-	    1.0f, -1.0f, -1.0f,
-	    -1.0f, 1.0f, -1.0f,
-	    -1.0f, -1.0f, -1.0f,
-	    //Top
-	    -1.0f, 1.0f, -1.0f,
-	    -1.0f, 1.0f, 1.0f,
-	    1.0f, 1.0f, -1.0f,
-	    1.0f, 1.0f, 1.0f,
-	    //Bottom
-	    -1.0f, -1.0f, 1.0f,
-	    -1.0f, -1.0f, -1.0f,
-	    1.0f, -1.0f, 1.0f,
-	    1.0f, -1.0f, -1.0f,
-	    //Left
-	    -1.0f, 1.0f, -1.0f,
-	    -1.0f, -1.0f, -1.0f,
-	    -1.0f, 1.0f, 1.0f,
-	    -1.0f, -1.0f, 1.0f,
-	    //Right
-	    1.0f, 1.0f, 1.0f,
-	    1.0f, -1.0f, 1.0f,
-	    1.0f, 1.0f, -1.0f,
-	    1.0f, -1.0f, -1.0f
-	};
-
-	glGenBuffers(1, &Game->VertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER,
-		     Game->VertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER,
-		     sizeof(vertexBufferData),
-		     vertexBufferData,
-		     GL_STATIC_DRAW);
-
-#define FrontNormal 0.0f, 1.0f, 0.0f
-#define UpNormal 0.0f, 1.0f, 0.0f
-#define DownNormal 0.0, -1.0f, 0.0f
-#define LeftNormal -1.0f, 0.0f, 0.0f
-#define RightNormal 1.0f, 0.0f, 0.0f
-#define BackNormal 0.0f, 0.0f, -1.0f
-	GLfloat normalBufferData[] = {
-	    FrontNormal, FrontNormal, FrontNormal,FrontNormal,
-	    BackNormal, BackNormal, BackNormal,BackNormal,
-	    UpNormal, UpNormal, UpNormal,UpNormal,
-	    DownNormal, DownNormal, DownNormal,DownNormal,
-	    LeftNormal, LeftNormal, LeftNormal,LeftNormal,
-	    RightNormal, RightNormal, RightNormal,RightNormal,
-	};
-
-	glGenBuffers(1, &Game->NormalBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER,
-		     Game->NormalBuffer);
-	glBufferData(GL_ARRAY_BUFFER,
-		     sizeof(normalBufferData),
-		     &normalBufferData[0],
-		     GL_STATIC_DRAW);
-	
-	GLushort indexBufferData[] = {
-	    0,1,2,
-	    1,3,2,
-	    4,5,6,
-	    5,7,6,
-	    8,9,10,
-	    9,11,10,
-	    12,13,14,
-	    13,15,14,
-	    16,17,18,
-	    17,19,18,
-	    20,21,22,
-	    21,23,22
-	};
-	Game->IndexCount = sizeof(indexBufferData)/sizeof(GLushort);
-
-	glGenBuffers(1, &Game->IndexBuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
-		     Game->IndexBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-		     sizeof(indexBufferData),
-		     &indexBufferData[0],
-		     GL_STATIC_DRAW);
-
-	GLfloat OneThird = 1.0f/3.0f;
-	GLfloat TwoThirds = 2.0f/3.0f;
-	GLfloat uvBufferData[] = {
-	    0.0f, 0.0f,
-	    0.0f, OneThird,
-	    OneThird, 0.0f,
-	    OneThird, OneThird,
-
-	    TwoThirds, OneThird,
-	    TwoThirds, TwoThirds,
-	    1.0f, OneThird,
-	    1.0f, TwoThirds,
-
-	    OneThird, 0.0f,
-	    OneThird, OneThird,
-	    TwoThirds, 0.0f,
-	    TwoThirds, OneThird,
-
-	    OneThird, OneThird,
-	    OneThird, TwoThirds,
-	    TwoThirds, OneThird,
-	    TwoThirds, TwoThirds,
-
-	    TwoThirds,0.0f,
-	    TwoThirds,OneThird,
-	    1.0f, 0.0f,
-	    1.0f, OneThird,
-
-	    0.0f, OneThird,
-	    0.0f, TwoThirds,
-	    OneThird, OneThird,
-	    OneThird, TwoThirds,
-	};
-
-	glGenBuffers(1, &Game->UVBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, Game->UVBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(uvBufferData), uvBufferData, GL_STATIC_DRAW);
-	
-	Game->Program = LoadShaders("lightTextureShader.vert", "lightTextureShader.frag");
-	Game->M = glGetUniformLocation(Game->Program, "M");
-	Game->V = glGetUniformLocation(Game->Program, "V");
-	Game->MV = glGetUniformLocation(Game->Program, "MV");
-	Game->MVP = glGetUniformLocation(Game->Program, "MVP");
-	
-	Game->LightPower = glGetUniformLocation(Game->Program, "Light.Power");
-	Game->LightPosition = glGetUniformLocation(Game->Program, "Light.Position");
-	Game->LightAmbient = glGetUniformLocation(Game->Program, "Light.Ambient");
-	Game->LightDiffuse = glGetUniformLocation(Game->Program, "Light.Diffuse");
-	Game->LightSpecular = glGetUniformLocation(Game->Program, "Light.Specular");
-
-	Game->MaterialAmbient = glGetUniformLocation(Game->Program, "Material.Ambient");
-	Game->MaterialDiffuse = glGetUniformLocation(Game->Program, "Material.Diffuse");
-	Game->MaterialSpecular = glGetUniformLocation(Game->Program, "Material.Specular");
-	Game->MaterialShine = glGetUniformLocation(Game->Program, "Material.Shine");
-
-	
-	Game->Texture = LoadDDS("uvtemplate.dds");
-
-	camera Camera = {0};
-	Camera.FOV = PI*0.25f;
-	Camera.Aspect = 800.0f/600.0f;
-	Camera.Near = 0.01f;
-	Camera.Far = 1000.0f;
-
-	Camera.Position = V3(0.0f, 5.0f, 5.0f);
-	Camera.Forward = V3(0, -1.0f,-1.0f);
-	Camera.Up = V3(0,1,0);
-	
-	Game->Camera = Camera;
-	Game->Initialized = true;
+	Init(Platform, Game);
     }
 
     if (Keyboard.Left.Down)
@@ -610,81 +739,12 @@ void UpdateAndRender(platform_data* Platform)
 	       Keyboard.RStick.Y / 100.0f,
 	       Input->dT*1.0f);
 
-    //Game->BoxRotation += PI*(1.0f/120.0f);
+//    Game->Box.Angle += PI*(1.0f/120.0f);
 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     mat4 Projection = GenerateCameraPerspective(Game->Camera);
     mat4 View = GenerateCameraView(Game->Camera);
 
-    mat4 Model = Identity4x4();
-    v3 ModelAxis = V3(0.25f, 1.0f, .5f);
-    mat4 Rotation = MakeRotation(ModelAxis, Game->BoxRotation);
-    mat4 Scale = MakeScale(V3(1.0f, 1.0f, 1.0f));
-    mat4  Translation = MakeTranslation(V3(0.0f, 0.0f, 0.0f));
-    Model = Translation * Rotation * Scale;
-    mat4 MV = View * Model;
-    mat4 MVP = Projection * View * Model;
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glUseProgram(Game->Program);
-    glUniformMatrix4fv(Game->M, 1, GL_FALSE, &Model.E[0][0]);
-    glUniformMatrix4fv(Game->V, 1, GL_FALSE, &View.E[0][0]);
-    glUniformMatrix4fv(Game->MV, 1, GL_FALSE, &MV.E[0][0]);
-    glUniformMatrix4fv(Game->MVP, 1, GL_FALSE, &MVP.E[0][0]);
-    
-    glUniform3f(Game->LightPosition, 4.0f, 4.0f, 4.0f);
-    glUniform3f(Game->LightAmbient, 0.1f, 0.1f, 0.1f);
-    glUniform3f(Game->LightDiffuse, 0.5f, 0.5f, 0.5f);
-    glUniform3f(Game->LightSpecular, 1.0f, 1.0f, 1.0f);
-    glUniform1f(Game->LightPower, 40.f);
-
-    glUniform3f(Game->MaterialAmbient, 1.0f, 1.0f, 1.0f);
-    glUniform3f(Game->MaterialDiffuse, 1.0f, 1.0f, 1.0f);
-    glUniform3f(Game->MaterialSpecular, 1.0f, 1.0f, 1.0f);
-    glUniform1f(Game->MaterialShine, 5.0f);
-    
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Game->Texture);
-    glUniform1i(Game->Texture, 0);
-
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, Game->VertexBuffer);
-    glVertexAttribPointer(0,
-			  3,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
-    
-    glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, Game->UVBuffer);
-    glVertexAttribPointer(1,
-			  2,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
-    
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ARRAY_BUFFER, Game->NormalBuffer);
-    glVertexAttribPointer(2,
-			  3,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
-    
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Game->IndexBuffer);
-    glDrawElements(
-	GL_TRIANGLES,
-	Game->IndexCount,
-	GL_UNSIGNED_SHORT,
-	(void*)0);
-    
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
+    RenderObject(Game->Box, Game->Camera, Projection, View, Game->LightTextureShader);
+    RenderObject(Game->Box2, Game->Camera, Projection, View, Game->LightTextureShader);
 }

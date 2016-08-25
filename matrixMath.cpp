@@ -1,6 +1,8 @@
 #ifndef MATRIXMATH_CPP__
 #define MATRIXMATH_CPP__
 
+#include "math.cpp"
+
 #include <math.h>
 #include <stdio.h>
 
