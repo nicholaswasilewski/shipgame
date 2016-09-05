@@ -81,7 +81,24 @@ v3 V3(float x, float y, float z)
     Result.z = z;
     return Result;
 }
-     
+ 
+
+void PrintVector(v3 v)
+{
+    printf("X:%f, Y:%f, Z:%f\n", v.x, v.y, v.z); 
+}
+
+void PrintMatrix(mat4 m)
+{
+    printf("%.4f %.4f %.4f %.4f\n"
+           "%.4f %.4f %.4f %.4f\n"
+           "%.4f %.4f %.4f %.4f\n"
+           "%.4f %.4f %.4f %.4f\n",
+	   (double)m.x0, (double)m.y0, (double)m.z0, (double)m.w0,
+	   (double)m.x1, (double)m.y1, (double)m.z1, (double)m.w1,
+	   (double)m.x2, (double)m.y2, (double)m.z2, (double)m.w2,
+	   (double)m.x3, (double)m.y3, (double)m.z3, (double)m.w3);
+}    
 
 const v3 Vec3UnitX = V3(1.0f,0.0f,0.0f);
 const v3 Vec3UnitY = V3(0.0f,1.0f,0.0f);
@@ -289,8 +306,8 @@ mat3 operator*(mat3 m1, mat3 m2)
 	x1, y1, z1,
 	x2, y2, z2
     };
-    return Result;
-}
+    return Result;}
+
 
 mat4 operator*(mat4 m1, mat4 m2)
 {
@@ -317,7 +334,7 @@ mat4 operator*(mat4 m1, mat4 m2)
     w0 = m1.w0*m2.x0 + m1.w1*m2.y0 + m1.w2*m2.z0 + m1.w3*m2.w0;
     w1 = m1.w0*m2.x1 + m1.w1*m2.y1 + m1.w2*m2.z1 + m1.w3*m2.w1;
     w2 = m1.w0*m2.x2 + m1.w1*m2.y2 + m1.w2*m2.z2 + m1.w3*m2.w2;
-    w3 = m1.w0*m2.w3 + m1.w1*m2.y3 + m1.w2*m2.z3 + m1.w3*m2.w3;
+    w3 = m1.w0*m2.x3 + m1.w1*m2.y3 + m1.w2*m2.z3 + m1.w3*m2.w3;
     
     mat4 Result = {
 	x0, y0, z0, w0,
@@ -471,29 +488,28 @@ mat4 Identity4x4() {
 
 mat4 DirectionView(v3 Position, v3 Direction, v3 Up)
 {
-    v3 Z = Normalize(-Direction);
+    v3 Z = Normalize(Direction);
     v3 X = Normalize(Cross(Up, Z));
     v3 Y = Cross(Z, X);
-    
+
     mat4 View = {
 	X.x, Y.x, Z.x, 0,
 	X.y, Y.y, Z.y, 0,
 	X.z, Y.z, Z.z, 0,
-	-Dot(X, Position), -Dot(Y, Position), -Dot(Z, Position), 1
+	-Dot(X, Position), -Dot(Y, Position), -Dot(Z, Position), 1.0f
     };
-
     return View;
 }
 
 mat4 LookAtView(v3 Position, v3 Target, v3 Up)
 {
-    return DirectionView(Position, Target-Position, Up);
+    return DirectionView(Position, Position-Target, Up);
 }
 
-mat4 MakeOrthoProjection(float HalfWidth, float HalfHeight, float Near, float Far)
+mat4 MakeOrthographicProjection(float HalfHeight, float Aspect, float Near, float Far)
 {
     mat4 Result = {
-	1.0f/HalfWidth, 0.0f, 0.0f, 0.0f,
+	1.0f/HalfHeight/Aspect, 0.0f, 0.0f, 0.0f,
 	0.0f, 1.0f/HalfHeight, 0.0f, 0.0f,
 	0.0f, 0.0f, -2.0f/(Far-Near), 0.0f,
 	0.0f, 0.0f, -(Far+Near)/(Far-Near), 1.0f
@@ -503,31 +519,36 @@ mat4 MakeOrthoProjection(float HalfWidth, float HalfHeight, float Near, float Fa
 
 mat4 MakePerspectiveProjection(float Fov, float Aspect, float Near, float Far)
 {
-    
+/*
     mat4 Result = {
-	1.0f / (float)tan(Fov*Aspect/2.0f), 0.0f, 0.0f, 0.0f,
-	0.0f, 1.0f / (float)tan(Fov/2.0f), 0.0f, 0.0f,
+	Near/400, 0.0f, 0.0f, 0.0f,
+	0.0f, Near / 300, 0.0f, 0.0f,
 	0.0f, 0.0f, -(Far+Near)/(Far-Near), -1.0f,
-	0.0f, 0.0f, -2*(Near*Far)/(Far-Near), 1.0f
+	0.0f, 0.0f, -2.0f*(Near*Far)/(Far-Near), 0.0f
     };
     return Result;
-}
+*/
 
-void PrintVector(v3 v)
-{
-    printf("X:%f, Y:%f, Z:%f\n", v.x, v.y, v.z); 
-}
+    float yScale = 1.0f / (float)tan(Fov/2.0f);
+    float xScale = yScale / Aspect;
+    float nearmfar = Near - Far;
+    mat4 Result = {
+	xScale, 0, 0, 0,
+	0, yScale, 0, 0,
+	0, 0, (Far+Near)/nearmfar, -1,
+	0, 0, 2*Far*Near/nearmfar, 0
+    };
 
-void PrintMatrix(mat4 m)
-{
-    printf("%.4f %.4f %.4f %.4f\n"
-           "%.4f %.4f %.4f %.4f\n"
-           "%.4f %.4f %.4f %.4f\n"
-           "%.4f %.4f %.4f %.4f\n",
-	   (double)m.x0, (double)m.y0, (double)m.z0, (double)m.w0,
-	   (double)m.x1, (double)m.y1, (double)m.z1, (double)m.w1,
-	   (double)m.x2, (double)m.y2, (double)m.z2, (double)m.w2,
-	   (double)m.x3, (double)m.y3, (double)m.z3, (double)m.w3);
+    return Result;
+/*
+    mat4 Result = {
+	1.0f / Aspect*(float)tan(Fov/2.0f), 0.0f, 0.0f, 0.0f,
+	0.0f, 1.0f / (float)tan(Fov/2.0f), 0.0f, 0.0f,
+	0.0f, 0.0f, -(Far+Near)/(Far-Near), -1.0f,
+	0.0f, 0.0f, -2.0f*(Near*Far)/(Far-Near), 0.0f
+    };
+    return Result;
+*/
 }
 
 #endif

@@ -16,7 +16,7 @@ uniform mat4 MVP;
 uniform mat4 V;
 uniform mat4 M;
 
-layout(location = 0) in vec3 vertexPosition_model;
+layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec2 vertexUV;
 layout(location = 2) in vec3 vertexNormal;
 
@@ -26,8 +26,9 @@ out vec3 Normal;
 
 void main()
 {
-    gl_Position = MVP * vec4(vertexPosition_model,1);
-    FragPos = vec3(M*vec4(vertexPosition_model, 1));
-    Normal = mat3(transpose(inverse(M))) * vertexNormal;
+    gl_Position = MVP * vec4(vertexPosition,1.0f);
+    FragPos = vec3(M*vec4(vertexPosition, 1.0f));
+    Normal = mat3(M) * vertexNormal;
+    //Normal = mat3(transpose(inverse(M)))*vertexNormal;
     UV = vertexUV;
 }

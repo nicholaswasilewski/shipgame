@@ -1,7 +1,7 @@
 #include "platform.h"
 #include "math.cpp"
 #include "matrixMath.cpp"
-
+#include "glHelper.cpp"
 #include "camera.cpp"
 #include "loadFBX.cpp"
 
@@ -30,20 +30,82 @@ struct texture
     uint8* Data;
 };
 
-struct material
+struct color_material
 {
     v3 Ambient;
     v3 Diffuse;
     v3 Specular;
-    float Shininess;
+    v3 Emissive;
+    float Shine;
 };
 
-struct textured_material
+struct point_light_binding
+{
+    GLuint Position;
+    GLuint Ambient;
+    GLuint Diffuse;
+    GLuint Specular;
+    GLuint Power;
+};
+
+point_light_binding CreatePointLightBinding(GLuint ShaderProgram)
+{
+    point_light_binding LightBinding = { 0 };
+    LightBinding.Power = glGetUniformLocation(ShaderProgram, "Light.Power");
+    LightBinding.Position = glGetUniformLocation(ShaderProgram, "Light.Position");
+    LightBinding.Ambient = glGetUniformLocation(ShaderProgram, "Light.Ambient");
+    LightBinding.Diffuse = glGetUniformLocation(ShaderProgram, "Light.Diffuse");
+    LightBinding.Specular = glGetUniformLocation(ShaderProgram, "Light.Specular");
+    return LightBinding;
+}
+
+struct material_binding
+{
+    GLuint Diffuse;
+    GLuint Specular;
+    GLuint Emissive;
+    GLuint Shine;
+};
+
+material_binding CreateMaterialBinding(GLuint ShaderProgram)
+{
+    material_binding MaterialBinding = {0};
+    MaterialBinding.Diffuse = glGetUniformLocation(ShaderProgram, "Material.Diffuse");
+    MaterialBinding.Specular = glGetUniformLocation(ShaderProgram, "Material.Specular");
+    MaterialBinding.Emissive = glGetUniformLocation(ShaderProgram, "Material.Emissive");
+    MaterialBinding.Shine = glGetUniformLocation(ShaderProgram, "Material.Shine");
+
+    return MaterialBinding;
+};
+
+void SetPointLightUniforms(point_light_binding LightBinding, point_light Light)
+{
+    glUniformVec3f(LightBinding.Position, Light.Position);
+    glUniformVec3f(LightBinding.Ambient, Light.Ambient);
+    glUniformVec3f(LightBinding.Diffuse, Light.Diffuse);
+    glUniformVec3f(LightBinding.Specular, Light.Specular);
+    glUniform1f(LightBinding.Power, 100.f);
+}
+
+struct color_shader
+{
+    GLuint Program;
+    GLuint M;
+    GLuint V;
+    GLuint MVP;
+
+    GLuint CameraPosition;
+
+    point_light_binding PointLight;
+    material_binding Material;
+};
+
+struct texture_material
 {
     //some sort of texture thing
     GLuint DiffuseMap;
     v3 Specular;
-    float Shininess;
+    float Shine;
 };
 
 struct light_texture_shader
@@ -54,12 +116,9 @@ struct light_texture_shader
     GLuint MVP;
     
     GLuint CameraPosition;
-    GLuint LightPosition;
-    GLuint LightAmbient;
-    GLuint LightDiffuse;
-    GLuint LightSpecular;
-    GLuint LightPower;
-    
+
+    point_light_binding PointLight;
+    material_binding Material;
     GLuint DiffuseTexture;
     GLuint MaterialSpecular;
     GLuint MaterialShine;
@@ -71,7 +130,9 @@ struct model
     GLfloat *Normals;
     GLushort *Indices;
     GLfloat *UVs;
-    textured_material *Material;
+    GLfloat *Colors;
+    
+    texture_material *Material;
     
     int IndexCount;
     
@@ -80,6 +141,18 @@ struct model
     GLuint IndexBuffer;
     GLuint ColorBuffer;
     GLuint UVBuffer;
+};
+
+struct color_model
+{
+    model Model;
+    color_material *Material;
+};
+
+struct texture_model
+{
+    model Model;
+    texture_material *Material;
 };
 
 struct game_object
@@ -91,21 +164,35 @@ struct game_object
     float Angle;
 };
 
+struct color_game_object
+{
+    color_model *Model;
+    v3 Scale;
+    v3 Position;
+    v3 Axis;
+    float Angle;
+};
+
 struct game_data
 {
     bool Initialized;
 
     light_texture_shader LightTextureShader;
+    color_shader ColorShader;
     camera Camera;
 
     texture BoxTexture;
-    textured_material Material;
+    texture_material BoxMaterial;
+    color_material ColorMaterial;
     model BoxModel;
+    color_model ColorBoxModel;
     
     //Scene
     point_light Light;
     game_object Box;
     game_object Box2;
+    game_object LightBox;
+    color_game_object ColorBox;
 
     float BoxRotation;
 };
@@ -371,9 +458,10 @@ void Init(platform_data* Platform, game_data *Game)
 {
     glClearColor(0.0, 0.0, 0.4, 0.0);
     glFrontFace(GL_CCW);
-    glEnable(GL_CULL_FACE);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//    glEnable(GL_CULL_FACE);
+    glPolygonMode(GL_FRONT, GL_FILL);
+//    glPolygonMode(GL_BACK, GL_LINE);
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     GLuint VertexArrayID;
@@ -381,7 +469,6 @@ void Init(platform_data* Platform, game_data *Game)
     glBindVertexArray(VertexArrayID);
 
     model *BoxModel = &Game->BoxModel;
-	
     GLfloat vertexBufferData[] = {
 	//Front
 	-1.0f, 1.0f, 1.0f,
@@ -443,7 +530,6 @@ void Init(platform_data* Platform, game_data *Game)
     };
 
     size_t normalBufferSize = sizeof(normalBufferData);
-    printf("Normal Buffer Size: %ld\n", normalBufferSize);
     BoxModel->Normals = (GLfloat*)malloc(normalBufferSize);
     memcpy(BoxModel->Normals, normalBufferData, normalBufferSize);
 	
@@ -544,11 +630,21 @@ void Init(platform_data* Platform, game_data *Game)
 #elif defined(CONTAINER)
     Game->BoxTexture = LoadDDS("container.dds");
 #endif
-    textured_material *BoxMaterial = &Game->Material;
+    texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxModel->Material = BoxMaterial;
     BoxMaterial->DiffuseMap = Game->BoxTexture.Handle;
     BoxMaterial->Specular = V3(1.0f, 1.0f, 1.0f);
-    BoxMaterial->Shininess = 32.0f;
+    BoxMaterial->Shine = 60.0f;
+
+    color_model *ColorBoxModel = &Game->ColorBoxModel;
+    ColorBoxModel->Model = *BoxModel;
+
+    color_material *ColorMaterial = &Game->ColorMaterial;
+    ColorBoxModel->Material = ColorMaterial;
+    ColorMaterial->Diffuse = V3(0.0f, 0.0f, 0.0f);
+    ColorMaterial->Specular = V3(0.0f, 0.0f, 0.0f);
+    ColorMaterial->Emissive = V3(1.0f, 1.0f, 1.0f);
+    ColorMaterial->Shine = 0.0f;
 
     light_texture_shader Shader;
     Shader.Program = LoadShaders("Shaders/lightTextureShader.vert", "Shaders/lightTextureShader.frag");
@@ -557,26 +653,35 @@ void Init(platform_data* Platform, game_data *Game)
     Shader.MVP = glGetUniformLocation(Shader.Program, "MVP");
 	
     Shader.CameraPosition = glGetUniformLocation(Shader.Program, "CameraPosition");
-    
-    Shader.LightPower = glGetUniformLocation(Shader.Program, "Light.Power");
-    Shader.LightPosition = glGetUniformLocation(Shader.Program, "Light.Position");
-    Shader.LightAmbient = glGetUniformLocation(Shader.Program, "Light.Ambient");
-    Shader.LightDiffuse = glGetUniformLocation(Shader.Program, "Light.Diffuse");
-    Shader.LightSpecular = glGetUniformLocation(Shader.Program, "Light.Specular");
+    Shader.PointLight = CreatePointLightBinding(Shader.Program);
 	
     Shader.DiffuseTexture = glGetUniformLocation(Shader.Program, "Material.Diffuse");
     Shader.MaterialSpecular = glGetUniformLocation(Shader.Program, "Material.Specular");
     Shader.MaterialShine = glGetUniformLocation(Shader.Program, "Material.Shine");
-
     Game->LightTextureShader = Shader;
+
+    color_shader ColorShader;
+    ColorShader.Program = LoadShaders("Shaders/vertexShader.vert", "Shaders/fragmentShader.frag");
+    ColorShader.M = glGetUniformLocation(ColorShader.Program, "M");
+    ColorShader.V = glGetUniformLocation(ColorShader.Program, "V");
+    ColorShader.MVP = glGetUniformLocation(ColorShader.Program, "MVP");
+
+    ColorShader.CameraPosition = glGetUniformLocation(ColorShader.Program, "CameraPosition");
+    ColorShader.PointLight = CreatePointLightBinding(ColorShader.Program);
+
+    ColorShader.Material.Diffuse = glGetUniformLocation(ColorShader.Program, "Material.Diffuse");
+    ColorShader.Material.Specular = glGetUniformLocation(ColorShader.Program, "Material.Specular");
+    ColorShader.Material.Emissive = glGetUniformLocation(ColorShader.Program, "Material.Emissive");
+    ColorShader.Material.Shine = glGetUniformLocation(ColorShader.Program, "Material.Shine");
+    Game->ColorShader = ColorShader;
 	
     camera Camera = {0};
-    Camera.FOV = PI*0.25f;
+    Camera.FOV = PI*.5f;
     Camera.Aspect = 800.0f/600.0f;
-    Camera.Near = 0.01f;
+    Camera.Near = 0.001f;
     Camera.Far = 1000.0f;
-    Camera.Position = V3(0.0f, 5.0f, 5.0f);
-    Camera.Forward = V3(0, -1.0f,-1.0f);
+    Camera.Position = V3(0.0f, 0.0f, 5.0f);
+    Camera.Forward = Normalize(V3(0.0f, 0.0f,-1.0f));
     Camera.Up = V3(0,1,0);
     Game->Camera = Camera;
 
@@ -586,6 +691,7 @@ void Init(platform_data* Platform, game_data *Game)
     Light.Diffuse = V3(0.5f, 0.5f, 0.5f);
     Light.Specular = V3(1.0f, 1.0f, 1.0f);
     Light.Power = 100.0f;
+    Game->Light = Light;
     
     game_object Box = { 0 };
     Box.Model = &Game->BoxModel;
@@ -599,21 +705,85 @@ void Init(platform_data* Platform, game_data *Game)
     game_object Box2 = { 0 };
     Box2.Model = &Game->BoxModel;
     Box2.Scale = V3(0.5f, 0.5f, 0.5f);
-    Box2.Position = V3(2.0f, 0.0f, 0.0f);
+    Box2.Position = V3(4.0f, 0.0f, 0.0f);
     Box2.Axis = V3(0.0f, 1.0f, 0.0f);
     Box2.Angle = PI*0.25f;
     Game->Box2 = Box2;
+
+    game_object LightBox = { 0 };
+    LightBox.Model = &Game->BoxModel;
+    LightBox.Scale = V3(0.5f, 0.5f, 0.5f);
+    LightBox.Position = V3(-4.0f, 0.0f, 0.0f);
+    LightBox.Axis = V3(0.0f, 1.0f, 0.0f);
+    LightBox.Angle = 0.0f;
+    Game->LightBox = LightBox;
+
+    color_game_object ColorBox = { 0 };
+    ColorBox.Model = &Game->ColorBoxModel;
+    ColorBox.Scale = V3(0.5f, 0.5f, 0.5f);
+    ColorBox.Position = Light.Position;
+    ColorBox.Axis = V3(0.0f, 1.0f, 0.0f);
+    Box2.Angle = 0.0f;
+    Game->ColorBox = ColorBox;
     
     Game->Initialized = true;
 }
 
-void LoadLightTextureShader(light_texture_shader Shader, point_light Light)
+void RenderObject(color_game_object GameObject, camera Camera, point_light PointLight, mat4 Projection, mat4 View, color_shader Shader)
 {
-//  glUserProgram(Shader.Program);
-//  glUniform3f/
+    mat4 Rotation = MakeRotation(GameObject.Axis, GameObject.Angle);
+    mat4 Scale = MakeScale(GameObject.Scale);
+    mat4 Translation = MakeTranslation(GameObject.Position);
+    mat4 Model = Translation * Rotation * Scale;
+    mat4 MVP = Projection * View * Model;
+
+    glUseProgram(Shader.Program);
+    glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
+    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
+    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+
+    glUniformVec3f(Shader.CameraPosition, Camera.Position);
+    
+    SetPointLightUniforms(Shader.PointLight, PointLight);
+
+    color_material *Material = GameObject.Model->Material;
+    glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
+    glUniformVec3f(Shader.Material.Emissive, Material->Emissive);
+    glUniformVec3f(Shader.Material.Specular, Material->Specular);
+    glUniform1f(Shader.Material.Shine, Material->Shine);
+
+    model ObjectModel = GameObject.Model->Model;
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.VertexBuffer);
+    glVertexAttribPointer(0,
+			  3,
+			  GL_FLOAT,
+			  GL_FALSE,
+			  0,
+			  (void*)0
+	);
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.NormalBuffer);
+    glVertexAttribPointer(2,
+			  3,
+			  GL_FLOAT,
+			  GL_FALSE,
+			  0,
+			  (void*)0
+	);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjectModel.IndexBuffer);
+    glDrawElements(GL_TRIANGLES,
+		   ObjectModel.IndexCount,
+		   GL_UNSIGNED_SHORT,
+		   (void*)0
+	);
+    
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
 }
 
-void RenderObject(game_object GameObject, camera Camera, mat4 Projection, mat4 View, light_texture_shader Shader)
+void RenderObject(game_object GameObject, camera Camera, point_light PointLight, mat4 Projection, mat4 View, light_texture_shader Shader)
 {
     mat4 Rotation = MakeRotation(GameObject.Axis, GameObject.Angle);
     mat4 Scale = MakeScale(GameObject.Scale);
@@ -626,22 +796,18 @@ void RenderObject(game_object GameObject, camera Camera, mat4 Projection, mat4 V
     glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
     glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
 
-    glUniform3f(Shader.CameraPosition, Camera.Position.x, Camera.Position.y, Camera.Position.z);
-    
-    glUniform3f(Shader.LightPosition, 4.0f, 4.0f, 4.0f);
-    glUniform3f(Shader.LightAmbient, 0.1f, 0.1f, 0.1f);
-    glUniform3f(Shader.LightDiffuse, 0.5f, 0.5f, 0.5f);
-    glUniform3f(Shader.LightSpecular, 1.0f, 1.0f, 1.0f);
-    glUniform1f(Shader.LightPower, 100.f);
-	    
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, GameObject.Model->Material->DiffuseMap);
-    glUniform1i(Shader.DiffuseTexture, 0);
+    glUniformVec3f(Shader.CameraPosition, Camera.Position);
 
-    textured_material *Material = GameObject.Model->Material;
+    SetPointLightUniforms(Shader.PointLight, PointLight);
+
+    texture_material *Material = GameObject.Model->Material;
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, Material->DiffuseMap);
+    glUniform1i(Shader.DiffuseTexture, 0);
+    
     v3 MaterialSpec = Material->Specular;
     glUniform3f(Shader.MaterialSpecular, MaterialSpec.x, MaterialSpec.y, MaterialSpec.z);
-    glUniform1f(Shader.MaterialShine, Material->Shininess);
+    glUniform1f(Shader.MaterialShine, Material->Shine);
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->VertexBuffer);
@@ -738,13 +904,16 @@ void UpdateAndRender(platform_data* Platform)
 	       Keyboard.RStick.X / 100.0f,
 	       Keyboard.RStick.Y / 100.0f,
 	       Input->dT*1.0f);
-
+    
 //    Game->Box.Angle += PI*(1.0f/120.0f);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     mat4 Projection = GenerateCameraPerspective(Game->Camera);
     mat4 View = GenerateCameraView(Game->Camera);
 
-    RenderObject(Game->Box, Game->Camera, Projection, View, Game->LightTextureShader);
-    RenderObject(Game->Box2, Game->Camera, Projection, View, Game->LightTextureShader);
+    RenderObject(Game->Box, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    
+    RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
 }

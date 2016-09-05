@@ -18,6 +18,12 @@ struct camera
     v3 Up;
 };
 
+mat4 GenerateCameraOrthographic(camera Camera)
+{
+    mat4 Projection = MakeOrthographicProjection(6.0f, Camera.Aspect, Camera.Near, Camera.Far);
+    return Projection;
+}
+
 mat4 GenerateCameraPerspective(camera Camera)
 {
     mat4 Projection = MakePerspectiveProjection(Camera.FOV, Camera.Aspect, Camera.Near, Camera.Far);
@@ -26,7 +32,7 @@ mat4 GenerateCameraPerspective(camera Camera)
 
 mat4 GenerateCameraView(camera Camera)
 {
-    mat4 View = DirectionView(Camera.Position, Camera.Forward, Camera.Up);
+    mat4 View = LookAtView(Camera.Position, Camera.Position+Camera.Forward, Camera.Up);
     return View;
 }
 

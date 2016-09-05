@@ -40,9 +40,9 @@ void main()
     
     vec3 E = normalize(CameraPosition - FragPos);
     vec3 R = reflect(-L, N);
-    float EyeLightAngle = max(dot(E,R),0.0);
+    float Spec = pow(max(dot(E,R),0.0), Material.Shine);
     
     Color = AmbientColor +
 	DiffuseColor*Light.Power*LightAngle / LightDistanceSquared + 
-	SpecularColor*Light.Power*pow(EyeLightAngle, Material.Shine) / LightDistanceSquared;
+	SpecularColor*Light.Power*Spec / LightDistanceSquared;
 }
