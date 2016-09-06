@@ -2,7 +2,8 @@
 
 struct material {
     sampler2D Diffuse;
-    vec3 Specular;
+    sampler2D Specular;
+    sampler2D Emissive;
     float Shine;
 };
 
@@ -27,22 +28,24 @@ out vec3 Color;
 
 void main()
 {
-    vec3 AmbientColor = Light.Ambient*texture(Material.Diffuse, UV).rgb;
-    vec3 DiffuseColor = Light.Diffuse*texture(Material.Diffuse, UV).rgb;
-    vec3 SpecularColor = Light.Specular*Material.Specular;
-
     float LightDistance = length(Light.Position - FragPos);
     float LightDistanceSquared = LightDistance*LightDistance;
 
     vec3 N = normalize(Normal);
     vec3 L = normalize(Light.Position - FragPos);
-    float LightAngle = max(dot(N,L),0.0);
+    float Diff = max(dot(N,L),0.0);
     
     vec3 E = normalize(CameraPosition - FragPos);
     vec3 R = reflect(-L, N);
     float Spec = pow(max(dot(E,R),0.0), Material.Shine);
-    
+ 
+    vec3 AmbientColor = Light.Ambient*texture(Material.Diffuse, UV).rgb;
+    vec3 DiffuseColor = Light.Diffuse*Diff*texture(Material.Diffuse, UV).rgb;
+    vec3 SpecularColor = Light.Specular*Spec*texture(Material.Specular, UV).rgb;
+    vec3 EmissiveColor = texture(Material.Emissive, UV).rgb;
+
     Color = AmbientColor +
-	DiffuseColor*Light.Power*LightAngle / LightDistanceSquared + 
-	SpecularColor*Light.Power*Spec / LightDistanceSquared;
+	DiffuseColor*Light.Power / LightDistanceSquared + 
+	SpecularColor*Light.Power / LightDistanceSquared +
+	EmissiveColor;
 }

@@ -39,6 +39,24 @@ struct color_material
     float Shine;
 };
 
+struct material_binding
+{
+    GLuint Diffuse;
+    GLuint Specular;
+    GLuint Emissive;
+    GLuint Shine;
+};
+
+material_binding CreateMaterialBinding(GLuint ShaderProgram)
+{
+    material_binding MaterialBinding = {0};
+    MaterialBinding.Diffuse = glGetUniformLocation(ShaderProgram, "Material.Diffuse");
+    MaterialBinding.Specular = glGetUniformLocation(ShaderProgram, "Material.Specular");
+    MaterialBinding.Emissive = glGetUniformLocation(ShaderProgram, "Material.Emissive");
+    MaterialBinding.Shine = glGetUniformLocation(ShaderProgram, "Material.Shine");
+    return MaterialBinding;
+};
+
 struct point_light_binding
 {
     GLuint Position;
@@ -58,25 +76,6 @@ point_light_binding CreatePointLightBinding(GLuint ShaderProgram)
     LightBinding.Specular = glGetUniformLocation(ShaderProgram, "Light.Specular");
     return LightBinding;
 }
-
-struct material_binding
-{
-    GLuint Diffuse;
-    GLuint Specular;
-    GLuint Emissive;
-    GLuint Shine;
-};
-
-material_binding CreateMaterialBinding(GLuint ShaderProgram)
-{
-    material_binding MaterialBinding = {0};
-    MaterialBinding.Diffuse = glGetUniformLocation(ShaderProgram, "Material.Diffuse");
-    MaterialBinding.Specular = glGetUniformLocation(ShaderProgram, "Material.Specular");
-    MaterialBinding.Emissive = glGetUniformLocation(ShaderProgram, "Material.Emissive");
-    MaterialBinding.Shine = glGetUniformLocation(ShaderProgram, "Material.Shine");
-
-    return MaterialBinding;
-};
 
 void SetPointLightUniforms(point_light_binding LightBinding, point_light Light)
 {
@@ -104,7 +103,8 @@ struct texture_material
 {
     //some sort of texture thing
     GLuint DiffuseMap;
-    v3 Specular;
+    GLuint SpecularMap;
+    GLuint EmissiveMap;
     float Shine;
 };
 
@@ -119,9 +119,6 @@ struct light_texture_shader
 
     point_light_binding PointLight;
     material_binding Material;
-    GLuint DiffuseTexture;
-    GLuint MaterialSpecular;
-    GLuint MaterialShine;
 };
 
 struct model
@@ -181,7 +178,9 @@ struct game_data
     color_shader ColorShader;
     camera Camera;
 
-    texture BoxTexture;
+    texture BoxDiffuseMap;
+    texture BoxSpecularMap;
+    texture BoxEmissiveMap;
     texture_material BoxMaterial;
     color_material ColorMaterial;
     model BoxModel;
@@ -294,13 +293,15 @@ texture LoadDDS(const char * filePath)
 
     uint32 blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
     uint32 offset = 0;
-    for(uint32 level = 0; level < mipMapCount && (width || height); ++level)
+    int w = width;
+    int h = height;
+    for(uint32 level = 0; level < mipMapCount && (w || h); ++level)
     {
-	uint32 size = ((width+3)/4)*((height+3)/4)*blockSize;
-	glCompressedTexImage2D(GL_TEXTURE_2D, level, format, width, height, 0, size, buffer + offset);
+	uint32 size = ((w+3)/4)*((h+3)/4)*blockSize;
+	glCompressedTexImage2D(GL_TEXTURE_2D, level, format, w, h, 0, size, buffer + offset);
 	offset += size;
-	width /= 2;
-	height /= 2;
+	w /= 2;
+	h /= 2;
     }
 
     texture Result = {
@@ -309,6 +310,7 @@ texture LoadDDS(const char * filePath)
 	textureID,
 	buffer
     };
+    glDisable(GL_TEXTURE_2D);
     return Result;
 }
 
@@ -373,6 +375,7 @@ texture LoadBMP(char* filePath)
 	textureID,
 	data
     };
+    glDisable(GL_TEXTURE_2D);
     return Result;
 }
 
@@ -626,14 +629,19 @@ void Init(platform_data* Platform, game_data *Game)
     glBufferData(GL_ARRAY_BUFFER, uvBufferSize, BoxModel->UVs, GL_STATIC_DRAW);
 
 #if DIE
-    Game->BoxTexture = LoadDDS("uvtemplate.dds");
+    Game->BoxDiffuseMap = LoadDDS("uvtemplate.dds");
 #elif defined(CONTAINER)
-    Game->BoxTexture = LoadDDS("container.dds");
+    Game->BoxDiffuseMap = LoadDDS("container.dds");
 #endif
+
+    Game->BoxSpecularMap = LoadDDS("containerspecular.dds");
+    Game->BoxEmissiveMap = LoadDDS("containeremissive.dds");
+
     texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxModel->Material = BoxMaterial;
-    BoxMaterial->DiffuseMap = Game->BoxTexture.Handle;
-    BoxMaterial->Specular = V3(1.0f, 1.0f, 1.0f);
+    BoxMaterial->DiffuseMap = Game->BoxDiffuseMap.Handle;
+    BoxMaterial->SpecularMap = Game->BoxSpecularMap.Handle;
+//    BoxMaterial->EmissiveMap = Game->BoxEmissiveMap.Handle;
     BoxMaterial->Shine = 60.0f;
 
     color_model *ColorBoxModel = &Game->ColorBoxModel;
@@ -654,10 +662,8 @@ void Init(platform_data* Platform, game_data *Game)
 	
     Shader.CameraPosition = glGetUniformLocation(Shader.Program, "CameraPosition");
     Shader.PointLight = CreatePointLightBinding(Shader.Program);
-	
-    Shader.DiffuseTexture = glGetUniformLocation(Shader.Program, "Material.Diffuse");
-    Shader.MaterialSpecular = glGetUniformLocation(Shader.Program, "Material.Specular");
-    Shader.MaterialShine = glGetUniformLocation(Shader.Program, "Material.Shine");
+    
+    Shader.Material = CreateMaterialBinding(Shader.Program);
     Game->LightTextureShader = Shader;
 
     color_shader ColorShader;
@@ -803,11 +809,15 @@ void RenderObject(game_object GameObject, camera Camera, point_light PointLight,
     texture_material *Material = GameObject.Model->Material;
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Material->DiffuseMap);
-    glUniform1i(Shader.DiffuseTexture, 0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, Material->SpecularMap);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, Material->EmissiveMap);
     
-    v3 MaterialSpec = Material->Specular;
-    glUniform3f(Shader.MaterialSpecular, MaterialSpec.x, MaterialSpec.y, MaterialSpec.z);
-    glUniform1f(Shader.MaterialShine, Material->Shine);
+    glUniform1i(Shader.Material.Diffuse, 0);
+    glUniform1i(Shader.Material.Specular, 1);
+    glUniform1f(Shader.Material.Shine, Material->Shine);
+    glUniform1i(Shader.Material.Emissive, 2);
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->VertexBuffer);
@@ -904,7 +914,6 @@ void UpdateAndRender(platform_data* Platform)
 	       Keyboard.RStick.X / 100.0f,
 	       Keyboard.RStick.Y / 100.0f,
 	       Input->dT*1.0f);
-    
 //    Game->Box.Angle += PI*(1.0f/120.0f);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
