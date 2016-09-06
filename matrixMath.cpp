@@ -6,7 +6,7 @@
 #include <math.h>
 #include <stdio.h>
 
-typedef struct
+struct mat4
 {
     union
     {
@@ -18,9 +18,9 @@ typedef struct
 	};
 	float E[4][4];
     };
-} mat4;
+};
 
-typedef struct
+struct mat3
 {
     union
     {
@@ -31,18 +31,12 @@ typedef struct
 	};
 	float E[3][3];
     };
-} mat3;
+};
 
-typedef struct
+struct v2
 {
     float x,y;
-} v2;
-
-v2 V2(float x, float y)
-{
-    v2 Result = {x, y};
-    return Result;
-}
+};
 
 typedef struct
 {
@@ -73,6 +67,12 @@ typedef struct
     float x,y,z,w;
 } quaternion;
 
+v2 V2(float x, float y)
+{
+    v2 Result = {x, y};
+    return Result;
+}
+
 v3 V3(float x, float y, float z)
 {
     v3 Result;
@@ -81,7 +81,15 @@ v3 V3(float x, float y, float z)
     Result.z = z;
     return Result;
 }
- 
+
+v3 V3(v4 vec)
+{
+    v3 Result;
+    Result.x = vec.x;
+    Result.y = vec.y;
+    Result.z = vec.z;
+    return Result;
+} 
 
 void PrintVector(v3 v)
 {

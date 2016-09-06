@@ -13,9 +13,9 @@
 
 #define CONTAINER
 
-struct point_light
+struct light
 {
-    v3 Position;
+    v4 Position;
     v3 Ambient;
     v3 Diffuse;
     v3 Specular;
@@ -57,7 +57,7 @@ material_binding CreateMaterialBinding(GLuint ShaderProgram)
     return MaterialBinding;
 };
 
-struct point_light_binding
+struct light_binding
 {
     GLuint Position;
     GLuint Ambient;
@@ -66,9 +66,9 @@ struct point_light_binding
     GLuint Power;
 };
 
-point_light_binding CreatePointLightBinding(GLuint ShaderProgram)
+light_binding CreateLightBinding(GLuint ShaderProgram)
 {
-    point_light_binding LightBinding = { 0 };
+    light_binding LightBinding = { 0 };
     LightBinding.Power = glGetUniformLocation(ShaderProgram, "Light.Power");
     LightBinding.Position = glGetUniformLocation(ShaderProgram, "Light.Position");
     LightBinding.Ambient = glGetUniformLocation(ShaderProgram, "Light.Ambient");
@@ -77,9 +77,9 @@ point_light_binding CreatePointLightBinding(GLuint ShaderProgram)
     return LightBinding;
 }
 
-void SetPointLightUniforms(point_light_binding LightBinding, point_light Light)
+void SetPointLightUniforms(light_binding LightBinding, light Light)
 {
-    glUniformVec3f(LightBinding.Position, Light.Position);
+    glUniformVec4f(LightBinding.Position, Light.Position);
     glUniformVec3f(LightBinding.Ambient, Light.Ambient);
     glUniformVec3f(LightBinding.Diffuse, Light.Diffuse);
     glUniformVec3f(LightBinding.Specular, Light.Specular);
@@ -95,7 +95,7 @@ struct color_shader
 
     GLuint CameraPosition;
 
-    point_light_binding PointLight;
+    light_binding Light;
     material_binding Material;
 };
 
@@ -117,7 +117,7 @@ struct light_texture_shader
     
     GLuint CameraPosition;
 
-    point_light_binding PointLight;
+    light_binding Light;
     material_binding Material;
 };
 
@@ -187,7 +187,7 @@ struct game_data
     color_model ColorBoxModel;
     
     //Scene
-    point_light Light;
+    light Light;
     game_object Box;
     game_object Box2;
     game_object LightBox;
@@ -661,7 +661,7 @@ void Init(platform_data* Platform, game_data *Game)
     Shader.MVP = glGetUniformLocation(Shader.Program, "MVP");
 	
     Shader.CameraPosition = glGetUniformLocation(Shader.Program, "CameraPosition");
-    Shader.PointLight = CreatePointLightBinding(Shader.Program);
+    Shader.Light = CreateLightBinding(Shader.Program);
     
     Shader.Material = CreateMaterialBinding(Shader.Program);
     Game->LightTextureShader = Shader;
@@ -673,7 +673,7 @@ void Init(platform_data* Platform, game_data *Game)
     ColorShader.MVP = glGetUniformLocation(ColorShader.Program, "MVP");
 
     ColorShader.CameraPosition = glGetUniformLocation(ColorShader.Program, "CameraPosition");
-    ColorShader.PointLight = CreatePointLightBinding(ColorShader.Program);
+    ColorShader.Light = CreateLightBinding(ColorShader.Program);
 
     ColorShader.Material.Diffuse = glGetUniformLocation(ColorShader.Program, "Material.Diffuse");
     ColorShader.Material.Specular = glGetUniformLocation(ColorShader.Program, "Material.Specular");
@@ -691,8 +691,8 @@ void Init(platform_data* Platform, game_data *Game)
     Camera.Up = V3(0,1,0);
     Game->Camera = Camera;
 
-    point_light Light = { 0 };
-    Light.Position = V3(4.0f, 4.0f, 4.0f);
+    light Light = { 0 };
+    Light.Position = V4(4.0f, 4.0f, 4.0f, 1.0f);
     Light.Ambient = V3(0.1f, 0.1f, 0.1f);
     Light.Diffuse = V3(0.5f, 0.5f, 0.5f);
     Light.Specular = V3(1.0f, 1.0f, 1.0f);
@@ -727,7 +727,7 @@ void Init(platform_data* Platform, game_data *Game)
     color_game_object ColorBox = { 0 };
     ColorBox.Model = &Game->ColorBoxModel;
     ColorBox.Scale = V3(0.5f, 0.5f, 0.5f);
-    ColorBox.Position = Light.Position;
+    ColorBox.Position = V3(Light.Position);
     ColorBox.Axis = V3(0.0f, 1.0f, 0.0f);
     Box2.Angle = 0.0f;
     Game->ColorBox = ColorBox;
@@ -735,7 +735,7 @@ void Init(platform_data* Platform, game_data *Game)
     Game->Initialized = true;
 }
 
-void RenderObject(color_game_object GameObject, camera Camera, point_light PointLight, mat4 Projection, mat4 View, color_shader Shader)
+void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4 Projection, mat4 View, color_shader Shader)
 {
     mat4 Rotation = MakeRotation(GameObject.Axis, GameObject.Angle);
     mat4 Scale = MakeScale(GameObject.Scale);
@@ -750,7 +750,7 @@ void RenderObject(color_game_object GameObject, camera Camera, point_light Point
 
     glUniformVec3f(Shader.CameraPosition, Camera.Position);
     
-    SetPointLightUniforms(Shader.PointLight, PointLight);
+    SetPointLightUniforms(Shader.Light, Light);
 
     color_material *Material = GameObject.Model->Material;
     glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
@@ -789,7 +789,7 @@ void RenderObject(color_game_object GameObject, camera Camera, point_light Point
     glDisableVertexAttribArray(1);
 }
 
-void RenderObject(game_object GameObject, camera Camera, point_light PointLight, mat4 Projection, mat4 View, light_texture_shader Shader)
+void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Projection, mat4 View, light_texture_shader Shader)
 {
     mat4 Rotation = MakeRotation(GameObject.Axis, GameObject.Angle);
     mat4 Scale = MakeScale(GameObject.Scale);
@@ -804,7 +804,7 @@ void RenderObject(game_object GameObject, camera Camera, point_light PointLight,
 
     glUniformVec3f(Shader.CameraPosition, Camera.Position);
 
-    SetPointLightUniforms(Shader.PointLight, PointLight);
+    SetPointLightUniforms(Shader.Light, Light);
 
     texture_material *Material = GameObject.Model->Material;
     glActiveTexture(GL_TEXTURE0);

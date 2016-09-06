@@ -9,7 +9,7 @@ struct material {
 
 struct light {
     float Power;
-    vec3 Position;
+    vec4 Position;
     
     vec3 Ambient;
     vec3 Diffuse;
@@ -28,11 +28,12 @@ out vec3 Color;
 
 void main()
 {
-    float LightDistance = length(Light.Position - FragPos);
+    vec3 LightPosition = vec3(Light.Position);
+    float LightDistance = length(LightPosition - FragPos);
     float LightDistanceSquared = LightDistance*LightDistance;
 
     vec3 N = normalize(Normal);
-    vec3 L = normalize(Light.Position - FragPos);
+    vec3 L = normalize(LightPosition - FragPos);
     float Diff = max(dot(N,L),0.0);
     
     vec3 E = normalize(CameraPosition - FragPos);
