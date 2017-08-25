@@ -1,3 +1,5 @@
+#define LINUX
+
 #if TESTING
 #include "test.cpp"
 #endif

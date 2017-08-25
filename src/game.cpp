@@ -1,15 +1,12 @@
+#include "glHelper.cpp"
 #include "platform.h"
 #include "math.cpp"
 #include "matrixMath.cpp"
-#include "glHelper.cpp"
 #include "camera.cpp"
 #include "loadFBX.cpp"
 
 #include <stdlib.h>
 #include <string.h>
-#define GL_GLEXT_PROTOTYPES
-#define GLX_GLXEXT_PROTOTYPES
-#include <GL/glx.h>
 
 #define CONTAINER
 
