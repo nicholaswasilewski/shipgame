@@ -28,6 +28,7 @@ typedef int32_t bool32;
 	    y = swap;					\
 	}
 
+#define ArrayCount(Array) (sizeof((Array)) / sizeof((Array)[0]))
 #define Max(A, B) ((A)>(B)?(A):(B))
 #define Min(A, B) ((A)<(B)?(A):(B))
 #define Clamp(A, B, C) Min(Max((A), (B)), (C))
@@ -73,23 +74,41 @@ struct stick_state
 
 struct controller
 {
-    button_state Up;
-    button_state Down;
-    button_state Forward;
-    button_state Back;
-    button_state Left;
-    button_state Right;
+    union
+    {
+	button_state Buttons[16];
+	struct
+	{
+	    button_state Up;
+	    button_state Down;
+	    button_state Forward;
+	    button_state Back;
+	    button_state Left;
+	    button_state Right;
+	    button_state ActionUp;
+	    button_state ActionDown;
+	    button_state ActionLeft;
+	    button_state ActionRight;
+	    button_state LeftShoulder;
+	    button_state RightShoulder;
+	    button_state UpperLeft;
+	    button_state UpperRight;
+	    button_state Start;
+	    button_state Select;
+	};
+    };
 
-    button_state UpperLeft;
-    button_state UpperRight;
-
-    stick_state LStick;
-    stick_state RStick;
+    stick_state LeftTrigger;
+    stick_state RightTrigger;
+    stick_state LeftStick;
+    stick_state RightStick;
+	
 };
 
 struct input
 {
     float dT;
+    mouse Mouse;
     controller Keyboard;
 };
 

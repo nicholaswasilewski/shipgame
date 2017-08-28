@@ -908,8 +908,8 @@ void UpdateAndRender(platform_data* Platform)
     }
 
     TurnCamera(&Game->Camera,
-	       Keyboard.RStick.X / 100.0f,
-	       Keyboard.RStick.Y / 100.0f,
+	       Keyboard.RightStick.X / 100.0f,
+	       Keyboard.RightStick.Y / 100.0f,
 	       Input->dT*1.0f);
 //    Game->Box.Angle += PI*(1.0f/120.0f);
 

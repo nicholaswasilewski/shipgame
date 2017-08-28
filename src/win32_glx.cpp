@@ -1,5 +1,4 @@
 #define WINDOWS
-
 #include <stdio.h>
 #include <windows.h>
 #include <Windowsx.h>
@@ -27,6 +26,34 @@ typedef struct memory_arena
     uint8 *Base;
     size_t Used;
 } memory_arena;
+
+typedef struct win32_offscreen_buffer
+{
+    BITMAPINFO Info;
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+    int BytesPerPixel;
+} win32_offscreen_buffer;
+
+typedef struct win32_state
+{
+    bool Running;
+    bool ConsoleVisible;
+    win32_offscreen_buffer Backbuffer;
+    HWND MainWindow;
+    WINDOWPLACEMENT PreviousWindowPlacement;
+    HWND Console;
+
+    uint64 TotalSize;
+    void* GameMemoryBlock;
+} win32_state;
+
+typedef struct win32_window_dimension {
+    int Width;
+    int Height;
+} win32_window_dimension;
 
 #define PushSize(Arena, type) (type *)PushSize_(Arena, sizeof(type))
 #define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
@@ -63,33 +90,87 @@ size_t ArenaSizeRemaining(memory_arena *Arena)
     return Arena->Size - Arena->Used;
 }
 
-typedef struct win32_offscreen_buffer
+HWND FindConsole()
 {
-    BITMAPINFO Info;
-    void *Memory;
-    int Width;
-    int Height;
-    int Pitch;
-    int BytesPerPixel;
-} win32_offscreen_buffer;
+    return FindWindowA("ConsoleWindowClass", 0);
+}
 
-typedef struct win32_state
+HWND CreateConsole()
 {
-    bool Running;
-    bool ConsoleVisible;
-    win32_offscreen_buffer Backbuffer;
-    HWND MainWindow;
-    WINDOWPLACEMENT PreviousWindowPlacement;
     HWND Console;
+    long StandardOut;
+    FILE *fp;
 
-    uint64 TotalSize;
-    void* GameMemoryBlock;
-} win32_state;
+    AllocConsole();
+    freopen("CONIN$", "r", stdin);
+    freopen("CONOUT$", "w", stdout);
+    freopen("CONOUT$", "w", stderr);
 
-typedef struct win32_window_dimension {
-    int Width;
-    int Height;
-} win32_window_dimension;
+    Console = FindConsole();
+    SetWindowText(Console, "GLX Console");
+    ShowWindow(Console, 0);
+    
+    return Console;
+}
+
+char* ConsoleInputMutexName = "GLXConsoleInputMutex";
+bool NewInput;
+#define CONSOLE_INPUT_MAX 512
+char ConsoleInput[CONSOLE_INPUT_MAX];
+
+bool CheckConsoleInput(LPVOID OutBuffer) {
+    if (NewInput)
+    {
+        HANDLE mut = OpenMutex(MUTEX_ALL_ACCESS, 0, ConsoleInputMutexName);
+        memcpy(OutBuffer, ConsoleInput, CONSOLE_INPUT_MAX);
+        memset(ConsoleInput, 0, CONSOLE_INPUT_MAX);
+        NewInput = false;
+        ReleaseMutex(mut);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+DWORD WINAPI Win32AsyncReadFromConsole(void* ThreadInput) {
+
+    HANDLE hConHandle = CreateFile("CONIN$", GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+
+    DWORD CharsToRead = CONSOLE_INPUT_MAX;
+    DWORD CharsRead;
+    while(true) {
+        char ConsoleInputTempBuffer[CONSOLE_INPUT_MAX];
+        ReadConsole(hConHandle, &ConsoleInputTempBuffer, CharsToRead, &CharsRead, 0);
+        HANDLE mut = OpenMutex(MUTEX_ALL_ACCESS, 0, ConsoleInputMutexName);
+
+        //remove endline because that's how I signal I'm done entering things? let's check it out
+        ConsoleInputTempBuffer[CharsRead-2] = '\0';
+        memcpy(ConsoleInput, ConsoleInputTempBuffer, CharsRead);
+        NewInput = true;
+        ReleaseMutex(mut);
+    }
+}
+
+void ShowConsole(win32_state* State, bool Show)
+{    
+    State->ConsoleVisible = Show;
+    ShowWindow(State->Console, Show);
+
+    SetActiveWindow(State->MainWindow);
+}
+
+void ToggleConsole(win32_state* State)
+{
+    ShowConsole(State, !State->ConsoleVisible);
+}
+
+void FocusConsole(win32_state* State)
+{
+    SetActiveWindow(State->Console);
+    SetFocus(State->Console);
+}
 
 win32_window_dimension GetWindowDimension(HWND Window)
 {
@@ -183,9 +264,35 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
     {
         case WM_CREATE:
         {
+	    PIXELFORMATDESCRIPTOR pfd =
+		{
+		    sizeof(PIXELFORMATDESCRIPTOR),
+		    1,
+		    PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    //Flags
+		    PFD_TYPE_RGBA,            //The kind of framebuffer. RGBA or palette.
+		    32,                        //Colordepth of the framebuffer.
+		    0, 0, 0, 0, 0, 0,
+		    0,
+		    0,
+		    0,
+		    0, 0, 0, 0,
+		    24,                        //Number of bits for the depthbuffer
+		    8,                        //Number of bits for the stencilbuffer
+		    0,                        //Number of Aux buffers in the framebuffer.
+		    PFD_MAIN_PLANE,
+		    0,
+		    0, 0, 0
+		};
+
             CREATESTRUCT* Create = (CREATESTRUCT*)LParam;
             win32_state* State = (win32_state*)Create->lpCreateParams;
             SetWindowLongPtr(Window, GWLP_USERDATA, (LONG_PTR)State);
+
+	    HDC DeviceContext = GetDC(Window);
+	    int ChosenPixelFormat = ChoosePixelFormat(DeviceContext, &pfd);
+	    SetPixelFormat(DeviceContext, ChosenPixelFormat, &pfd);
+	    HGLRC RenderContext = wglCreateContext(DeviceContext);
+	    wglMakeCurrent(DeviceContext, RenderContext);
         } break;
         case WM_CLOSE:
         {
@@ -325,19 +432,19 @@ Win32ProcessPendingMessages(HWND Window,
 				{
 					if(VKCode == 'W')
 					{
-						Win32ProcessKeyboardMessage(&KeyboardController->MoveUp, IsDown);
+						Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
 					}
 					else if(VKCode == 'A')
 					{
-						Win32ProcessKeyboardMessage(&KeyboardController->MoveLeft, IsDown);
+						Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
 					}
 					else if(VKCode == 'S')
 					{
-						Win32ProcessKeyboardMessage(&KeyboardController->MoveDown, IsDown);
+						Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
 					}
 					else if(VKCode == 'D')
 					{
-						Win32ProcessKeyboardMessage(&KeyboardController->MoveRight, IsDown);
+						Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
 					}
 					else if(VKCode == 'Q')
 					{
@@ -380,7 +487,7 @@ Win32ProcessPendingMessages(HWND Window,
 						}
                         if (VKCode == VK_F12)
                         {
-                            //ToggleConsole(State);
+                            ToggleConsole(State);
                         }
 
                         if (VKCode == VK_RETURN && AltIsDown)
@@ -406,6 +513,16 @@ int CALLBACK WinMain(
     int ShowCode)
 {
     win32_state State = {};
+    State.Console = CreateConsole();
+    CreateMutex(0, 0, ConsoleInputMutexName);
+
+    DWORD ConsoleReadThreadID;
+    CreateThread(NULL,
+                 0,
+                 Win32AsyncReadFromConsole,
+                 0,
+                 0,
+                 &ConsoleReadThreadID);
 
     LARGE_INTEGER PerfCountFreqRes;
     QueryPerformanceFrequency(&PerfCountFreqRes);
@@ -415,4 +532,82 @@ int CALLBACK WinMain(
     WindowClass.style = CS_HREDRAW|CS_VREDRAW|CS_OWNDC;
     WindowClass.lpfnWndProc = MainWindowCallback;
     WindowClass.hInstance = Instance;
+    WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
+    WindowClass.lpszClassName="GLXMainWindowClass";
+
+    int GameWidth = 480;
+    int GameHeight = 320;
+    Win32ResizeDIBSection(&State.Backbuffer, GameWidth, GameHeight);
+
+    if (!RegisterClassA(&WindowClass))
+    {
+	printf("failed to register window class");
+	return 1;
+    }
+
+    int WindowWidth = 976;
+    int WindowHeight = 678;
+
+    HWND WindowHandle = CreateWindowEx(
+	0,
+	WindowClass.lpszClassName,
+	"GLX",
+	WS_OVERLAPPEDWINDOW|WS_VISIBLE,
+	CW_USEDEFAULT,
+	CW_USEDEFAULT,
+	WindowWidth,
+	WindowHeight,
+	0,
+	0,
+	Instance,
+	&State);
+    PrintGLVersion();
+    PrintAvailableGLExtensions();
+    LoadGLExtensions();
+
+    if(!WindowHandle)
+    {
+	DWORD LastError = GetLastError();
+	printf("failed to get window handle: %d\n", LastError);
+	return 1;
+    }
+
+    input Inputs[2];
+    Inputs[0] = {0};
+    Inputs[1] = {0};
+    input *NewInput = &Inputs[0];
+    input *LastInput = &Inputs[1];
+    State.Running = true;
+    while(State.Running)
+    {
+        
+        //prework
+        mouse *OldMouse = &LastInput->Mouse;
+        mouse *NewMouse = &NewInput->Mouse;
+
+        NewMouse->Moved = 0;
+        NewMouse->X = OldMouse->X;
+        NewMouse->Y = OldMouse->Y;
+        for(int ButtonIndex = 0;
+            ButtonIndex < ArrayCount(NewMouse->Buttons);
+            ++ButtonIndex)
+        {
+            NewMouse->Buttons[ButtonIndex].Down =
+                OldMouse->Buttons[ButtonIndex].Down;
+        }
+        
+        controller *OldKeyboard = &LastInput->Keyboard;
+        controller *NewKeyboard = &NewInput->Keyboard;
+        
+        for(int ButtonIndex = 0;
+            ButtonIndex < ArrayCount(NewKeyboard->Buttons);
+            ++ButtonIndex)
+        {
+            NewKeyboard->Buttons[ButtonIndex].Down =
+                OldKeyboard->Buttons[ButtonIndex].Down;
+        }
+        Win32ProcessPendingMessages(WindowHandle, &State, NewMouse, NewKeyboard);
+    }
+
+    return 0;
 }

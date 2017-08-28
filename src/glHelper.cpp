@@ -69,6 +69,10 @@ void* GetGLFuncAddress(const char* name)
 #define GL_TEXTURE30                      0x84DE
 #define GL_TEXTURE31                      0x84DF
 
+#define GL_MAJOR_VERSION                  0x821B
+#define GL_MINOR_VERSION                  0x821C
+#define GL_NUM_EXTENSIONS                 0x821D
+
 #define GLDECL WINAPI
 #include <GL\gl.h>
 
@@ -110,10 +114,6 @@ typedef char GLchar;
     GLE(void, VertexAttribPointer, GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer) \
     GLE(void, ActiveTexture, GLenum texture)
 
-#define GLE(retType, procName, ...) typedef retType GLDECL procName##GLProc(__VA_ARGS__); static procName##GLProc * gl##procName;
-GLExtensionList
-#undef GLE
-
 void *GetGLFuncAddress(const char *name)
 {
     void *p = (void *)wglGetProcAddress(name);
@@ -127,17 +127,41 @@ void *GetGLFuncAddress(const char *name)
 
     return p;
 }
-
-#define GLE(retType, procName, ...) gl##procName = (procName##GLProc*)GetGLFuncAddress( #procName );
-
 #endif
 
-static void LoadExtensions()
+#define GLE(retType, procName, ...) typedef retType GLDECL procName##GLProc(__VA_ARGS__); static procName##GLProc * gl##procName;
+GLExtensionList
+
+GLE(GLubyte*, GetStringi, GLenum name, GLuint index)
+#undef GLE
+
+#define GLE(retType, procName, ...) gl##procName = (procName##GLProc*)GetGLFuncAddress( "gl" #procName );
+
+static void LoadGLExtensions()
 {
     GLExtensionList
-#undef GLE
 #undef GLExtensionList
 }
+
+static void PrintGLVersion()
+{
+    int majorV, minorV, numGLExtensions;
+    glGetIntegerv(GL_MAJOR_VERSION, &majorV);
+    glGetIntegerv(GL_MINOR_VERSION, &minorV);
+    printf("GL VERSION NUMBER: %d.%d\n", majorV, minorV);   
+}
+static void PrintAvailableGLExtensions()
+{   
+    GLE(Glubyte*, GetStringi, GLenum name, GLuint index);
+    int numGLExtensions;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &numGLExtensions);
+    printf("%d\n", numGLExtensions);
+    for(int i = 0; i < numGLExtensions; i++)
+    {
+	printf("%s\n", glGetStringi(GL_EXTENSIONS, i));
+    }
+}
+#undef GLE
 
 void glUniformVec3f(GLuint location, v3 vec)
 {
