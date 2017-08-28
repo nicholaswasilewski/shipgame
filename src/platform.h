@@ -1,3 +1,4 @@
+
 #ifndef PLATFORM_H__
 #define PLATFORM_H__
 
@@ -26,11 +27,42 @@ typedef int32_t bool32;
 	    x = y;					\
 	    y = swap;					\
 	}
+
+#define Max(A, B) ((A)>(B)?(A):(B))
+#define Min(A, B) ((A)<(B)?(A):(B))
+#define Clamp(A, B, C) Min(Max((A), (B)), (C))
     
+#ifndef RELEASE
+#define Assert(Expression)                      \
+    if(!(Expression))                           \
+    {                                           \
+        (*(int*)0 = 0);                         \
+    }
+#else
+#define Assert(Expression, Message) {};
+#endif   
 
 struct button_state 
 {
     bool32 Down;
+};
+
+struct mouse
+{
+    int Moved;
+    int X;
+    int Y;
+    
+    union
+    {
+	button_state Buttons[3];
+	struct
+	{
+	    button_state Mouse1;
+	    button_state Mouse2;
+	    button_state Mouse3;
+	};
+    };
 };
 
 struct stick_state
