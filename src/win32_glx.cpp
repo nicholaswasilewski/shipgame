@@ -90,6 +90,13 @@ size_t ArenaSizeRemaining(memory_arena *Arena)
     return Arena->Size - Arena->Used;
 }
 
+LARGE_INTEGER GetCPUTime()
+{
+    LARGE_INTEGER Res;
+    QueryPerformanceCounter(&Res);
+    return Res;
+}
+
 HWND FindConsole()
 {
     return FindWindowA("ConsoleWindowClass", 0);
@@ -572,12 +579,27 @@ int CALLBACK WinMain(
 	return 1;
     }
 
+    platform_data GameMemory = {};
+    GameMemory.MainMemorySize = GIGABYTES(1);
+    GameMemory.TempMemorySize = MEGABYTES(512);
+    GameMemory.TotalMemorySize = GameMemory.MainMemorySize + GameMemory.TempMemorySize;
+    GameMemory.MainMemory = VirtualAlloc(0,
+					 (size_t)GameMemory.TotalMemorySize,
+					 MEM_RESERVE|MEM_COMMIT,
+					 PAGE_READWRITE);
+    GameMemory.TempMemory = (uint8 *)GameMemory.MainMemory+GameMemory.MainMemorySize;
+    
+
     input Inputs[2];
     Inputs[0] = {0};
     Inputs[1] = {0};
     input *NewInput = &Inputs[0];
     input *LastInput = &Inputs[1];
+    NewInput->dT = 0.0f;
     State.Running = true;
+
+    LARGE_INTEGER LastCounter = GetCPUTime();
+    
     while(State.Running)
     {
         

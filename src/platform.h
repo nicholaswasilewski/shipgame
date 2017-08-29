@@ -118,6 +118,7 @@ struct platform_data
     void* MainMemory;
     int32 TempMemorySize;
     void* TempMemory;
+    int32 TotalMemorySize;
 
     input *LastInput;
     input *NewInput;
