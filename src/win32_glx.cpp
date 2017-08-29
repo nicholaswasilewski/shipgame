@@ -6,89 +6,14 @@
 #include <fcntl.h>
 #include <math.h>
 
+#include "win32_platform.h"
+#include "platform.h"
 #include "glHelper.cpp"
 #include "game.cpp"
-#include "platform.h"
 
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "OpenGL32.lib")
-
-struct stack
-{
-    int Count;
-    void* Base;
-};
-
-typedef struct memory_arena
-{
-    size_t Size;
-    uint8 *Base;
-    size_t Used;
-} memory_arena;
-
-typedef struct win32_offscreen_buffer
-{
-    BITMAPINFO Info;
-    void *Memory;
-    int Width;
-    int Height;
-    int Pitch;
-    int BytesPerPixel;
-} win32_offscreen_buffer;
-
-typedef struct win32_state
-{
-    bool Running;
-    bool ConsoleVisible;
-    win32_offscreen_buffer Backbuffer;
-    HWND MainWindow;
-    WINDOWPLACEMENT PreviousWindowPlacement;
-    HWND Console;
-
-    uint64 TotalSize;
-    void* GameMemoryBlock;
-} win32_state;
-
-typedef struct win32_window_dimension {
-    int Width;
-    int Height;
-} win32_window_dimension;
-
-#define PushSize(Arena, type) (type *)PushSize_(Arena, sizeof(type))
-#define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
-void*
-PushSize_(memory_arena *Arena, size_t Size)
-{
-    Assert((Arena->Used + Size) <= (Arena->Size));
-    void *NewSpace = Arena->Base + Arena->Used;
-    Arena->Used += Size;
-    
-    return NewSpace;
-}
-
-inline void
-InitArena(memory_arena *Arena, size_t Size, uint8 *Base)
-{
-    Arena->Size = Size;
-    Arena->Base = Base;
-    Arena->Used = 0;
-}
-
-inline memory_arena
-PushArena(memory_arena *Arena, size_t Size)
-{
-    memory_arena Result = {0};
-    Result.Size = Size;
-    Result.Used = 0;
-    Result.Base = (uint8 *)PushSize_(Arena, Size);
-    return Result;
-}
-
-size_t ArenaSizeRemaining(memory_arena *Arena)
-{
-    return Arena->Size - Arena->Used;
-}
 
 HWND FindConsole()
 {
@@ -368,9 +293,9 @@ Win32ProcessPendingMessages(HWND Window,
 	MSG Message;
 	while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
 	{
-		switch(Message.message)
-		{
-            case WM_QUIT:
+	    switch(Message.message)
+	    {
+	    case WM_QUIT:
             {
                 State->Running = false;
             } break;
@@ -388,7 +313,6 @@ Win32ProcessPendingMessages(HWND Window,
                 Mouse->Mouse1.Down = 1;
                 SetCapture(Window);
             } break;
-            /*
             case WM_RBUTTONDOWN:
             {
                 Mouse->Mouse2.Down = 1;
@@ -399,14 +323,11 @@ Win32ProcessPendingMessages(HWND Window,
                 Mouse->Mouse3.Down = 1;
                 SetCapture(Window);
             } break;
-            */
-            
             case WM_LBUTTONUP:
             {
                 Mouse->Mouse1.Down = 0;
                 ReleaseCapture();
             } break;
-            /*
             case WM_RBUTTONUP:
             {
                 Mouse->Mouse2.Down = 0;
@@ -416,76 +337,74 @@ Win32ProcessPendingMessages(HWND Window,
             {
                 Mouse->Mouse3.Down = 0;
                 ReleaseCapture();
-            } break;
-            */
-                    
-			case WM_SYSKEYDOWN:
-			case WM_SYSKEYUP:
-			case WM_KEYDOWN:
-			case WM_KEYUP:
+            } break;	    
+	    case WM_SYSKEYDOWN:
+	    case WM_SYSKEYUP:
+	    case WM_KEYDOWN:
+	    case WM_KEYUP:
+	    {
+		uint32 VKCode = (uint32)Message.wParam;
+		bool WasDown = ((Message.lParam & (1 << 30)) != 0);
+		bool IsDown = ((Message.lParam & (1 << 31)) == 0);
+		    
+		if(WasDown != IsDown)
+		{
+		    if(VKCode == 'W')
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
+		    }
+		    else if(VKCode == 'A')
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
+		    }
+		    else if(VKCode == 'S')
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
+		    }
+		    else if(VKCode == 'D')
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
+		    }
+		    else if(VKCode == 'Q')
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->LeftShoulder, IsDown);
+		    }
+		    else if(VKCode == 'E')
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->RightShoulder, IsDown);
+		    }
+		    else if(VKCode == VK_UP)
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->ActionUp, IsDown);
+		    }
+		    else if(VKCode == VK_LEFT)
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->ActionLeft, IsDown);
+		    }
+		    else if(VKCode == VK_DOWN)
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->ActionDown, IsDown);
+		    }
+		    else if(VKCode == VK_RIGHT)
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->ActionRight, IsDown);
+		    }
+		    else if(VKCode == VK_ESCAPE)
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
+		    }
+		    else if(VKCode == VK_SPACE)
+		    {
+			Win32ProcessKeyboardMessage(&KeyboardController->Start, IsDown);
+		    }
+		    if (IsDown)
+		    {
+			bool AltIsDown = (Message.lParam & (1 << 29));
+			if(VKCode == VK_F4 && AltIsDown)
 			{
-				uint32 VKCode = (uint32)Message.wParam;
-				bool WasDown = ((Message.lParam & (1 << 30)) != 0);
-				bool IsDown = ((Message.lParam & (1 << 31)) == 0);
-
-				if(WasDown != IsDown)
-				{
-					if(VKCode == 'W')
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
-					}
-					else if(VKCode == 'A')
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
-					}
-					else if(VKCode == 'S')
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
-					}
-					else if(VKCode == 'D')
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
-					}
-					else if(VKCode == 'Q')
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->LeftShoulder, IsDown);
-					}
-					else if(VKCode == 'E')
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->RightShoulder, IsDown);
-					}
-					else if(VKCode == VK_UP)
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->ActionUp, IsDown);
-					}
-					else if(VKCode == VK_LEFT)
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->ActionLeft, IsDown);
-					}
-					else if(VKCode == VK_DOWN)
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->ActionDown, IsDown);
-					}
-					else if(VKCode == VK_RIGHT)
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->ActionRight, IsDown);
-					}
-					else if(VKCode == VK_ESCAPE)
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
-					}
-					else if(VKCode == VK_SPACE)
-					{
-						Win32ProcessKeyboardMessage(&KeyboardController->Start, IsDown);
-					}
-					if (IsDown)
-					{
-						bool AltIsDown = (Message.lParam & (1 << 29));
-						if(VKCode == VK_F4 && AltIsDown)
-						{
-                            State->Running = false;
-						}
-                        if (VKCode == VK_F12)
+			    State->Running = false;
+			}
+			if (VKCode == VK_F12)
                         {
                             ToggleConsole(State);
                         }
@@ -494,16 +413,16 @@ Win32ProcessPendingMessages(HWND Window,
                         {
                             //ToggleFullScreen(State);
                         }
-					}
-				}
-			} break;
-			default:
-			{
-				TranslateMessage(&Message);
-				DispatchMessage(&Message);
-			} break;
+		    }
 		}
+	    } break;
+	    default:
+	    {
+		TranslateMessage(&Message);
+		DispatchMessage(&Message);
+	    } break;
 	}
+    }
 }				
 
 int CALLBACK WinMain(

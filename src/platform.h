@@ -43,6 +43,54 @@ typedef int32_t bool32;
 #define Assert(Expression, Message) {};
 #endif   
 
+struct stack
+{
+    int Count;
+    void* Base;
+};
+
+typedef struct memory_arena
+{
+    size_t Size;
+    uint8 *Base;
+    size_t Used;
+} memory_arena;
+
+#define PushSize(Arena, type) (type *)PushSize_(Arena, sizeof(type))
+#define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
+void*
+PushSize_(memory_arena *Arena, size_t Size)
+{
+    Assert((Arena->Used + Size) <= (Arena->Size));
+    void *NewSpace = Arena->Base + Arena->Used;
+    Arena->Used += Size;
+    
+    return NewSpace;
+}
+
+inline void
+InitArena(memory_arena *Arena, size_t Size, uint8 *Base)
+{
+    Arena->Size = Size;
+    Arena->Base = Base;
+    Arena->Used = 0;
+}
+
+inline memory_arena
+PushArena(memory_arena *Arena, size_t Size)
+{
+    memory_arena Result = {0};
+    Result.Size = Size;
+    Result.Used = 0;
+    Result.Base = (uint8 *)PushSize_(Arena, Size);
+    return Result;
+}
+
+size_t ArenaSizeRemaining(memory_arena *Arena)
+{
+    return Arena->Size - Arena->Used;
+}
+
 struct button_state 
 {
     bool32 Down;
