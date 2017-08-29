@@ -160,6 +160,16 @@ struct input
     controller Keyboard;
 };
 
+    
+typedef struct game_screen_buffer
+{
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+    int BytesPerPixel;
+} game_screen_buffer, game_offscreen_buffer;
+
 struct platform_data
 {
     int32 MainMemorySize;

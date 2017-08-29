@@ -497,6 +497,11 @@ int CALLBACK WinMain(
 	printf("failed to get window handle: %d\n", LastError);
 	return 1;
     }
+    
+    int HardRefreshHz = 60;
+
+    float GameUpdateHz = (HardRefreshHz/2.0f);
+    float TargetFrameSeconds = 1.0f/GameUpdateHz;
 
     platform_data GameMemory = {};
     GameMemory.MainMemorySize = GIGABYTES(1);
@@ -518,6 +523,10 @@ int CALLBACK WinMain(
     State.Running = true;
 
     LARGE_INTEGER LastCounter = GetCPUTime();
+
+    int FPSSampleFrames = 60;
+    int FPSFrameCounter = 0;
+    float FPSAverageAccumulator = 0.0f;
     
     while(State.Running)
     {
@@ -548,6 +557,57 @@ int CALLBACK WinMain(
                 OldKeyboard->Buttons[ButtonIndex].Down;
         }
         Win32ProcessPendingMessages(WindowHandle, &State, NewMouse, NewKeyboard);
+	
+        game_screen_buffer Buffer = {};
+        Buffer.Memory = State.Backbuffer.Memory;
+        Buffer.Width = State.Backbuffer.Width;
+        Buffer.Height = State.Backbuffer.Height;
+        Buffer.Pitch = State.Backbuffer.Pitch;
+        Buffer.BytesPerPixel = State.Backbuffer.BytesPerPixel;
+
+	char ConsoleBuffer[512];
+	if (CheckConsoleInput(&ConsoleBuffer))
+	{
+	    if (strcmp(ConsoleBuffer, "close") == 0)
+	    {
+		ToggleConsole(&State);
+	    }
+	    else
+	    {
+		//ProcessConsoleInput(NewInput, &GameMemory, &Buffer, ConsoleBuffer);
+	    }
+	}
+
+	win32_state* winState = (win32_state*)GetAppState(WindowHandle);
+	
+        //post work
+        LARGE_INTEGER TimeNow = GetCPUTime();
+        float FrameSecondsElapsed = Win32GetSecondsElapsed(LastCounter, TimeNow);
+	foat oldFraction;
+	float complement;
+	if (frameCounter < FPSSampleFrames)
+	{
+	    oldFraction = frameCounter / frameCounter + 1;
+	    frameCounter += 1;
+	}
+	else
+	{
+	    oldFraction = (FPSSampleFrames-1) / FPSSampleFrames;
+	}
+	complement = 1 - oldFraction;
+	FPSAverageAccumulator = (FPSAverageAccumulator*oldFraction) + (FrameSecondsElapsed*complement);
+        printf("FPS: %-4f\n", FPSAverageAccumulator);
+        if (FrameSecondsElapsed < TargetFrameSeconds)
+        {
+            DWORD SleepMS = (DWORD)(1000.0f*(TargetFrameSeconds - FrameSecondsElapsed));
+            if (SleepMS > 0)
+            {
+                Sleep(SleepMS);
+                TimeNow = GetCPUTime();
+            }
+        }
+	
+	LastCounter = TimeNow;
     }
 
     return 0;
