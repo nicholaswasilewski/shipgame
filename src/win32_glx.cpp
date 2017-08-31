@@ -503,15 +503,15 @@ int CALLBACK WinMain(
     float GameUpdateHz = (HardRefreshHz/2.0f);
     float TargetFrameSeconds = 1.0f/GameUpdateHz;
 
-    platform_data GameMemory = {};
-    GameMemory.MainMemorySize = GIGABYTES(1);
-    GameMemory.TempMemorySize = MEGABYTES(512);
-    GameMemory.TotalMemorySize = GameMemory.MainMemorySize + GameMemory.TempMemorySize;
-    GameMemory.MainMemory = VirtualAlloc(0,
-					 (size_t)GameMemory.TotalMemorySize,
+    platform_data PlatformData = {0};
+    PlatformData.MainMemorySize = GIGABYTES(1);
+    PlatformData.TempMemorySize = MEGABYTES(512);
+    PlatformData.TotalMemorySize = PlatformData.MainMemorySize + PlatformData.TempMemorySize;
+    PlatformData.MainMemory = VirtualAlloc(0,
+					 (size_t)PlatformData.TotalMemorySize,
 					 MEM_RESERVE|MEM_COMMIT,
 					 PAGE_READWRITE);
-    GameMemory.TempMemory = (uint8 *)GameMemory.MainMemory+GameMemory.MainMemorySize;
+    PlatformData.TempMemory = (uint8 *)PlatformData.MainMemory+PlatformData.MainMemorySize;
     
 
     input Inputs[2];
@@ -564,39 +564,17 @@ int CALLBACK WinMain(
         Buffer.Height = State.Backbuffer.Height;
         Buffer.Pitch = State.Backbuffer.Pitch;
         Buffer.BytesPerPixel = State.Backbuffer.BytesPerPixel;
-
-	char ConsoleBuffer[512];
-	if (CheckConsoleInput(&ConsoleBuffer))
-	{
-	    if (strcmp(ConsoleBuffer, "close") == 0)
-	    {
-		ToggleConsole(&State);
-	    }
-	    else
-	    {
-		//ProcessConsoleInput(NewInput, &GameMemory, &Buffer, ConsoleBuffer);
-	    }
-	}
-
+	
 	win32_state* winState = (win32_state*)GetAppState(WindowHandle);
+
+	UpdateAndRender(&PlatformData);
+	HDC DeviceContext = GetDC(WindowHandle);
+	SwapBuffers(DeviceContext);
+	ReleaseDC(WindowHandle, DeviceContext);
 	
         //post work
         LARGE_INTEGER TimeNow = GetCPUTime();
         float FrameSecondsElapsed = Win32GetSecondsElapsed(LastCounter, TimeNow);
-	foat oldFraction;
-	float complement;
-	if (frameCounter < FPSSampleFrames)
-	{
-	    oldFraction = frameCounter / frameCounter + 1;
-	    frameCounter += 1;
-	}
-	else
-	{
-	    oldFraction = (FPSSampleFrames-1) / FPSSampleFrames;
-	}
-	complement = 1 - oldFraction;
-	FPSAverageAccumulator = (FPSAverageAccumulator*oldFraction) + (FrameSecondsElapsed*complement);
-        printf("FPS: %-4f\n", FPSAverageAccumulator);
         if (FrameSecondsElapsed < TargetFrameSeconds)
         {
             DWORD SleepMS = (DWORD)(1000.0f*(TargetFrameSeconds - FrameSecondsElapsed));
@@ -606,9 +584,26 @@ int CALLBACK WinMain(
                 TimeNow = GetCPUTime();
             }
         }
-	
+	float oldFraction;
+	float complement;
+	if (FPSFrameCounter < FPSSampleFrames)
+	{
+	    oldFraction = FPSFrameCounter / FPSFrameCounter + 1;
+	    FPSFrameCounter += 1;
+	}
+	else
+	{
+	    oldFraction = (FPSSampleFrames-1) / FPSSampleFrames;
+	}
+
+	complement = 1 - oldFraction;
+	FPSAverageAccumulator = (FPSAverageAccumulator*oldFraction) + (FrameSecondsElapsed*complement);
+        printf("FPS: %-4f\n", FPSAverageAccumulator);
+
+	*PlatformData.LastInput = *PlatformData.NewInput;
+	PlatformData.NewInput->dT = FrameSecondsElapsed/1000.0f;
 	LastCounter = TimeNow;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

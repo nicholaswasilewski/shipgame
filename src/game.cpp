@@ -4,6 +4,7 @@
 #include "matrixMath.cpp"
 #include "camera.cpp"
 #include "loadFBX.cpp"
+#include "game.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -870,7 +871,7 @@ void UpdateAndRender(platform_data* Platform)
     {
 	Init(Platform, Game);
     }
-
+/*
     if (Keyboard.Left.Down)
     {
 	CameraStrafe(&Game->Camera, Input->dT, -3.0f);
@@ -911,6 +912,7 @@ void UpdateAndRender(platform_data* Platform)
 	       Keyboard.RightStick.X / 100.0f,
 	       Keyboard.RightStick.Y / 100.0f,
 	       Input->dT*1.0f);
+*/
 //    Game->Box.Angle += PI*(1.0f/120.0f);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
