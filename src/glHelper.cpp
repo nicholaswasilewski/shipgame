@@ -73,8 +73,14 @@ void* GetGLFuncAddress(const char* name)
 #define GL_MINOR_VERSION                  0x821C
 #define GL_NUM_EXTENSIONS                 0x821D
 
+#define WGL_CONTEXT_MAJOR_VERSION_ARB     0x2091
+#define WGL_CONTEXT_MINOR_VERSION_ARB     0x2092
+#define WGL_CONTEXT_FLAGS_ARB             0x2094
+
+
 #define GLDECL WINAPI
 #include <GL\gl.h>
+#include <GL\glu.h>
 
 typedef ptrdiff_t GLsizeiptr;
 typedef ptrdiff_t GLintptr;
@@ -126,6 +132,19 @@ void *GetGLFuncAddress(const char *name)
     }
 
     return p;
+}
+
+/*The Pain*/
+typedef HGLRC GLDECL CreateContextAttribsARBGLProc (HDC hDC, HGLRC hShareContext, const int *attribList);
+static CreateContextAttribsARBGLProc *wglCreateContextAttribsARB;
+
+typedef BOOL GLDECL ChoosePixelFormatARBGLProc (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
+static ChoosePixelFormatARBGLProc *wglChoosePixelFormatARB;
+
+void LoadWGLBullshit()
+{
+    wglCreateContextAttribsARB = (CreateContextAttribsARBGLProc*)GetGLFuncAddress("wglCreateContextAttribsARB");
+    wglChoosePixelFormatARB = (ChoosePixelFormatARBGLProc*)GetGLFuncAddress("wglChoosePixelFormatARB");
 }
 #endif
 

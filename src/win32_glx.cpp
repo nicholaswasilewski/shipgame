@@ -15,6 +15,11 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "OpenGL32.lib")
 
+void ShowAlert(char* Message)
+{
+    MessageBoxA(0, Message, "Something Broke", 0);
+}
+
 LARGE_INTEGER GetCPUTime()
 {
     LARGE_INTEGER Res;
@@ -196,35 +201,81 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
     {
         case WM_CREATE:
         {
-	    PIXELFORMATDESCRIPTOR pfd =
-		{
-		    sizeof(PIXELFORMATDESCRIPTOR),
-		    1,
-		    PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    //Flags
-		    PFD_TYPE_RGBA,            //The kind of framebuffer. RGBA or palette.
-		    32,                        //Colordepth of the framebuffer.
-		    0, 0, 0, 0, 0, 0,
-		    0,
-		    0,
-		    0,
-		    0, 0, 0, 0,
-		    24,                        //Number of bits for the depthbuffer
-		    8,                        //Number of bits for the stencilbuffer
-		    0,                        //Number of Aux buffers in the framebuffer.
-		    PFD_MAIN_PLANE,
-		    0,
-		    0, 0, 0
-		};
+	    PIXELFORMATDESCRIPTOR pfd = {0};
+	    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	    pfd.nVersion = 1;
+	    pfd.dwFlags = PFD_DOUBLEBUFFER |
+		PFD_SUPPORT_OPENGL |
+		PFD_DRAW_TO_WINDOW;
+	    pfd.iPixelType = PFD_TYPE_RGBA;
+	    pfd.cColorBits = 32;
+	    pfd.cAlphaBits = 8;
+	    pfd.cDepthBits = 24;
+	    pfd.iLayerType = PFD_MAIN_PLANE;
+
+	    HDC DeviceContext = GetDC(Window);
+	    int ChosenPixelFormat = ChoosePixelFormat(DeviceContext, &pfd);
+	    
+	    bool setResult = SetPixelFormat(DeviceContext, ChosenPixelFormat, &pfd);
+	    if (!setResult)
+	    {
+		ShowAlert("Setting pixel format failed");
+	    }
+	    HGLRC RenderContext = wglCreateContext(DeviceContext);
+	    wglMakeCurrent(DeviceContext, RenderContext);
+
+	    const int pixelAttribs[] =
+	    {
+		WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+		WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+		WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+		WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+		WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+		WGL_COLOR_BITS_ARB, 32,
+		WGL_ALPHA_BITS_ARB, 8,
+		WGL_DEPTH_BITS_ARB, 24,
+		WGL_STENCIL_BITS_ARB, 8,
+		WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
+		WGL_SAMPLES_ARB, 4,
+		0
+	    };
+
+	    int pixelFormatID;
+	    uint numFormats;
+
+	    bool pixelFormatResult = wglChoosePixelFormatARB(DeviceContext, pixelAttribs, 0, 1, &pixelFormatID, &numFormats);
+	    if (!pixelFormatResult || numFormats == 0)
+	    {
+		ShowStatus("wglChoosePixelFormatARB() failed");
+		PostQuitMessage(1);
+	    }
+
+	    PIXELFORMATDESCRIPTOR PFD;
+	    DescribePixelFormat(DeviceContext, pixelFormatID, sizeof(PFD), &PFD);
+	    SetPixelFormat(DeviceContext, pixelFormatID, &PFD);
+
+	    int glContextAttributes[] =
+	    {
+		WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+		WGL_CONTEXT_MINOR_VERSION_ARB, 2,
+		WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+		WGL_CONTEXT_FLAGS_ARB, 0,
+		0
+	    };
+
+	    RenderContext = wglCreateContextAttribsARB(DeviceContext, 0, glAttribs);
+	    
+	    PrintGLVersion();
+	    PrintAvailableGLExtensions();
+	    LoadGLExtensions();
 
             CREATESTRUCT* Create = (CREATESTRUCT*)LParam;
             win32_state* State = (win32_state*)Create->lpCreateParams;
             SetWindowLongPtr(Window, GWLP_USERDATA, (LONG_PTR)State);
 
-	    HDC DeviceContext = GetDC(Window);
-	    int ChosenPixelFormat = ChoosePixelFormat(DeviceContext, &pfd);
-	    SetPixelFormat(DeviceContext, ChosenPixelFormat, &pfd);
-	    HGLRC RenderContext = wglCreateContext(DeviceContext);
-	    wglMakeCurrent(DeviceContext, RenderContext);
+
+	    GLErrorShow();
+	    
         } break;
         case WM_CLOSE:
         {
@@ -458,7 +509,8 @@ int CALLBACK WinMain(
     WindowClass.style = CS_HREDRAW|CS_VREDRAW|CS_OWNDC;
     WindowClass.lpfnWndProc = MainWindowCallback;
     WindowClass.hInstance = Instance;
-    WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
+    WindowClass.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
+    //WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
     WindowClass.lpszClassName="GLXMainWindowClass";
 
     int GameWidth = 480;
@@ -487,9 +539,6 @@ int CALLBACK WinMain(
 	0,
 	Instance,
 	&State);
-    PrintGLVersion();
-    PrintAvailableGLExtensions();
-    LoadGLExtensions();
 
     if(!WindowHandle)
     {
@@ -504,21 +553,23 @@ int CALLBACK WinMain(
     float TargetFrameSeconds = 1.0f/GameUpdateHz;
 
     platform_data PlatformData = {0};
-    PlatformData.MainMemorySize = GIGABYTES(1);
-    PlatformData.TempMemorySize = MEGABYTES(512);
+    PlatformData.MainMemorySize = MEGABYTES(32);
+    PlatformData.TempMemorySize = MEGABYTES(32);
     PlatformData.TotalMemorySize = PlatformData.MainMemorySize + PlatformData.TempMemorySize;
     PlatformData.MainMemory = VirtualAlloc(0,
 					 (size_t)PlatformData.TotalMemorySize,
 					 MEM_RESERVE|MEM_COMMIT,
 					 PAGE_READWRITE);
     PlatformData.TempMemory = (uint8 *)PlatformData.MainMemory+PlatformData.MainMemorySize;
-    
 
     input Inputs[2];
     Inputs[0] = {0};
     Inputs[1] = {0};
     input *NewInput = &Inputs[0];
     input *LastInput = &Inputs[1];
+    PlatformData.LastInput = LastInput;
+    PlatformData.NewInput = NewInput;
+    
     NewInput->dT = 0.0f;
     State.Running = true;
 
@@ -567,6 +618,7 @@ int CALLBACK WinMain(
 	
 	win32_state* winState = (win32_state*)GetAppState(WindowHandle);
 
+	//TestUpdateAndRender(&PlatformData);
 	UpdateAndRender(&PlatformData);
 	HDC DeviceContext = GetDC(WindowHandle);
 	SwapBuffers(DeviceContext);
@@ -584,6 +636,7 @@ int CALLBACK WinMain(
                 TimeNow = GetCPUTime();
             }
         }
+	/*
 	float oldFraction;
 	float complement;
 	if (FPSFrameCounter < FPSSampleFrames)
@@ -595,10 +648,11 @@ int CALLBACK WinMain(
 	{
 	    oldFraction = (FPSSampleFrames-1) / FPSSampleFrames;
 	}
-
+	
 	complement = 1 - oldFraction;
 	FPSAverageAccumulator = (FPSAverageAccumulator*oldFraction) + (FrameSecondsElapsed*complement);
         printf("FPS: %-4f\n", FPSAverageAccumulator);
+	*/
 
 	*PlatformData.LastInput = *PlatformData.NewInput;
 	PlatformData.NewInput->dT = FrameSecondsElapsed/1000.0f;

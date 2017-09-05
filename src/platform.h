@@ -1,4 +1,3 @@
-
 #ifndef PLATFORM_H__
 #define PLATFORM_H__
 
@@ -170,7 +169,15 @@ typedef struct game_screen_buffer
     int BytesPerPixel;
 } game_screen_buffer, game_offscreen_buffer;
 
-struct platform_data
+
+//#define PLATFORM_READ_WHOLE_FILE(
+
+typedef struct platform_functions
+{
+    
+} platform_functions;
+
+typedef struct platform_data
 {
     int32 MainMemorySize;
     void* MainMemory;
@@ -180,6 +187,8 @@ struct platform_data
 
     input *LastInput;
     input *NewInput;
-};
+
+    
+} platform_data;
 
 #endif
