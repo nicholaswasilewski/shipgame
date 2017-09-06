@@ -27,4 +27,3 @@ void main()
     FragPos = vec3(M*vec4(vertexPosition, 1));
     FragNormal = mat3(M) * vertexNormal;
 }
-

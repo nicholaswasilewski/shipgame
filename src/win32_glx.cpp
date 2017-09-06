@@ -203,54 +203,11 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
         {
 	    /*
 	    */
-
-	    const int pixelAttribs[] =
-	    {
-		WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-		WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-		WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-		WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-		WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-		WGL_COLOR_BITS_ARB, 32,
-		WGL_ALPHA_BITS_ARB, 8,
-		WGL_DEPTH_BITS_ARB, 24,
-		WGL_STENCIL_BITS_ARB, 8,
-		WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
-		WGL_SAMPLES_ARB, 4,
-		0
-	    };
 /*
-	    int pixelFormatID;
-	    UINT numFormats;
-
-	    bool pixelFormatResult = wglChoosePixelFormatARB(DeviceContext, pixelAttribs, 0, 1, &pixelFormatID, &numFormats);
-	    if (!pixelFormatResult || numFormats == 0)
-	    {
-		ShowAlert("wglChoosePixelFormatARB() failed");
-		PostQuitMessage(1);
-	    }
-
-	    PIXELFORMATDESCRIPTOR PFD;
-	    DescribePixelFormat(DeviceContext, pixelFormatID, sizeof(PFD), &PFD);
-	    SetPixelFormat(DeviceContext, pixelFormatID, &PFD);
-
-	    int glContextAttributes[] =
-	    {
-		WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-		WGL_CONTEXT_MINOR_VERSION_ARB, 2,
-		WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-		WGL_CONTEXT_FLAGS_ARB, 0,
-		0
-	    };
-
-	    RenderContext = wglCreateContextAttribsARB(DeviceContext, 0, glContextAttributes);
 */	    
             CREATESTRUCT* Create = (CREATESTRUCT*)LParam;
             win32_state* State = (win32_state*)Create->lpCreateParams;
             SetWindowLongPtr(Window, GWLP_USERDATA, (LONG_PTR)State);
-
-
-	    GLErrorShow();
 	    
         } break;
         case WM_CLOSE:
@@ -486,7 +443,7 @@ int CALLBACK WinMain(
     WindowClass.lpfnWndProc = MainWindowCallback;
     WindowClass.hInstance = Instance;
     WindowClass.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
-    //WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
+    WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
     WindowClass.lpszClassName="GLXMainWindowClass";
 
     int GameWidth = 480;
@@ -501,8 +458,8 @@ int CALLBACK WinMain(
 
     int WindowWidth = 976;
     int WindowHeight = 678;
-
-    HWND WindowHandle = CreateWindowEx(
+    
+    HWND ContextInitWindow = CreateWindowEx(
 	0,
 	WindowClass.lpszClassName,
 	"GLX",
@@ -528,26 +485,97 @@ int CALLBACK WinMain(
     pfd.cDepthBits = 24;
     pfd.iLayerType = PFD_MAIN_PLANE;
 
-    HDC DeviceContext = GetDC(WindowHandle);
-    int ChosenPixelFormat = ChoosePixelFormat(DeviceContext, &pfd);
+    HDC TempDeviceContext = GetDC(ContextInitWindow);
+    int ChosenPixelFormat = ChoosePixelFormat(TempDeviceContext, &pfd);
 	    
-    bool setResult = SetPixelFormat(DeviceContext, ChosenPixelFormat, &pfd);
+    bool setResult = SetPixelFormat(TempDeviceContext, ChosenPixelFormat, &pfd);
     if (!setResult)
     {
 	ShowAlert("Setting pixel format failed");
     }
-    HGLRC RenderContext = wglCreateContext(DeviceContext);
-    wglMakeCurrent(DeviceContext, RenderContext);
-    PrintGLVersion();
-    PrintAvailableGLExtensions();
-    LoadGLExtensions();
-
+    HGLRC TempRenderContext = wglCreateContext(TempDeviceContext);
+    wglMakeCurrent(TempDeviceContext, TempRenderContext);
+    LoadWGLBullshit();
+    
+    HWND WindowHandle = CreateWindowEx(
+	0,
+	WindowClass.lpszClassName,
+	"GLX",
+	WS_OVERLAPPEDWINDOW|WS_VISIBLE,
+	CW_USEDEFAULT,
+	CW_USEDEFAULT,
+	WindowWidth,
+	WindowHeight,
+	0,
+	0,
+	Instance,
+	&State);
+    
     if(!WindowHandle)
     {
 	DWORD LastError = GetLastError();
 	printf("failed to get window handle: %d\n", LastError);
 	return 1;
     }
+    HDC DeviceContext = GetDC(WindowHandle);
+    
+    const int pixelAttribs[] =
+	{
+	    WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+	    WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+	    WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+	    WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+	    WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+	    WGL_COLOR_BITS_ARB, 32,
+	    WGL_ALPHA_BITS_ARB, 8,
+	    WGL_DEPTH_BITS_ARB, 24,
+	    WGL_STENCIL_BITS_ARB, 8,
+	    WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
+	    WGL_SAMPLES_ARB, 4,
+	    0
+	};
+    
+    int pixelFormatID;
+    UINT numFormats;
+    bool pixelFormatResult = wglChoosePixelFormatARB(DeviceContext, pixelAttribs, 0, 1, &pixelFormatID, &numFormats);
+    if (!pixelFormatResult || numFormats == 0)
+    {
+	ShowAlert("wglChoosePixelFormatARB() failed");
+	return 1;
+    }
+    
+    PIXELFORMATDESCRIPTOR PFD;
+    DescribePixelFormat(DeviceContext, pixelFormatID, sizeof(PFD), &PFD);
+    SetPixelFormat(DeviceContext, pixelFormatID, &PFD);
+    
+    int glContextAttributes[] =
+	{
+	    WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+	    WGL_CONTEXT_MINOR_VERSION_ARB, 2,
+	    WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+	    WGL_CONTEXT_FLAGS_ARB, 0,
+	    0
+	};
+    
+    HGLRC RenderContext = wglCreateContextAttribsARB(DeviceContext, 0, glContextAttributes);
+
+    wglMakeCurrent(0, 0);
+    wglDeleteContext(TempRenderContext);
+    ReleaseDC(ContextInitWindow, TempDeviceContext);
+    DestroyWindow(ContextInitWindow);
+
+    if(!wglMakeCurrent(DeviceContext, RenderContext))
+    {
+	ShowAlert("wglMakeCurrent() 2 failed");
+	return 1;
+    }
+    
+    PrintGLVersion();
+    PrintAvailableGLExtensions();
+    LoadGLExtensions();
+    GLErrorShow();
+
+    
     
     int HardRefreshHz = 60;
 

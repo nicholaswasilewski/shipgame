@@ -379,59 +379,68 @@ texture LoadBMP(char* filePath)
 
 GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 {
-    GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-    FILE* vertexShaderFile = fopen(vertexShaderFilePath, "r");
-    fseek(vertexShaderFile, 0L, SEEK_END);
-    int32 vertexShaderFileLength = ftell(vertexShaderFile);
-    rewind(vertexShaderFile);
- 
-    char* vertexShaderCode = (char*)malloc(vertexShaderFileLength+1);
-    fread(vertexShaderCode, 1, vertexShaderFileLength+1, vertexShaderFile);
-    vertexShaderCode[vertexShaderFileLength] = '\0';
-    fclose(vertexShaderFile);
-
+    char* vertexShaderCode;
     GLint result = GL_FALSE;
     int32 infoLogLength;
+    int readResult;
     
-    glShaderSource(vertexShaderID, 1, &vertexShaderCode, 0);
-    glCompileShader(vertexShaderID);
-    free(vertexShaderCode);
-
-    glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    if (infoLogLength > 0)
+    GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
     {
-	char* error = (char*)malloc(infoLogLength);
-	glGetShaderInfoLog(vertexShaderID, infoLogLength, 0, error);
-	printf("%s error:\n%s\n", vertexShaderFilePath, error);
-	free(error);
-    }
-    char* fragmentShaderCode = 0;
-    FILE* fragmentShaderFile = fopen(fragmentShaderFilePath, "r");
-    fseek(fragmentShaderFile, 0L, SEEK_END);
-    int fragmentShaderFileLength = ftell(fragmentShaderFile);
-    rewind(fragmentShaderFile);
+	FILE* vertexShaderFile = fopen(vertexShaderFilePath, "rb");
+	fseek(vertexShaderFile, 0L, SEEK_END);
+	int32 vertexShaderFileLength = ftell(vertexShaderFile);
+	rewind(vertexShaderFile);
+ 
+	vertexShaderCode = (char*)malloc(vertexShaderFileLength+1);
+	readResult = fread(vertexShaderCode, 1, vertexShaderFileLength, vertexShaderFile);
+	fclose(vertexShaderFile);
+	vertexShaderCode[vertexShaderFileLength] = '\0';
+    
+	glShaderSource(vertexShaderID, 1, &vertexShaderCode, 0);
+	glCompileShader(vertexShaderID);
 
-    fragmentShaderCode = (char*)malloc(fragmentShaderFileLength+1);
-    fread(fragmentShaderCode, 1, fragmentShaderFileLength+1, fragmentShaderFile);
-    fragmentShaderCode[fragmentShaderFileLength] = '\0';
-    fclose(fragmentShaderFile);
-
-    glShaderSource(fragmentShaderID, 1, &fragmentShaderCode, 0);
-    glCompileShader(fragmentShaderID);
-    free(fragmentShaderCode);
-
-    glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    if (infoLogLength > 0)
-    {
-	char* error = (char*)malloc(infoLogLength+1);
-	glGetShaderInfoLog(fragmentShaderID, infoLogLength, 0, error);
-	printf("%s error:\n%s\n", fragmentShaderFilePath, error);
-	free(error);
+	glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (infoLogLength > 0)
+	{
+	    printf("Vertex Shader: %s:%ld:\n%s\n", vertexShaderFilePath, vertexShaderFileLength, vertexShaderCode);
+	    char* error = (char*)malloc(infoLogLength);
+	    glGetShaderInfoLog(vertexShaderID, infoLogLength, 0, error);
+	    printf("%s error:\n%s\n", vertexShaderFilePath, error);
+	    free(error);
+	}
+	free(vertexShaderCode);
     }
 
+    {
+	FILE* fragmentShaderFile = fopen(fragmentShaderFilePath, "rb");
+	fseek(fragmentShaderFile, 0L, SEEK_END);
+	long fragmentShaderFileLength = ftell(fragmentShaderFile);
+	rewind(fragmentShaderFile);
+
+	char *fragmentShaderCode = (char*)malloc(fragmentShaderFileLength+1);
+	readResult = fread(fragmentShaderCode, 1, fragmentShaderFileLength, fragmentShaderFile);
+	fragmentShaderCode[fragmentShaderFileLength] = '\0';
+    
+	GLint glFragmentShaderFileLength = fragmentShaderFileLength;
+	glShaderSource(fragmentShaderID, 1, &fragmentShaderCode, &glFragmentShaderFileLength);
+	fclose(fragmentShaderFile);
+	glCompileShader(fragmentShaderID);
+
+	glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (infoLogLength > 0)
+	{
+	    printf("Fragment Shader: %s:%ld:\n%s\n", fragmentShaderFilePath, fragmentShaderFileLength, fragmentShaderCode);
+	    char* error = (char*)malloc(infoLogLength+1);
+	    glGetShaderInfoLog(fragmentShaderID, infoLogLength, 0, error);
+	    printf("%s error:\n%s\n", fragmentShaderFilePath, error);
+	    free(error);
+	}
+	free(fragmentShaderCode);
+    }
+    
     GLuint programID = glCreateProgram();
     glAttachShader(programID, vertexShaderID);
     glAttachShader(programID, fragmentShaderID);
@@ -446,7 +455,7 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 	printf("%s\n", error);
 	free(error);
     }
-
+    
     glDetachShader(programID, vertexShaderID);
     glDetachShader(programID, fragmentShaderID);
     glDeleteShader(vertexShaderID);
