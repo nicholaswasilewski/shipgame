@@ -201,28 +201,8 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
     {
         case WM_CREATE:
         {
-	    PIXELFORMATDESCRIPTOR pfd = {0};
-	    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
-	    pfd.nVersion = 1;
-	    pfd.dwFlags = PFD_DOUBLEBUFFER |
-		PFD_SUPPORT_OPENGL |
-		PFD_DRAW_TO_WINDOW;
-	    pfd.iPixelType = PFD_TYPE_RGBA;
-	    pfd.cColorBits = 32;
-	    pfd.cAlphaBits = 8;
-	    pfd.cDepthBits = 24;
-	    pfd.iLayerType = PFD_MAIN_PLANE;
-
-	    HDC DeviceContext = GetDC(Window);
-	    int ChosenPixelFormat = ChoosePixelFormat(DeviceContext, &pfd);
-	    
-	    bool setResult = SetPixelFormat(DeviceContext, ChosenPixelFormat, &pfd);
-	    if (!setResult)
-	    {
-		ShowAlert("Setting pixel format failed");
-	    }
-	    HGLRC RenderContext = wglCreateContext(DeviceContext);
-	    wglMakeCurrent(DeviceContext, RenderContext);
+	    /*
+	    */
 
 	    const int pixelAttribs[] =
 	    {
@@ -239,14 +219,14 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
 		WGL_SAMPLES_ARB, 4,
 		0
 	    };
-
+/*
 	    int pixelFormatID;
-	    uint numFormats;
+	    UINT numFormats;
 
 	    bool pixelFormatResult = wglChoosePixelFormatARB(DeviceContext, pixelAttribs, 0, 1, &pixelFormatID, &numFormats);
 	    if (!pixelFormatResult || numFormats == 0)
 	    {
-		ShowStatus("wglChoosePixelFormatARB() failed");
+		ShowAlert("wglChoosePixelFormatARB() failed");
 		PostQuitMessage(1);
 	    }
 
@@ -263,12 +243,8 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
 		0
 	    };
 
-	    RenderContext = wglCreateContextAttribsARB(DeviceContext, 0, glAttribs);
-	    
-	    PrintGLVersion();
-	    PrintAvailableGLExtensions();
-	    LoadGLExtensions();
-
+	    RenderContext = wglCreateContextAttribsARB(DeviceContext, 0, glContextAttributes);
+*/	    
             CREATESTRUCT* Create = (CREATESTRUCT*)LParam;
             win32_state* State = (win32_state*)Create->lpCreateParams;
             SetWindowLongPtr(Window, GWLP_USERDATA, (LONG_PTR)State);
@@ -539,6 +515,32 @@ int CALLBACK WinMain(
 	0,
 	Instance,
 	&State);
+    
+    PIXELFORMATDESCRIPTOR pfd = {0};
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DOUBLEBUFFER |
+	PFD_SUPPORT_OPENGL |
+	PFD_DRAW_TO_WINDOW;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 24;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+
+    HDC DeviceContext = GetDC(WindowHandle);
+    int ChosenPixelFormat = ChoosePixelFormat(DeviceContext, &pfd);
+	    
+    bool setResult = SetPixelFormat(DeviceContext, ChosenPixelFormat, &pfd);
+    if (!setResult)
+    {
+	ShowAlert("Setting pixel format failed");
+    }
+    HGLRC RenderContext = wglCreateContext(DeviceContext);
+    wglMakeCurrent(DeviceContext, RenderContext);
+    PrintGLVersion();
+    PrintAvailableGLExtensions();
+    LoadGLExtensions();
 
     if(!WindowHandle)
     {
