@@ -456,8 +456,8 @@ int CALLBACK WinMain(
 	return 1;
     }
 
-    int WindowWidth = 976;
-    int WindowHeight = 678;
+    int WindowWidth = 800;
+    int WindowHeight = 600;
     
     HWND ContextInitWindow = CreateWindowEx(
 	0,

@@ -379,6 +379,7 @@ texture LoadBMP(char* filePath)
 
 GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 {
+    DebugLog("Loading %s & %s\n", vertexShaderFilePath, fragmentShaderFilePath);
     char* vertexShaderCode;
     GLint result = GL_FALSE;
     int32 infoLogLength;
@@ -404,10 +405,10 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 	glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
 	if (infoLogLength > 0)
 	{
-	    printf("Vertex Shader: %s:%ld:\n%s\n", vertexShaderFilePath, vertexShaderFileLength, vertexShaderCode);
+	    DebugLog("Vertex Shader: %s:%ld:\n%s\n", vertexShaderFilePath, vertexShaderFileLength, vertexShaderCode);
 	    char* error = (char*)malloc(infoLogLength);
 	    glGetShaderInfoLog(vertexShaderID, infoLogLength, 0, error);
-	    printf("%s error:\n%s\n", vertexShaderFilePath, error);
+	    DebugLog("%s error:\n%s\n", vertexShaderFilePath, error);
 	    free(error);
 	}
 	free(vertexShaderCode);
@@ -432,10 +433,10 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 	glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
 	if (infoLogLength > 0)
 	{
-	    printf("Fragment Shader: %s:%ld:\n%s\n", fragmentShaderFilePath, fragmentShaderFileLength, fragmentShaderCode);
+	    DebugLog("Fragment Shader: %s:%ld:\n%s\n", fragmentShaderFilePath, fragmentShaderFileLength, fragmentShaderCode);
 	    char* error = (char*)malloc(infoLogLength+1);
 	    glGetShaderInfoLog(fragmentShaderID, infoLogLength, 0, error);
-	    printf("%s error:\n%s\n", fragmentShaderFilePath, error);
+	    DebugLog("%s error:\n%s\n", fragmentShaderFilePath, error);
 	    free(error);
 	}
 	free(fragmentShaderCode);
@@ -452,7 +453,8 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
     {
 	char* error = (char*)malloc(infoLogLength+1);
 	glGetProgramInfoLog(programID, infoLogLength, 0, error);
-	printf("%s\n", error);
+	DebugLog("%s\n%s\n%s\n", vertexShaderFilePath, fragmentShaderFilePath, error);
+	//printf("%s\n", error);
 	free(error);
     }
     
@@ -468,7 +470,7 @@ void Init(platform_data* Platform, game_data *Game)
 {
     glClearColor(0.0, 0.0, 0.4, 0.0);
     glFrontFace(GL_CCW);
-//    glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     glPolygonMode(GL_FRONT, GL_FILL);
 //    glPolygonMode(GL_BACK, GL_LINE);
 //    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

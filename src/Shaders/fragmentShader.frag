@@ -20,7 +20,6 @@ uniform light Light;
 uniform color_material Material;
 uniform vec3 CameraPosition;
 
-in vec3 Normal;
 in vec3 FragPos;
 in vec3 FragNormal;
 
@@ -35,7 +34,7 @@ void main()
     float LightDistance = length(Light.Position - FragPos);
     float LightDistanceSquared = LightDistance*LightDistance;
 
-    vec3 N = normalize(Normal);
+    vec3 N = normalize(FragNormal);
     vec3 L = normalize(Light.Position - FragPos);
     float LightAngle = max(dot(N,L), 0.0);
 

@@ -38,9 +38,15 @@ typedef int32_t bool32;
     {                                           \
         (*(int*)0 = 0);                         \
     }
+
+#define DebugLog(Format, ...) \
+    printf("%s:%d: " Format, __FILE__, __LINE__, __VA_ARGS__);
+
 #else
 #define Assert(Expression, Message) {};
-#endif   
+#define DebugLog(Format, ...) {};
+#endif
+
 
 struct stack
 {
