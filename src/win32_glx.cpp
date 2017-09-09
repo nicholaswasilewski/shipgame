@@ -201,10 +201,6 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
     {
         case WM_CREATE:
         {
-	    /*
-	    */
-/*
-*/	    
             CREATESTRUCT* Create = (CREATESTRUCT*)LParam;
             win32_state* State = (win32_state*)Create->lpCreateParams;
             SetWindowLongPtr(Window, GWLP_USERDATA, (LONG_PTR)State);
