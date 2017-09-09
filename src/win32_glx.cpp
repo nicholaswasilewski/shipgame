@@ -342,7 +342,7 @@ Win32ProcessPendingMessages(HWND Window,
 		{
 		    if(VKCode == 'W')
 		    {
-			Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
+			Win32ProcessKeyboardMessage(&KeyboardController->Forward, IsDown);
 		    }
 		    else if(VKCode == 'A')
 		    {
@@ -350,7 +350,7 @@ Win32ProcessPendingMessages(HWND Window,
 		    }
 		    else if(VKCode == 'S')
 		    {
-			Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
+			Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
 		    }
 		    else if(VKCode == 'D')
 		    {
@@ -358,11 +358,11 @@ Win32ProcessPendingMessages(HWND Window,
 		    }
 		    else if(VKCode == 'Q')
 		    {
-			Win32ProcessKeyboardMessage(&KeyboardController->LeftShoulder, IsDown);
+			Win32ProcessKeyboardMessage(&KeyboardController->UpperLeft, IsDown);
 		    }
 		    else if(VKCode == 'E')
 		    {
-			Win32ProcessKeyboardMessage(&KeyboardController->RightShoulder, IsDown);
+			Win32ProcessKeyboardMessage(&KeyboardController->UpperRight, IsDown);
 		    }
 		    else if(VKCode == VK_UP)
 		    {
@@ -655,37 +655,25 @@ int CALLBACK WinMain(
 	ReleaseDC(WindowHandle, DeviceContext);
 	
         //post work
-        LARGE_INTEGER TimeNow = GetCPUTime();
-        float FrameSecondsElapsed = Win32GetSecondsElapsed(LastCounter, TimeNow);
-        if (FrameSecondsElapsed < TargetFrameSeconds)
-        {
-            DWORD SleepMS = (DWORD)(1000.0f*(TargetFrameSeconds - FrameSecondsElapsed));
-            if (SleepMS > 0)
-            {
-                Sleep(SleepMS);
-                TimeNow = GetCPUTime();
-            }
-        }
-	/*
-	float oldFraction;
-	float complement;
-	if (FPSFrameCounter < FPSSampleFrames)
+	float FrameSecondsElapsed = 0;
+	LARGE_INTEGER TimeNow = GetCPUTime();
+	while(FrameSecondsElapsed < TargetFrameSeconds)
 	{
-	    oldFraction = FPSFrameCounter / FPSFrameCounter + 1;
-	    FPSFrameCounter += 1;
+	    TimeNow = GetCPUTime();
+	    FrameSecondsElapsed = Win32GetSecondsElapsed(LastCounter, TimeNow);
+	    if (FrameSecondsElapsed < TargetFrameSeconds)
+	    {
+		DWORD SleepMS = (DWORD)(1000.0f*(TargetFrameSeconds - FrameSecondsElapsed));
+		if (SleepMS > 0)
+		{
+		    Sleep(SleepMS);
+		    TimeNow = GetCPUTime();
+		}
+	    }
 	}
-	else
-	{
-	    oldFraction = (FPSSampleFrames-1) / FPSSampleFrames;
-	}
-	
-	complement = 1 - oldFraction;
-	FPSAverageAccumulator = (FPSAverageAccumulator*oldFraction) + (FrameSecondsElapsed*complement);
-        printf("FPS: %-4f\n", FPSAverageAccumulator);
-	*/
 
 	*PlatformData.LastInput = *PlatformData.NewInput;
-	PlatformData.NewInput->dT = FrameSecondsElapsed/1000.0f;
+	PlatformData.NewInput->dT = FrameSecondsElapsed;
 	LastCounter = TimeNow;
     }
 

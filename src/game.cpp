@@ -882,7 +882,7 @@ void UpdateAndRender(platform_data* Platform)
     {
 	Init(Platform, Game);
     }
-/*
+
     if (Keyboard.Left.Down)
     {
 	CameraStrafe(&Game->Camera, Input->dT, -3.0f);
@@ -923,7 +923,7 @@ void UpdateAndRender(platform_data* Platform)
 	       Keyboard.RightStick.X / 100.0f,
 	       Keyboard.RightStick.Y / 100.0f,
 	       Input->dT*1.0f);
-*/
+
 //    Game->Box.Angle += PI*(1.0f/120.0f);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -934,5 +934,5 @@ void UpdateAndRender(platform_data* Platform)
     RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     
-    RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+    //RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
 }
