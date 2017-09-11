@@ -220,7 +220,11 @@ void GLErrorShow()
 	{
 	    msg = "Invalid framebuffer operation";
 	}
-	printf("OpenGL error: %d - %s\n", error, msg);
+	else
+	{
+	    msg = "Unknown GL error";
+	}
+	DebugLog("OpenGL error: %d - %s\n", error, msg);
     }
 }
 
@@ -232,7 +236,7 @@ texture LoadDDS(const char * filePath)
     FILE *fp = fopen(filePath, "rb");
     if (fp == 0)
     {
-	printf("File not found: %s", filePath);
+	DebugLog("File not found: %s", filePath);
 	return NullTexture;
     }
 
@@ -241,7 +245,7 @@ texture LoadDDS(const char * filePath)
     if (strncmp(fileCode, "DDS ", 4) != 0)
     {
 	fclose(fp);
-	printf("File is not DDS: %s", filePath);
+	DebugLog("File is not DDS: %s", filePath);
 	return NullTexture;
     }
 
@@ -281,7 +285,7 @@ texture LoadDDS(const char * filePath)
     else
     {
 	free(buffer);
-	printf("File not DXT compressed: %s", filePath);
+	DebugLog("File not DXT compressed: %s", filePath);
 	return NullTexture;
     }
 
@@ -324,18 +328,18 @@ texture LoadBMP(char* filePath)
     FILE * file = fopen(filePath, "rb");
     if (!file)
     {
-	printf("File not found: %s\n", filePath);
+	DebugLog("File not found: %s\n", filePath);
 	return NullTexture;
     }
 
     if (fread(header, 1, 54, file) != 54) {
-	printf("Malformed BMP: %s\n", filePath);
+	DebugLog("Malformed BMP: %s\n", filePath);
 	return NullTexture;
     }
 
     if (header[0] != 'B' || header[1]!= 'M')
     {
-	printf("Malformed BMP: %s\n", filePath);
+	DebugLog("Malformed BMP: %s\n", filePath);
 	return NullTexture;
     }
 

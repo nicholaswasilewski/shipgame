@@ -3,6 +3,8 @@
 IF NOT EXIST ..\bin mkdir ..\bin
 pushd ..\bin
 
-cl /nologo /Od /fp:fast ..\src\win32_glx.cpp /Z7 /link /incremental:no /opt:ref
+set CommonCompilerFlags=/Od /MTd /fp:fast /I ../ext/headers /nologo /Z7
+set CommonLinkerFlags=/incremental:no /opt:ref /LIBPATH:"../ext/lib/win32"
+cl %CommonCompilerFlags% ..\src\win32_glx.cpp /link %CommonLinkerFlags%
 
 popd

@@ -114,7 +114,7 @@ const v3 Vec3UnitZ = V3(0.0f,1.0f,0.0f);
 
 float Length(v3 v)
 {
-    return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+    return (float)sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 }
 
 v3 operator+(v3 u, v3 v)
@@ -191,7 +191,7 @@ v3 Normalize(v3 v)
 
 float Length(v2 v)
 {
-    return sqrt(v.x*v.x + v.y*v.y);
+    return (float)sqrt(v.x*v.x + v.y*v.y);
 }
 
 v2 Normalize(v2 v)
@@ -201,7 +201,7 @@ v2 Normalize(v2 v)
 
 float Length(quaternion q)
 {
-    return sqrt(q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w);
+    return (float)sqrt(q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w);
 }
 
 quaternion Normalize(quaternion q)
@@ -369,8 +369,8 @@ quaternion QuaternionFromAxisAngle(v3 Axis, float Angle)
 {
     Axis = Normalize(Axis);
     float halfAngle = Angle/2.0f;
-    float a = sin(halfAngle);
-    float b = cos(halfAngle);
+    float a = (float)sin(halfAngle);
+    float b = (float)cos(halfAngle);
     quaternion Result = {
 	Axis.x * a,
 	Axis.y * a,

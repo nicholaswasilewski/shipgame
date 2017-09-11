@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <math.h>
 
+#include <openvr.h>
 #include "win32_platform.h"
 #include "platform.h"
 #include "glHelper.cpp"
@@ -14,6 +15,7 @@
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "OpenGL32.lib")
+#pragma comment(lib, "openvr_api.lib")
 
 void ShowAlert(char* Message)
 {
