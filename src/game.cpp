@@ -642,13 +642,13 @@ void Init(platform_data* Platform, game_data *Game)
     glBufferData(GL_ARRAY_BUFFER, uvBufferSize, BoxModel->UVs, GL_STATIC_DRAW);
 
 #if DIE
-    Game->BoxDiffuseMap = LoadDDS("uvtemplate.dds");
+    Game->BoxDiffuseMap = LoadDDS("../res/Textures/uvtemplate.dds");
 #elif defined(CONTAINER)
-    Game->BoxDiffuseMap = LoadDDS("container.dds");
+    Game->BoxDiffuseMap = LoadDDS("../res/Textures/container.dds");
 #endif
 
-    Game->BoxSpecularMap = LoadDDS("containerspecular.dds");
-    Game->BoxEmissiveMap = LoadDDS("containeremissive.dds");
+    Game->BoxSpecularMap = LoadDDS("../res/Textures/containerspecular.dds");
+    Game->BoxEmissiveMap = LoadDDS("../res/Textures/containeremissive.dds");
 
     texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxModel->Material = BoxMaterial;
@@ -668,7 +668,7 @@ void Init(platform_data* Platform, game_data *Game)
     ColorMaterial->Shine = 0.0f;
 
     light_texture_shader Shader;
-    Shader.Program = LoadShaders("Shaders/lightTextureShader.vert", "Shaders/lightTextureShader.frag");
+    Shader.Program = LoadShaders("../res/Shaders/lightTextureShader.vert", "../res/Shaders/lightTextureShader.frag");
     Shader.M = glGetUniformLocation(Shader.Program, "M");
     Shader.V = glGetUniformLocation(Shader.Program, "V");
     Shader.MVP = glGetUniformLocation(Shader.Program, "MVP");
@@ -680,7 +680,7 @@ void Init(platform_data* Platform, game_data *Game)
     Game->LightTextureShader = Shader;
 
     color_shader ColorShader;
-    ColorShader.Program = LoadShaders("Shaders/vertexShader.vert", "Shaders/fragmentShader.frag");
+    ColorShader.Program = LoadShaders("../res/Shaders/vertexShader.vert", "../res/Shaders/fragmentShader.frag");
     ColorShader.M = glGetUniformLocation(ColorShader.Program, "M");
     ColorShader.V = glGetUniformLocation(ColorShader.Program, "V");
     ColorShader.MVP = glGetUniformLocation(ColorShader.Program, "MVP");
@@ -877,9 +877,9 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
 void UpdateAndRender(platform_data* Platform)
 {    
     game_data* Game = (game_data*)(((char*)Platform->MainMemory)+0);
-//    input *LastInput = Platform->LastInput;
+    input *LastInput = Platform->LastInput;
     input *Input = Platform->NewInput;
-//    controller OldKeyboard = LastInput->Keyboard;
+    controller OldKeyboard = LastInput->Keyboard;
     controller Keyboard = Input->Keyboard;
 
     if (!Game->Initialized)
@@ -928,7 +928,7 @@ void UpdateAndRender(platform_data* Platform)
 	       Keyboard.RightStick.Y / 100.0f,
 	       Input->dT*1.0f);
 
-//    Game->Box.Angle += PI*(1.0f/120.0f);
+    Game->Box.Angle += PI*(1.0f/120.0f);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     mat4 Projection = GenerateCameraPerspective(Game->Camera);

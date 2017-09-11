@@ -1,3 +1,4 @@
 @echo off
-
-start ..\bin\win32_glx.exe
+pushd ..\bin
+start win32_glx.exe
+popd

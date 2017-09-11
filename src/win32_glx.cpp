@@ -644,7 +644,7 @@ int CALLBACK WinMain(
         Buffer.Pitch = State.Backbuffer.Pitch;
         Buffer.BytesPerPixel = State.Backbuffer.BytesPerPixel;
 	
-	win32_state* winState = (win32_state*)GetAppState(WindowHandle);
+ 	win32_state* winState = (win32_state*)GetAppState(WindowHandle);
 
 	//TestUpdateAndRender(&PlatformData);
 	UpdateAndRender(&PlatformData);
