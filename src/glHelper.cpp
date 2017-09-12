@@ -20,6 +20,8 @@ void* GetGLFuncAddress(const char* name)
 #define GL_BGR                            0x80E0
 #define GL_BGRA                           0x80E1
 
+#define GL_TEXTURE_MAX_LEVEL              0x813D
+
 #define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT  0x83F1
 #define GL_COMPRESSED_RGBA_S3TC_DXT3_EXT  0x83F2
 #define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT  0x83F3
@@ -30,6 +32,11 @@ void* GetGLFuncAddress(const char* name)
 #define GL_COMPILE_STATUS                 0x8B81
 #define GL_LINK_STATUS                    0x8B82
 #define GL_INFO_LOG_LENGTH                0x8B84
+
+#define GL_FRAMEBUFFER_COMPLETE           0x8CD5
+#define GL_DEPTH_ATTACHMENT               0x8D00
+#define GL_FRAMEBUFFER                    0x8D40
+#define GL_RENDERBUFFER                   0x8D41
 
 #define GL_ARRAY_BUFFER                   0x8892
 #define GL_ELEMENT_ARRAY_BUFFER           0x8893
@@ -69,6 +76,40 @@ void* GetGLFuncAddress(const char* name)
 #define GL_TEXTURE30                      0x84DE
 #define GL_TEXTURE31                      0x84DF
 
+#define GL_MAX_COLOR_ATTACHMENTS          0x8CDF
+#define GL_COLOR_ATTACHMENT0              0x8CE0
+#define GL_COLOR_ATTACHMENT1              0x8CE1
+#define GL_COLOR_ATTACHMENT2              0x8CE2
+#define GL_COLOR_ATTACHMENT3              0x8CE3
+#define GL_COLOR_ATTACHMENT4              0x8CE4
+#define GL_COLOR_ATTACHMENT5              0x8CE5
+#define GL_COLOR_ATTACHMENT6              0x8CE6
+#define GL_COLOR_ATTACHMENT7              0x8CE7
+#define GL_COLOR_ATTACHMENT8              0x8CE8
+#define GL_COLOR_ATTACHMENT9              0x8CE9
+#define GL_COLOR_ATTACHMENT10             0x8CEA
+#define GL_COLOR_ATTACHMENT11             0x8CEB
+#define GL_COLOR_ATTACHMENT12             0x8CEC
+#define GL_COLOR_ATTACHMENT13             0x8CED
+#define GL_COLOR_ATTACHMENT14             0x8CEE
+#define GL_COLOR_ATTACHMENT15             0x8CEF
+#define GL_COLOR_ATTACHMENT16             0x8CF0
+#define GL_COLOR_ATTACHMENT17             0x8CF1
+#define GL_COLOR_ATTACHMENT18             0x8CF2
+#define GL_COLOR_ATTACHMENT19             0x8CF3
+#define GL_COLOR_ATTACHMENT20             0x8CF4
+#define GL_COLOR_ATTACHMENT21             0x8CF5
+#define GL_COLOR_ATTACHMENT22             0x8CF6
+#define GL_COLOR_ATTACHMENT23             0x8CF7
+#define GL_COLOR_ATTACHMENT24             0x8CF8
+#define GL_COLOR_ATTACHMENT25             0x8CF9
+#define GL_COLOR_ATTACHMENT26             0x8CFA
+#define GL_COLOR_ATTACHMENT27             0x8CFB
+#define GL_COLOR_ATTACHMENT28             0x8CFC
+#define GL_COLOR_ATTACHMENT29             0x8CFD
+#define GL_COLOR_ATTACHMENT30             0x8CFE
+#define GL_COLOR_ATTACHMENT31             0x8CFF
+
 #define GL_MAJOR_VERSION                  0x821B
 #define GL_MINOR_VERSION                  0x821C
 #define GL_NUM_EXTENSIONS                 0x821D
@@ -91,6 +132,7 @@ void* GetGLFuncAddress(const char* name)
 #define WGL_SAMPLE_BUFFERS_ARB            0x2041
 #define WGL_SAMPLES_ARB                   0x2042
 
+#define GL_TEXTURE_2D_MULTISAMPLE         0x9100
 #define WGL_CONTEXT_PROFILE_MASK_ARB      0x9126
 #define WGL_CONTEXT_CORE_PROFILE_BIT_ARB  0x00000001
 
@@ -111,6 +153,8 @@ typedef char GLchar;
     GLE(void, Uniform4f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) \
     GLE(void, UniformMatrix4fv, GLint location, GLsizei count, GLboolean transpose, const GLfloat *value) \
     GLE(void, CompressedTexImage2D, GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data) \
+    GLE(void, TexImage2DMultisample, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations) \
+    GLE(void, TextureParameteri, GLuint texture, GLenum pname, GLint param) \
     GLE(void, GenerateMipmap, GLenum target) \
     GLE(GLuint, CreateShader, GLenum type) \
     GLE(void, DeleteShader, GLuint shader) \
@@ -135,7 +179,17 @@ typedef char GLchar;
     GLE(void, DeleteBuffers, GLsizei n, const GLuint *buffer) \
     GLE(void, BufferData, GLenum target, GLsizeiptr size, const void *data, GLenum usage) \
     GLE(void, VertexAttribPointer, GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer) \
-    GLE(void, ActiveTexture, GLenum texture)
+    GLE(void, ActiveTexture, GLenum texture) \
+    GLE(void, GenFramebuffers, GLsizei n, GLuint *framebuffers) \
+    GLE(void, FramebufferTexture2D, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) \
+    GLE(GLenum, CheckFramebufferStatus, GLenum target) \
+    GLE(void, BindFramebuffer, GLenum target, GLuint framebuffer) \
+    GLE(void, DeleteFramebuffers, GLsizei n, const GLuint *framebuffers) \
+    GLE(void, GenRenderbuffers, GLsizei n, GLuint *renderbuffers) \
+    GLE(void, BindRenderbuffer, GLenum target, GLuint renderbuffer) \
+    GLE(void, DeleteRenderbuffers, GLsizei n, const GLuint *renderbuffers) \
+    GLE(void, RenderbufferStorageMultisample, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height) \
+    GLE(void, FramebufferRenderbuffer, GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
 
 void *GetGLFuncAddress(const char *name)
 {
@@ -199,6 +253,15 @@ static void PrintAvailableGLExtensions()
 }
 #undef GLE
 
+struct FramebufferDesc
+{
+    GLuint DepthBufferId;
+    GLuint RenderTextureId;
+    GLuint RenderFramebufferId;
+    GLuint ResolveTextureId;
+    GLuint ResolveFramebufferId;
+};
+
 void glUniformVec3f(GLuint location, v3 vec)
 {
     glUniform3f(location, vec.x, vec.y, vec.z);
@@ -207,6 +270,40 @@ void glUniformVec3f(GLuint location, v3 vec)
 void glUniformVec4f(GLuint location, v4 vec)
 {
     glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
+}
+
+void GLErrorShow()
+{
+    GLenum error;
+    while ((error = glGetError()) != GL_NO_ERROR)
+    {
+	char* msg;
+	if (error == GL_INVALID_OPERATION)
+	{
+	    msg = "Invalid Operation";
+	}
+	else if (error == GL_INVALID_ENUM)
+	{
+	    msg = "Invalid enum";
+	}
+	else if (error == GL_INVALID_VALUE)
+	{
+	    msg = "Invalid value";
+	}
+	else if (error == GL_OUT_OF_MEMORY)
+	{
+	    msg = "Out of memory";
+	}
+	else if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
+	{
+	    msg = "Invalid framebuffer operation";
+	}
+	else
+	{
+	    msg = "Unknown GL error";
+	}
+	DebugLog("OpenGL error: %d - %s\n", error, msg);
+    }
 }
 
 #endif

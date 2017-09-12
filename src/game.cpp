@@ -194,40 +194,6 @@ struct game_data
     float BoxRotation;
 };
 
-void GLErrorShow()
-{
-    GLenum error;
-    while ((error = glGetError()) != GL_NO_ERROR)
-    {
-	char* msg;
-	if (error == GL_INVALID_OPERATION)
-	{
-	    msg = "Invalid Operation";
-	}
-	else if (error == GL_INVALID_ENUM)
-	{
-	    msg = "Invalid enum";
-	}
-	else if (error == GL_INVALID_VALUE)
-	{
-	    msg = "Invalid value";
-	}
-	else if (error == GL_OUT_OF_MEMORY)
-	{
-	    msg = "Out of memory";
-	}
-	else if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
-	{
-	    msg = "Invalid framebuffer operation";
-	}
-	else
-	{
-	    msg = "Unknown GL error";
-	}
-	DebugLog("OpenGL error: %d - %s\n", error, msg);
-    }
-}
-
 texture LoadDDS(const char * filePath)
 {
     texture NullTexture = {0};

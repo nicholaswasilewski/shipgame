@@ -23,6 +23,8 @@ typedef struct win32_state
 
     uint64 TotalSize;
     void* GameMemoryBlock;
+
+    vr::IVRSystem *VRSystem;
 } win32_state;
 
 typedef struct win32_window_dimension {
