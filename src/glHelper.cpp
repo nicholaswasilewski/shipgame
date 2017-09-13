@@ -17,6 +17,8 @@ void* GetGLFuncAddress(const char* name)
 
 #define GL_INVALID_FRAMEBUFFER_OPERATION  0x0506
 
+#define GL_MULTISAMPLE                    0x809D
+
 #define GL_BGR                            0x80E0
 #define GL_BGRA                           0x80E1
 
@@ -33,6 +35,8 @@ void* GetGLFuncAddress(const char* name)
 #define GL_LINK_STATUS                    0x8B82
 #define GL_INFO_LOG_LENGTH                0x8B84
 
+#define GL_READ_FRAMEBUFFER               0x8CA8
+#define GL_DRAW_FRAMEBUFFER               0x8CA9
 #define GL_FRAMEBUFFER_COMPLETE           0x8CD5
 #define GL_DEPTH_ATTACHMENT               0x8D00
 #define GL_FRAMEBUFFER                    0x8D40
@@ -189,7 +193,8 @@ typedef char GLchar;
     GLE(void, BindRenderbuffer, GLenum target, GLuint renderbuffer) \
     GLE(void, DeleteRenderbuffers, GLsizei n, const GLuint *renderbuffers) \
     GLE(void, RenderbufferStorageMultisample, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height) \
-    GLE(void, FramebufferRenderbuffer, GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
+    GLE(void, FramebufferRenderbuffer, GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer) \
+    GLE(void, BlitFramebuffer, GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
 
 void *GetGLFuncAddress(const char *name)
 {
@@ -302,7 +307,7 @@ void GLErrorShow()
 	{
 	    msg = "Unknown GL error";
 	}
-	DebugLog("OpenGL error: %d - %s\n", error, msg);
+	printf("OpenGL error: %d - %s\n", error, msg);
     }
 }
 

@@ -258,7 +258,7 @@ texture LoadDDS(const char * filePath)
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
-
+    
     uint32 blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
     uint32 offset = 0;
     int w = width;
@@ -278,7 +278,6 @@ texture LoadDDS(const char * filePath)
 	textureID,
 	buffer
     };
-    glDisable(GL_TEXTURE_2D);
     return Result;
 }
 
@@ -438,18 +437,16 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 
 void Init(platform_data* Platform, game_data *Game)
 {
-    glClearColor(0.0, 0.0, 0.4, 0.0);
+    glClearColor(0.0, 0.0, 0.0, 0.0);
     glFrontFace(GL_CCW);
     glEnable(GL_CULL_FACE);
-    glPolygonMode(GL_FRONT, GL_FILL);
-//    glPolygonMode(GL_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 //    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
-
     model *BoxModel = &Game->BoxModel;
     GLfloat vertexBufferData[] = {
 	//Front
@@ -486,7 +483,6 @@ void Init(platform_data* Platform, game_data *Game)
     size_t vertexBufferSize = sizeof(vertexBufferData);
     BoxModel->Vertices = (GLfloat*)malloc(vertexBufferSize);
     memcpy(BoxModel->Vertices, vertexBufferData, vertexBufferSize);
-
     glGenBuffers(1, &BoxModel->VertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER,
 		 BoxModel->VertexBuffer);
@@ -615,33 +611,31 @@ void Init(platform_data* Platform, game_data *Game)
 
     Game->BoxSpecularMap = LoadDDS("../res/Textures/containerspecular.dds");
     Game->BoxEmissiveMap = LoadDDS("../res/Textures/containeremissive.dds");
-
+    
     texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxModel->Material = BoxMaterial;
     BoxMaterial->DiffuseMap = Game->BoxDiffuseMap.Handle;
     BoxMaterial->SpecularMap = Game->BoxSpecularMap.Handle;
 //    BoxMaterial->EmissiveMap = Game->BoxEmissiveMap.Handle;
     BoxMaterial->Shine = 60.0f;
-
+    
     color_model *ColorBoxModel = &Game->ColorBoxModel;
     ColorBoxModel->Model = *BoxModel;
-
     color_material *ColorMaterial = &Game->ColorMaterial;
     ColorBoxModel->Material = ColorMaterial;
     ColorMaterial->Diffuse = V3(0.0f, 0.0f, 0.0f);
     ColorMaterial->Specular = V3(0.0f, 0.0f, 0.0f);
     ColorMaterial->Emissive = V3(1.0f, 1.0f, 1.0f);
     ColorMaterial->Shine = 0.0f;
-
+    
     light_texture_shader Shader;
     Shader.Program = LoadShaders("../res/Shaders/lightTextureShader.vert", "../res/Shaders/lightTextureShader.frag");
     Shader.M = glGetUniformLocation(Shader.Program, "M");
     Shader.V = glGetUniformLocation(Shader.Program, "V");
     Shader.MVP = glGetUniformLocation(Shader.Program, "MVP");
-	
+    
     Shader.CameraPosition = glGetUniformLocation(Shader.Program, "CameraPosition");
     Shader.Light = CreateLightBinding(Shader.Program);
-    
     Shader.Material = CreateMaterialBinding(Shader.Program);
     Game->LightTextureShader = Shader;
 
@@ -840,19 +834,13 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
     glDisableVertexAttribArray(2);
 }
 
-void UpdateAndRender(platform_data* Platform)
-{    
-    game_data* Game = (game_data*)(((char*)Platform->MainMemory)+0);
+void Update(platform_data *Platform, game_data *Game)
+{
     input *LastInput = Platform->LastInput;
     input *Input = Platform->NewInput;
     controller OldKeyboard = LastInput->Keyboard;
     controller Keyboard = Input->Keyboard;
-
-    if (!Game->Initialized)
-    {
-	Init(Platform, Game);
-    }
-
+    
     if (Keyboard.Left.Down)
     {
 	CameraStrafe(&Game->Camera, Input->dT, -3.0f);
@@ -895,14 +883,70 @@ void UpdateAndRender(platform_data* Platform)
 	       Input->dT*1.0f);
 
     Game->Box.Angle += PI*(1.0f/120.0f);
+}
 
+void RenderScene(game_data *Game, mat4 Projection, mat4 View)
+{
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    mat4 Projection = GenerateCameraPerspective(Game->Camera);
-    mat4 View = GenerateCameraView(Game->Camera);
-
+    glEnable(GL_DEPTH_TEST);
     RenderObject(Game->Box, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-    
     //RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+}
+
+void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, mat4 View, FramebufferDesc *TargetBuffer, int BufferWidth, int BufferHeight)
+{
+    
+    glEnable(GL_MULTISAMPLE);
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
+    glViewport(0, 0, BufferWidth, BufferHeight);
+    RenderScene(Game, Projection, View);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    glDisable(GL_MULTISAMPLE);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TargetBuffer->ResolveFramebufferId);
+    glBlitFramebuffer(0, 0, BufferWidth, BufferHeight,
+		      0, 0, BufferWidth, BufferHeight,
+		      GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);    
+}
+
+void Render(platform_data *Platform, game_data *Game)
+{
+    
+    mat4 Projection = GenerateCameraPerspective(Game->Camera);
+    mat4 View = GenerateCameraView(Game->Camera);
+    
+    if (Platform->LeftEye && Platform->RightEye)
+    {
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	
+	RenderToTarget(Platform, Game, Projection, View, Platform->LeftEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
+	RenderToTarget(Platform, Game, Projection, View, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
+    }
+    
+    glViewport(0, 0, Platform->WindowWidth, Platform->WindowHeight);
+    RenderScene(Game, Projection, View);
+}
+
+void UpdateAndRender(platform_data *Platform)
+{
+    game_data* Game = (game_data*)(((char*)Platform->MainMemory)+0);
+
+    if (!Game->Initialized)
+    {
+	Init(Platform, Game);
+	printf("GLInit Errors:\n");
+	GLErrorShow();
+	
+    }
+
+    Update(Platform, Game);
+    Render(Platform, Game);
+    GLErrorShow();
 }

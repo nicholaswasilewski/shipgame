@@ -1,6 +1,7 @@
 #ifndef PLATFORM_H__
 #define PLATFORM_H__
 
+#include "glHelper.cpp"
 #include <stdint.h>
 
 typedef int8_t int8;
@@ -194,7 +195,13 @@ typedef struct platform_data
     input *LastInput;
     input *NewInput;
 
+    int WindowWidth;
+    int WindowHeight;
     
+    int VRBufferWidth;
+    int VRBufferHeight;
+    FramebufferDesc *LeftEye;
+    FramebufferDesc *RightEye;
 } platform_data;
 
 #endif

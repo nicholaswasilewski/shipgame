@@ -274,6 +274,14 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
             Win32DisplayBufferInWindow(&State->Backbuffer, DeviceContext, Dimension.Width, Dimension.Height);
             EndPaint(Window, &Paint);
         } break;
+	case WM_SIZE:
+	{
+            win32_state* State = GetAppState(Window);
+	    int Width = LOWORD(LParam);
+	    int Height = HIWORD(LParam);
+	    State->WindowWidth = Width;
+	    State->WindowHeight = Height;
+	} break;
 	
         default:
         {
@@ -711,20 +719,22 @@ int CALLBACK WinMain(
 
     uint32 VRWidth;
     uint32 VRHeight;
-
-    GLuint fbo;
-    glGenFramebuffers(1, &fbo);
-    printf("Does this work?\n");
-    GLErrorShow();
-    printf("If that was blank, it does!\n");
     FramebufferDesc LeftEyeBuffer = {0};
     FramebufferDesc RightEyeBuffer = {0};
-    SetupStereoRenderTargets(State.VRSystem, &VRWidth, &VRHeight, &LeftEyeBuffer, &RightEyeBuffer);
-    GLErrorShow();
-    if (!vr::VRCompositor())
+    if (State.VRSystem)
     {
-	ShowAlert("Compositor initialization failed.");
-	return 1;
+	if (!SetupStereoRenderTargets(State.VRSystem, &VRWidth, &VRHeight, &LeftEyeBuffer, &RightEyeBuffer))
+	{
+	    ShowAlert("Failed to setup render targets!");
+	}
+	GLErrorShow();
+	printf("VR Render target size: %d x %d\n", VRWidth, VRHeight);
+    
+	if (!vr::VRCompositor())
+	{
+	    ShowAlert("Compositor initialization failed.");
+	    return 1;
+	}
     }
     
     
@@ -750,6 +760,11 @@ int CALLBACK WinMain(
     input *LastInput = &Inputs[1];
     PlatformData.LastInput = LastInput;
     PlatformData.NewInput = NewInput;
+
+    PlatformData.VRBufferWidth = VRWidth;
+    PlatformData.VRBufferHeight = VRHeight;
+    PlatformData.LeftEye = &LeftEyeBuffer;
+    PlatformData.RightEye = &RightEyeBuffer;
     
     NewInput->dT = 0.0f;
     State.Running = true;
@@ -759,7 +774,6 @@ int CALLBACK WinMain(
     int FPSSampleFrames = 60;
     int FPSFrameCounter = 0;
     float FPSAverageAccumulator = 0.0f;
-    
     while(State.Running)
     {
         
@@ -792,6 +806,7 @@ int CALLBACK WinMain(
   	if (State.VRSystem)
 	{
 	    VRProcessPendingMessages(State.VRSystem);
+	    
 	}
 	
         game_screen_buffer Buffer = {};
@@ -802,12 +817,32 @@ int CALLBACK WinMain(
         Buffer.BytesPerPixel = State.Backbuffer.BytesPerPixel;
 	
  	win32_state* winState = (win32_state*)GetAppState(WindowHandle);
-
+	
 	//TestUpdateAndRender(&PlatformData);
+	PlatformData.WindowWidth = State.WindowWidth;
+	PlatformData.WindowHeight = State.WindowHeight;
 	UpdateAndRender(&PlatformData);
-	HDC DeviceContext = GetDC(WindowHandle);
+
+	if (State.VRSystem)
+	{
+	    vr::Texture_t LeftEyeTexture = {(void*)(uintptr_t)PlatformData.LeftEye->ResolveTextureId,
+					    vr::TextureType_OpenGL,
+					    vr::ColorSpace_Gamma };
+	    vr::VRCompositor()->Submit(vr::Eye_Left, &LeftEyeTexture);
+	    vr::Texture_t RightEyeTexture = {(void*)(uintptr_t)PlatformData.RightEye->ResolveTextureId,
+					     vr::TextureType_OpenGL,
+					     vr::ColorSpace_Gamma };
+	    vr::VRCompositor()->Submit(vr::Eye_Right, &RightEyeTexture);
+	}
+	
+	glFinish();
 	SwapBuffers(DeviceContext);
-//	ReleaseDC(WindowHandle, DeviceContext);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glFlush();
+	glFinish();
+
+	vr::TrackedDevicePose_t TrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
+	vr::VRCompositor()->WaitGetPoses(TrackedDevicePose, vr::k_unMaxTrackedDeviceCount, 0, 0);
 	
         //post work
 	float FrameSecondsElapsed = 0;

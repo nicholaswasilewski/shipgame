@@ -21,6 +21,9 @@ typedef struct win32_state
     WINDOWPLACEMENT PreviousWindowPlacement;
     HWND Console;
 
+    int WindowWidth;
+    int WindowHeight;
+
     uint64 TotalSize;
     void* GameMemoryBlock;
 
