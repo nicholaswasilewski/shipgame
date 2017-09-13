@@ -825,6 +825,11 @@ int CALLBACK WinMain(
 
 	if (State.VRSystem)
 	{
+	    State.VRSystem->TriggerHapticPulse(1, 0, 500);
+	}
+	
+	if (State.VRSystem)
+	{
 	    vr::Texture_t LeftEyeTexture = {(void*)(uintptr_t)PlatformData.LeftEye->ResolveTextureId,
 					    vr::TextureType_OpenGL,
 					    vr::ColorSpace_Gamma };
@@ -841,8 +846,11 @@ int CALLBACK WinMain(
 	glFlush();
 	glFinish();
 
-	vr::TrackedDevicePose_t TrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
-	vr::VRCompositor()->WaitGetPoses(TrackedDevicePose, vr::k_unMaxTrackedDeviceCount, 0, 0);
+	if (State.VRSystem)
+	{
+	    vr::TrackedDevicePose_t TrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
+	    vr::VRCompositor()->WaitGetPoses(TrackedDevicePose, vr::k_unMaxTrackedDeviceCount, 0, 0);
+	}
 	
         //post work
 	float FrameSecondsElapsed = 0;
