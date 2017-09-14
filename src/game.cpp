@@ -905,7 +905,7 @@ void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, m
     RenderScene(Game, Projection, View);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
-    //glDisable(GL_MULTISAMPLE);
+    glDisable(GL_MULTISAMPLE);
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TargetBuffer->ResolveFramebufferId);
@@ -925,7 +925,7 @@ void Render(platform_data *Platform, game_data *Game)
     camera RightEyeCamera = Game->Camera;
     RightEyeCamera.Position = RightEyeCamera.Position + EyeDistance*Cross(RightEyeCamera.Forward,
 									   RightEyeCamera.Up);
-    mat4 Projection = GenerateCameraOrthographic(Game->Camera);
+    mat4 Projection = GenerateCameraPerspective(Game->Camera);
     
     mat4 View = GenerateCameraView(Game->Camera);
     mat4 LeftEyeView = GenerateCameraView(LeftEyeCamera);

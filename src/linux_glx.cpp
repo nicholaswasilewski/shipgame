@@ -265,8 +265,8 @@ void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int*
 	    {
 		if (motionEvent.x != WindowWidth/2 || motionEvent.y != WindowHeight/2)
 		{
-		    Input->Keyboard.RStick.X = motionEvent.x - WindowWidth/2;
-		    Input->Keyboard.RStick.Y = motionEvent.y - WindowHeight/2;
+		    Input->Keyboard.RightStick.X = motionEvent.x - WindowWidth/2;
+		    Input->Keyboard.RightStick.Y = motionEvent.y - WindowHeight/2;
 		    XWarpPointer(display, 0, window, 0, 0, 0, 0,
 				 WindowWidth/2, WindowHeight/2);
 		}
@@ -387,8 +387,8 @@ int Main(int argc, char *argv[])
 		 WindowWidth/2, WindowHeight/2);
     while(1)
     {
-	PlatformData.NewInput->Keyboard.RStick.X = 0.0f;
-	PlatformData.NewInput->Keyboard.RStick.Y = 0.0f;
+	PlatformData.NewInput->Keyboard.RightStick.X = 0.0f;
+	PlatformData.NewInput->Keyboard.RightStick.Y = 0.0f;
 	ProcessXEvents(PlatformData.NewInput,
 		       wm_protocols,
 		       wm_delete_window,
