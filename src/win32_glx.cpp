@@ -556,8 +556,8 @@ int CALLBACK WinMain(
     WindowClass.hCursor = LoadCursor(0, NULL);
     WindowClass.lpszClassName="GLXMainWindowClass";
 
-    int GameWidth = 480;
-    int GameHeight = 320;
+//    int GameWidth = 480;
+//    int GameHeight = 320;
 //    Win32ResizeDIBSection(&State.Backbuffer, GameWidth, GameHeight);
 
     if (!RegisterClassA(&WindowClass))
@@ -887,11 +887,6 @@ int CALLBACK WinMain(
 	PlatformData.WindowWidth = State.WindowWidth;
 	PlatformData.WindowHeight = State.WindowHeight;
 	UpdateAndRender(&PlatformData);
-
-	if (State.VRSystem)
-	{
-	    State.VRSystem->TriggerHapticPulse(1, 0, 500);
-	}
 	
 	if (State.VRSystem)
 	{
