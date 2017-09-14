@@ -765,7 +765,7 @@ int CALLBACK WinMain(
     }
     
     PrintGLVersion();
-    PrintAvailableGLExtensions();
+    //PrintAvailableGLExtensions();
     LoadGLExtensions();
     GLErrorShow();
     /*End Init OpenGL*/
@@ -789,7 +789,6 @@ int CALLBACK WinMain(
 	    return 1;
 	}
     }
-    
     
     int HardRefreshHz = 60;
 
@@ -869,7 +868,6 @@ int CALLBACK WinMain(
 	    win32_point MousePosition = GetCursorPosition();
 	    win32_point dMousePosition = {MousePosition.X - WindowCenter.X,
 					  MousePosition.Y - WindowCenter.Y};
-	    printf("%d, %d\n", MousePosition.X, MousePosition.Y);
 	    NewKeyboard->RightStick.X = dMousePosition.X;
 	    NewKeyboard->RightStick.Y = dMousePosition.Y;
 	    CenterCursor(WindowHandle);
@@ -883,9 +881,9 @@ int CALLBACK WinMain(
         Buffer.Pitch = State.Backbuffer.Pitch;
         Buffer.BytesPerPixel = State.Backbuffer.BytesPerPixel;
 	
-	//TestUpdateAndRender(&PlatformData);
 	PlatformData.WindowWidth = State.WindowWidth;
 	PlatformData.WindowHeight = State.WindowHeight;
+	
 	UpdateAndRender(&PlatformData);
 	
 	if (State.VRSystem)
