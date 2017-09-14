@@ -143,6 +143,22 @@ win32_window_dimension GetWindowDimension(HWND Window)
     return Result;
 }
 
+win32_point GetWindowCenter(HWND Window)
+{
+    win32_point Result;
+    RECT ClientRect;
+    GetWindowRect(Window, &ClientRect);
+    Result.X = (ClientRect.right - ClientRect.left)/2 + ClientRect.left;
+    Result.Y = (ClientRect.bottom - ClientRect.top)/2 + ClientRect.top;
+    return Result;
+}
+
+void CenterCursor(HWND Window)
+{
+    win32_point Center = GetWindowCenter(Window);
+    SetCursorPos(Center.X, Center.Y);
+}
+
 int64 PerfCountFrequency;
 float Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
 {
@@ -228,7 +244,7 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
             CREATESTRUCT* Create = (CREATESTRUCT*)LParam;
             win32_state* State = (win32_state*)Create->lpCreateParams;
             SetWindowLongPtr(Window, GWLP_USERDATA, (LONG_PTR)State);
-	    
+	    State->Focused = false;
         } break;
         case WM_CLOSE:
         {
@@ -238,11 +254,14 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
 	    vr::VR_Shutdown();
 	    State->VRSystem = 0;
             PostQuitMessage(0);
-        } break;	
+        } break;
+	case WM_MOUSELEAVE:
+	{
+	    CenterCursor(Window);
+	} break;	
         case WM_SETCURSOR:
         {
             Result = DefWindowProcA(Window, Message, WParam, LParam);
-            
         } break;
         case WM_DESTROY:
         {
@@ -253,15 +272,15 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
 	{
 	    win32_state* State = GetAppState(Window);
 	    win32_window_dimension WindowDimension = GetWindowDimension(Window);
-	    SetCursorPos(WindowDimension.Width/2, WindowDimension.Height/2);
+	    CenterCursor(Window);
+	    ShowCursor(false);
 	    State->Focused = true;
-	    printf("Gained Focus\n");
 	} break;
 	case WM_KILLFOCUS:
 	{
 	    win32_state* State = GetAppState(Window);
+	    ShowCursor(true);
 	    State->Focused = false;
-	    printf("Lost Focus\n");
 	} break;
         case WM_SYSKEYDOWN:
         case WM_SYSKEYUP:
@@ -415,7 +434,11 @@ Win32ProcessPendingMessages(HWND Window,
 		    
 		    if(WasDown != IsDown)
 		    {
-			if(VKCode == 'W')
+			if (VKCode == 'C')
+			{
+			    CenterCursor(Window);
+			}
+			else if(VKCode == 'W')
 			{
 			    Win32ProcessKeyboardMessage(&KeyboardController->Forward, IsDown);
 			}
@@ -532,7 +555,6 @@ int CALLBACK WinMain(
     WindowClass.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
     WindowClass.hCursor = LoadCursor(0, NULL);
     WindowClass.lpszClassName="GLXMainWindowClass";
-    ShowCursor(false);
 
     int GameWidth = 480;
     int GameHeight = 320;
@@ -807,7 +829,6 @@ int CALLBACK WinMain(
     float FPSAverageAccumulator = 0.0f;
     while(State.Running)
     {
-        
         //prework
         mouse *OldMouse = &LastInput->Mouse;
         mouse *NewMouse = &NewInput->Mouse;
@@ -840,16 +861,18 @@ int CALLBACK WinMain(
 	    
 	}
 
+	NewKeyboard->RightStick.X = 0;
+	NewKeyboard->RightStick.Y = 0;
 	if (State.Focused)
 	{
-	    win32_window_dimension WindowDimension = GetWindowDimension(WindowHandle);
+	    win32_point WindowCenter = GetWindowCenter(WindowHandle);
 	    win32_point MousePosition = GetCursorPosition();
-	    win32_point dMousePosition = {MousePosition.X - WindowDimension.Width/2,
-					  MousePosition.Y - WindowDimension.Height/2};
-
+	    win32_point dMousePosition = {MousePosition.X - WindowCenter.X,
+					  MousePosition.Y - WindowCenter.Y};
+	    printf("%d, %d\n", MousePosition.X, MousePosition.Y);
 	    NewKeyboard->RightStick.X = dMousePosition.X;
 	    NewKeyboard->RightStick.Y = dMousePosition.Y;
-	    SetCursorPos(WindowDimension.Width/2, WindowDimension.Height/2);
+	    CenterCursor(WindowHandle);
 	}
 	
 	
