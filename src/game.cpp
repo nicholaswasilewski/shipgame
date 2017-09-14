@@ -905,7 +905,7 @@ void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, m
     RenderScene(Game, Projection, View);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
-    glDisable(GL_MULTISAMPLE);
+    //glDisable(GL_MULTISAMPLE);
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TargetBuffer->ResolveFramebufferId);
@@ -918,16 +918,25 @@ void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, m
 
 void Render(platform_data *Platform, game_data *Game)
 {
+    float EyeDistance = 1.0f;
+    camera LeftEyeCamera = Game->Camera;
+    LeftEyeCamera.Position = LeftEyeCamera.Position + -EyeDistance*Cross(LeftEyeCamera.Forward,
+									LeftEyeCamera.Up);
+    camera RightEyeCamera = Game->Camera;
+    RightEyeCamera.Position = RightEyeCamera.Position + EyeDistance*Cross(RightEyeCamera.Forward,
+									   RightEyeCamera.Up);
+    mat4 Projection = GenerateCameraOrthographic(Game->Camera);
     
-    mat4 Projection = GenerateCameraPerspective(Game->Camera);
     mat4 View = GenerateCameraView(Game->Camera);
+    mat4 LeftEyeView = GenerateCameraView(LeftEyeCamera);
+    mat4 RightEyeView = GenerateCameraView(RightEyeCamera);
     
     if (Platform->LeftEye && Platform->RightEye)
     {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	
-	RenderToTarget(Platform, Game, Projection, View, Platform->LeftEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
-	RenderToTarget(Platform, Game, Projection, View, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
+	RenderToTarget(Platform, Game, Projection, LeftEyeView, Platform->LeftEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
+	RenderToTarget(Platform, Game, Projection, RightEyeView, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
     }
     
     glViewport(0, 0, Platform->WindowWidth, Platform->WindowHeight);
@@ -948,5 +957,4 @@ void UpdateAndRender(platform_data *Platform)
 
     Update(Platform, Game);
     Render(Platform, Game);
-    GLErrorShow();
 }

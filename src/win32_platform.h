@@ -35,5 +35,10 @@ typedef struct win32_window_dimension {
     int Height;
 } win32_window_dimension;
 
+typedef struct win32_point {
+    int X;
+    int Y;
+} win32_point;
+
 #define _WIN32_PLATFORM_H__
 #endif

@@ -125,6 +125,14 @@ void FocusConsole(win32_state* State)
     SetFocus(State->Console);
 }
 
+win32_point GetCursorPosition()
+{
+    POINT CursorPoint;
+    GetCursorPos(&CursorPoint);
+    win32_point CursorPosition = {CursorPoint.x, CursorPoint.y};
+    return CursorPosition;
+}
+
 win32_window_dimension GetWindowDimension(HWND Window)
 {
     win32_window_dimension Result;
@@ -234,7 +242,6 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
         case WM_SETCURSOR:
         {
             Result = DefWindowProcA(Window, Message, WParam, LParam);
-            /*SetCursor(0)*/
             
         } break;
         case WM_DESTROY:
@@ -352,6 +359,8 @@ Win32ProcessPendingMessages(HWND Window,
                 
 		    Mouse->X = Clamp(0, roundf(GET_X_LPARAM(Message.lParam)*XRatio), State->Backbuffer.Width);
 		    Mouse->Y = Clamp(0, roundf(GET_Y_LPARAM(Message.lParam)*YRatio), State->Backbuffer.Height);
+
+//		    KeyboardController->RStick.X =
 		} break;
 		case WM_LBUTTONDOWN:
 		{
@@ -501,12 +510,13 @@ int CALLBACK WinMain(
     WindowClass.lpfnWndProc = MainWindowCallback;
     WindowClass.hInstance = Instance;
     WindowClass.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
-    WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
+    WindowClass.hCursor = LoadCursor(0, NULL);
     WindowClass.lpszClassName="GLXMainWindowClass";
+    ShowCursor(false);
 
     int GameWidth = 480;
     int GameHeight = 320;
-    Win32ResizeDIBSection(&State.Backbuffer, GameWidth, GameHeight);
+//    Win32ResizeDIBSection(&State.Backbuffer, GameWidth, GameHeight);
 
     if (!RegisterClassA(&WindowClass))
     {
@@ -808,6 +818,16 @@ int CALLBACK WinMain(
 	    VRProcessPendingMessages(State.VRSystem);
 	    
 	}
+
+	win32_window_dimension WindowDimension = GetWindowDimension(WindowHandle);
+	win32_point MousePosition = GetCursorPosition();
+	win32_point dMousePosition = {MousePosition.X - WindowDimension.Width/2,
+				      MousePosition.Y - WindowDimension.Height/2};
+
+	NewKeyboard->RightStick.X = dMousePosition.X;
+	NewKeyboard->RightStick.Y = dMousePosition.Y;
+	SetCursorPos(WindowDimension.Width/2, WindowDimension.Height/2);
+	
 	
         game_screen_buffer Buffer = {};
         Buffer.Memory = State.Backbuffer.Memory;
@@ -815,8 +835,6 @@ int CALLBACK WinMain(
         Buffer.Height = State.Backbuffer.Height;
         Buffer.Pitch = State.Backbuffer.Pitch;
         Buffer.BytesPerPixel = State.Backbuffer.BytesPerPixel;
-	
- 	win32_state* winState = (win32_state*)GetAppState(WindowHandle);
 	
 	//TestUpdateAndRender(&PlatformData);
 	PlatformData.WindowWidth = State.WindowWidth;
