@@ -16,6 +16,7 @@ typedef struct win32_state
 {
     bool Running;
     bool ConsoleVisible;
+    bool Focused;
     win32_offscreen_buffer Backbuffer;
     HWND MainWindow;
     WINDOWPLACEMENT PreviousWindowPlacement;

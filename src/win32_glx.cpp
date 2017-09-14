@@ -249,6 +249,20 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
             win32_state* State = GetAppState(Window);
             State->Running = false;
         } break;
+	case WM_SETFOCUS:
+	{
+	    win32_state* State = GetAppState(Window);
+	    win32_window_dimension WindowDimension = GetWindowDimension(Window);
+	    SetCursorPos(WindowDimension.Width/2, WindowDimension.Height/2);
+	    State->Focused = true;
+	    printf("Gained Focus\n");
+	} break;
+	case WM_KILLFOCUS:
+	{
+	    win32_state* State = GetAppState(Window);
+	    State->Focused = false;
+	    printf("Lost Focus\n");
+	} break;
         case WM_SYSKEYDOWN:
         case WM_SYSKEYUP:
         case WM_KEYDOWN:
@@ -359,8 +373,6 @@ Win32ProcessPendingMessages(HWND Window,
                 
 		    Mouse->X = Clamp(0, roundf(GET_X_LPARAM(Message.lParam)*XRatio), State->Backbuffer.Width);
 		    Mouse->Y = Clamp(0, roundf(GET_Y_LPARAM(Message.lParam)*YRatio), State->Backbuffer.Height);
-
-//		    KeyboardController->RStick.X =
 		} break;
 		case WM_LBUTTONDOWN:
 		{
@@ -426,6 +438,14 @@ Win32ProcessPendingMessages(HWND Window,
 			else if(VKCode == 'E')
 			{
 			    Win32ProcessKeyboardMessage(&KeyboardController->UpperRight, IsDown);
+			}
+			else if (VKCode == VK_SHIFT)
+			{
+			    Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
+			}
+			else if (VKCode == VK_CONTROL)
+			{
+			    Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
 			}
 			else if(VKCode == VK_UP)
 			{
@@ -528,6 +548,7 @@ int CALLBACK WinMain(
     /*Init OpenVR*/
 
     vr::IVRSettings *VRSettings;
+    
     if (!vr::VR_IsRuntimeInstalled())
     {
 	ShowAlert("No VR runtime detected");
@@ -819,14 +840,17 @@ int CALLBACK WinMain(
 	    
 	}
 
-	win32_window_dimension WindowDimension = GetWindowDimension(WindowHandle);
-	win32_point MousePosition = GetCursorPosition();
-	win32_point dMousePosition = {MousePosition.X - WindowDimension.Width/2,
-				      MousePosition.Y - WindowDimension.Height/2};
+	if (State.Focused)
+	{
+	    win32_window_dimension WindowDimension = GetWindowDimension(WindowHandle);
+	    win32_point MousePosition = GetCursorPosition();
+	    win32_point dMousePosition = {MousePosition.X - WindowDimension.Width/2,
+					  MousePosition.Y - WindowDimension.Height/2};
 
-	NewKeyboard->RightStick.X = dMousePosition.X;
-	NewKeyboard->RightStick.Y = dMousePosition.Y;
-	SetCursorPos(WindowDimension.Width/2, WindowDimension.Height/2);
+	    NewKeyboard->RightStick.X = dMousePosition.X;
+	    NewKeyboard->RightStick.Y = dMousePosition.Y;
+	    SetCursorPos(WindowDimension.Width/2, WindowDimension.Height/2);
+	}
 	
 	
         game_screen_buffer Buffer = {};

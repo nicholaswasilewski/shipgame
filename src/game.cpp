@@ -892,7 +892,7 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View)
     RenderObject(Game->Box, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-    //RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+    RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
 }
 
 void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, mat4 View, FramebufferDesc *TargetBuffer, int BufferWidth, int BufferHeight)
