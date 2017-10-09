@@ -1,6 +1,8 @@
 #ifndef PLATFORM_H__
 #define PLATFORM_H__
 
+#define OPEN_VR 0
+
 #include "glHelper.cpp"
 #include <stdint.h>
 

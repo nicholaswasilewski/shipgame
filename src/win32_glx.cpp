@@ -16,7 +16,9 @@
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "OpenGL32.lib")
+#if OPEN_VR
 #pragma comment(lib, "openvr_api.lib")
+#endif
 
 void ShowAlert(char* Message)
 {
@@ -250,9 +252,10 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
         {
             win32_state* State = GetAppState(Window);
             State->Running = false;
-	    //TODO: figure out if this is important
+#if OPEN_VR
 	    vr::VR_Shutdown();
 	    State->VRSystem = 0;
+#endif
             PostQuitMessage(0);
         } break;
 	case WM_MOUSELEAVE:
@@ -556,10 +559,6 @@ int CALLBACK WinMain(
     WindowClass.hCursor = LoadCursor(0, NULL);
     WindowClass.lpszClassName="GLXMainWindowClass";
 
-//    int GameWidth = 480;
-//    int GameHeight = 320;
-//    Win32ResizeDIBSection(&State.Backbuffer, GameWidth, GameHeight);
-
     if (!RegisterClassA(&WindowClass))
     {
 	printf("failed to register window class");
@@ -568,7 +567,7 @@ int CALLBACK WinMain(
     /*End Init Window*/
 
     /*Init OpenVR*/
-
+#if OPEN_VR
     vr::IVRSettings *VRSettings;
     
     if (!vr::VR_IsRuntimeInstalled())
@@ -646,6 +645,7 @@ int CALLBACK WinMain(
 	    }
 	}
     }
+#endif
     
     /*End Init OpenVR*/
     
@@ -769,7 +769,7 @@ int CALLBACK WinMain(
     LoadGLExtensions();
     GLErrorShow();
     /*End Init OpenGL*/
-
+#if OPEN_VR
     uint32 VRWidth;
     uint32 VRHeight;
     FramebufferDesc LeftEyeBuffer = {0};
@@ -789,6 +789,7 @@ int CALLBACK WinMain(
 	    return 1;
 	}
     }
+#endif
     
     int HardRefreshHz = 60;
 
@@ -813,11 +814,12 @@ int CALLBACK WinMain(
     PlatformData.LastInput = LastInput;
     PlatformData.NewInput = NewInput;
 
+#if OPEN_VR
     PlatformData.VRBufferWidth = VRWidth;
     PlatformData.VRBufferHeight = VRHeight;
     PlatformData.LeftEye = &LeftEyeBuffer;
     PlatformData.RightEye = &RightEyeBuffer;
-    
+#endif
     NewInput->dT = 0.0f;
     State.Running = true;
 
@@ -885,7 +887,7 @@ int CALLBACK WinMain(
 	PlatformData.WindowHeight = State.WindowHeight;
 	
 	UpdateAndRender(&PlatformData);
-	
+#if OPEN_VR
 	if (State.VRSystem)
 	{
 	    vr::Texture_t LeftEyeTexture = {(void*)(uintptr_t)PlatformData.LeftEye->ResolveTextureId,
@@ -897,19 +899,19 @@ int CALLBACK WinMain(
 					     vr::ColorSpace_Gamma };
 	    vr::VRCompositor()->Submit(vr::Eye_Right, &RightEyeTexture);
 	}
-	
+#endif
 	glFinish();
 	SwapBuffers(DeviceContext);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glFlush();
 	glFinish();
-
+#if OPEN_VR
 	if (State.VRSystem)
 	{
 	    vr::TrackedDevicePose_t TrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
 	    vr::VRCompositor()->WaitGetPoses(TrackedDevicePose, vr::k_unMaxTrackedDeviceCount, 0, 0);
 	}
-	
+#endif
         //post work
 	float FrameSecondsElapsed = 0;
 	LARGE_INTEGER TimeNow = GetCPUTime();

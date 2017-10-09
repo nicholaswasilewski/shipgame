@@ -918,6 +918,10 @@ void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, m
 
 void Render(platform_data *Platform, game_data *Game)
 {
+
+    mat4 Projection = GenerateCameraPerspective(Game->Camera);
+    mat4 View = GenerateCameraView(Game->Camera);
+#if OPEN_VR
     float EyeDistance = 1.0f;
     camera LeftEyeCamera = Game->Camera;
     LeftEyeCamera.Position = LeftEyeCamera.Position + -EyeDistance*Cross(LeftEyeCamera.Forward,
@@ -925,9 +929,7 @@ void Render(platform_data *Platform, game_data *Game)
     camera RightEyeCamera = Game->Camera;
     RightEyeCamera.Position = RightEyeCamera.Position + EyeDistance*Cross(RightEyeCamera.Forward,
 									   RightEyeCamera.Up);
-    mat4 Projection = GenerateCameraPerspective(Game->Camera);
     
-    mat4 View = GenerateCameraView(Game->Camera);
     mat4 LeftEyeView = GenerateCameraView(LeftEyeCamera);
     mat4 RightEyeView = GenerateCameraView(RightEyeCamera);
     
@@ -938,6 +940,7 @@ void Render(platform_data *Platform, game_data *Game)
 	RenderToTarget(Platform, Game, Projection, LeftEyeView, Platform->LeftEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
 	RenderToTarget(Platform, Game, Projection, RightEyeView, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
     }
+#endif
     
     glViewport(0, 0, Platform->WindowWidth, Platform->WindowHeight);
     RenderScene(Game, Projection, View);
