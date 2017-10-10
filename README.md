@@ -1,8 +1,12 @@
 # Controls
 WASD
+
 Mouse look
+
 Shift/Ctrl: Move up/down
+
 Q/E: Roll
+
 F12: Open Console
 
 # Compiling
