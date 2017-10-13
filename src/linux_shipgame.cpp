@@ -54,20 +54,20 @@ GLXFBConfig ChooseFBConfig(Display *display, int screen)
 {
     static const int visualAttributes[] =
     {
-	GLX_X_RENDERABLE, True,
-	GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
-	GLX_RENDER_TYPE, GLX_RGBA_BIT,
-	GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
-	GLX_RED_SIZE, 8,
-	GLX_GREEN_SIZE, 8,
-	GLX_BLUE_SIZE, 8,
-	GLX_ALPHA_SIZE, 8,
-	GLX_DEPTH_SIZE, 24,
-	GLX_STENCIL_SIZE, 8,
-	GLX_DOUBLEBUFFER, True,
-	GLX_SAMPLE_BUFFERS, 1,
-	GLX_SAMPLES, 4,
-	None
+        GLX_X_RENDERABLE, True,
+        GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+        GLX_RENDER_TYPE, GLX_RGBA_BIT,
+        GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+        GLX_RED_SIZE, 8,
+        GLX_GREEN_SIZE, 8,
+        GLX_BLUE_SIZE, 8,
+        GLX_ALPHA_SIZE, 8,
+        GLX_DEPTH_SIZE, 24,
+        GLX_STENCIL_SIZE, 8,
+        GLX_DOUBLEBUFFER, True,
+        GLX_SAMPLE_BUFFERS, 1,
+        GLX_SAMPLES, 4,
+        None
     };
     int attributes[100];
     memcpy(attributes, visualAttributes, sizeof(visualAttributes));
@@ -76,11 +76,11 @@ GLXFBConfig ChooseFBConfig(Display *display, int screen)
     GLXFBConfig *fbc = glXChooseFBConfig(display, screen, attributes, &fbCount);
     if (fbc)
     {
-	if (fbCount >= 1)
-	{
-	    ret = fbc[0];
-	}
-	XFree(fbc);
+        if (fbCount >= 1)
+        {
+            ret = fbc[0];
+        }
+        XFree(fbc);
     }
     return ret;
 }
@@ -88,11 +88,11 @@ GLXFBConfig ChooseFBConfig(Display *display, int screen)
 float ElapsedMilliseconds(timeval *start, timeval *stop)
 {
     return ((stop->tv_sec - start->tv_sec) * 1000.0f +
-	    (stop->tv_usec - start->tv_usec) / 1000.0f);
+            (stop->tv_usec - start->tv_usec) / 1000.0f);
 }
 
 GLXContext CreateContext(Display *display, int screen,
-			 GLXFBConfig fbConfig, XVisualInfo *visinfo, Window window)
+                         GLXFBConfig fbConfig, XVisualInfo *visinfo, Window window)
 {
 #define GLX_CONTEXT_MAJOR_VERSION_ARB 0x2091
 #define GLX_CONTEXT_MINOR_VERSION_ARB 0x2092
@@ -102,38 +102,38 @@ GLXContext CreateContext(Display *display, int screen,
     GLXContext ctx_old = glXCreateContext(display, visinfo, 0, True);
     if (!ctx_old)
     {
-	printf("Could not allocate an old-style GL context!\n");
-	exit(EXIT_FAILURE);
+        printf("Could not allocate an old-style GL context!\n");
+        exit(EXIT_FAILURE);
     }
 
     glXMakeCurrent(display, window, ctx_old);
     if (strstr(glXQueryExtensionsString(display, screen), "GLX_ARB_create_context") != 0)
     {
-	glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddress((const GLubyte *)"glXCreateContextAttribsARB");
-	glXGetProcAddress((const GLubyte*)"glXCreateContextAttribsARB");
-	if (!glXCreateContextAttribsARB)
-	{
-	    printf("Can't create new-style GL context\n");
-	    exit(EXIT_FAILURE);
-	}
+        glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddress((const GLubyte *)"glXCreateContextAttribsARB");
+        glXGetProcAddress((const GLubyte*)"glXCreateContextAttribsARB");
+        if (!glXCreateContextAttribsARB)
+        {
+            printf("Can't create new-style GL context\n");
+            exit(EXIT_FAILURE);
+        }
     }
     glXMakeCurrent(display, None, 0);
     glXDestroyContext(display, ctx_old);
 
     static int contextAttributes[] =
     {
-	GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
-	GLX_CONTEXT_MINOR_VERSION_ARB, 2,
-	GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
-	None
+        GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+        GLX_CONTEXT_MINOR_VERSION_ARB, 2,
+        GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+        None
     };
 
     GLXContext context = glXCreateContextAttribsARB(display, fbConfig, 0, True, contextAttributes);
     XSync(display, False);
     if (!context)
     {
-	printf("Failed to allocate a GL context.\n");
-	exit(EXIT_FAILURE);
+        printf("Failed to allocate a GL context.\n");
+        exit(EXIT_FAILURE);
     }
     return context;
 }
@@ -145,64 +145,64 @@ void KeyboardCB(KeySym sym, unsigned char key, bool32 Press, controller* Keyboar
     //esc key
     case 27:
     {
-	exit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS);
     } break;
     case 'k':
     {
-	break;
+        break;
     }
     case 'w':
     {
-	Keyboard->Forward.Down = Press;
+        Keyboard->Forward.Down = Press;
     } break;
     case 'a':
     {
-	Keyboard->Left.Down = Press;
+        Keyboard->Left.Down = Press;
     } break;
     case 's':
     {
-	Keyboard->Back.Down = Press;
+        Keyboard->Back.Down = Press;
     } break;
     case 'd':
     {
-	Keyboard->Right.Down = Press;
+        Keyboard->Right.Down = Press;
     } break;
-    case 'q':	
+    case 'q':        
     {
-	Keyboard->UpperLeft.Down = Press;
+        Keyboard->UpperLeft.Down = Press;
     } break;
     case 'e':
     {
-	Keyboard->UpperRight.Down = Press;
+        Keyboard->UpperRight.Down = Press;
     } break;
     case 0:
     {
-	switch (sym)
-	{
-	case XK_Left:
-	{
-	    Keyboard->Left.Down = Press;
-	} break;
-	case XK_Right:
-	{
-	    Keyboard->Right.Down = Press;
-	} break;
-	case XK_Up:
-	{
-	    Keyboard->Forward.Down = Press;
-	} break;
-        case XK_Down:
-	{
-	    Keyboard->Back.Down = Press;
+        switch (sym)
+        {
+        case XK_Left:
+        {
+            Keyboard->Left.Down = Press;
         } break;
-	case XK_Control_L:
-	{
-	    Keyboard->Down.Down = Press;
-	} break;
-	case XK_Shift_L:
-	{
-	    Keyboard->Up.Down = Press;
-	} break;
+        case XK_Right:
+        {
+            Keyboard->Right.Down = Press;
+        } break;
+        case XK_Up:
+        {
+            Keyboard->Forward.Down = Press;
+        } break;
+        case XK_Down:
+        {
+            Keyboard->Back.Down = Press;
+        } break;
+        case XK_Control_L:
+        {
+            Keyboard->Down.Down = Press;
+        } break;
+        case XK_Shift_L:
+        {
+            Keyboard->Up.Down = Press;
+        } break;
         }
     } break;
     default:
@@ -220,74 +220,74 @@ void ProcessXEvents(input* Input, Atom wm_protocols, Atom wm_delete_window, int*
 {
     while (XEventsQueued(display, QueuedAfterFlush))
     {
-	XEvent event;
-	XNextEvent(display, &event);
-	if(event.xany.window != window)
-	{
-	    continue;
-	}
+        XEvent event;
+        XNextEvent(display, &event);
+        if(event.xany.window != window)
+        {
+            continue;
+        }
 
-	switch(event.type)
-	{
-	case MapNotify:
-	{
-	    *displayed = 1;
-	} break;
-	case ConfigureNotify:
-	{
-	    XConfigureEvent cevent = event.xconfigure;
-	    ReshapeCB(cevent.width, cevent.height);
-	} break;
-	case KeyPress:
-	{
-	    char chr;
-	    KeySym symbol;
-	    XComposeStatus status;
-	    XLookupString(&event.xkey, &chr, 1, &symbol, &status);
-	    KeyboardCB(symbol, chr, 1, &Input->Keyboard);
-	} break;
-	case KeyRelease:
-	{
-	    char chr;
-	    KeySym symbol;
-	    XComposeStatus status;
-	    XLookupString(&event.xkey, &chr, 1, &symbol, &status);
-	    KeyboardCB(symbol, chr, 0, &Input->Keyboard);
-	} break;
-	case MotionNotify:
-	{
-	    XMotionEvent motionEvent = event.xmotion;
-	    
-	    Window focus_return;
-	    int revert_to_return;
-	    XGetInputFocus(display, &focus_return, &revert_to_return);
-	    if (focus_return == window)
-	    {
-		if (motionEvent.x != WindowWidth/2 || motionEvent.y != WindowHeight/2)
-		{
-		    Input->Keyboard.RightStick.X = motionEvent.x - WindowWidth/2;
-		    Input->Keyboard.RightStick.Y = motionEvent.y - WindowHeight/2;
-		    XWarpPointer(display, 0, window, 0, 0, 0, 0,
-				 WindowWidth/2, WindowHeight/2);
-		}
-	    }
-	} break;
-	case FocusIn:
-	{
-	    
-	} break;
-	case FocusOut:
-	{
-	    
-	} break;
-	case ClientMessage:
-	{
-	    if (event.xclient.message_type == wm_protocols && (Atom)event.xclient.data.l[0] == wm_delete_window)
-	    {
-		exit(EXIT_SUCCESS);
-	    }
-	} break;
-	}
+        switch(event.type)
+        {
+        case MapNotify:
+        {
+            *displayed = 1;
+        } break;
+        case ConfigureNotify:
+        {
+            XConfigureEvent cevent = event.xconfigure;
+            ReshapeCB(cevent.width, cevent.height);
+        } break;
+        case KeyPress:
+        {
+            char chr;
+            KeySym symbol;
+            XComposeStatus status;
+            XLookupString(&event.xkey, &chr, 1, &symbol, &status);
+            KeyboardCB(symbol, chr, 1, &Input->Keyboard);
+        } break;
+        case KeyRelease:
+        {
+            char chr;
+            KeySym symbol;
+            XComposeStatus status;
+            XLookupString(&event.xkey, &chr, 1, &symbol, &status);
+            KeyboardCB(symbol, chr, 0, &Input->Keyboard);
+        } break;
+        case MotionNotify:
+        {
+            XMotionEvent motionEvent = event.xmotion;
+            
+            Window focus_return;
+            int revert_to_return;
+            XGetInputFocus(display, &focus_return, &revert_to_return);
+            if (focus_return == window)
+            {
+                if (motionEvent.x != WindowWidth/2 || motionEvent.y != WindowHeight/2)
+                {
+                    Input->Keyboard.RightStick.X = motionEvent.x - WindowWidth/2;
+                    Input->Keyboard.RightStick.Y = motionEvent.y - WindowHeight/2;
+                    XWarpPointer(display, 0, window, 0, 0, 0, 0,
+                                 WindowWidth/2, WindowHeight/2);
+                }
+            }
+        } break;
+        case FocusIn:
+        {
+            
+        } break;
+        case FocusOut:
+        {
+            
+        } break;
+        case ClientMessage:
+        {
+            if (event.xclient.message_type == wm_protocols && (Atom)event.xclient.data.l[0] == wm_delete_window)
+            {
+                exit(EXIT_SUCCESS);
+            }
+        } break;
+        }
     }
 }
 
@@ -301,8 +301,8 @@ int Main(int argc, char *argv[])
     display = XOpenDisplay(0);
     if (!display) 
     {
-	fprintf(stderr, "Cannot open display\n");
-	exit(1);
+        fprintf(stderr, "Cannot open display\n");
+        exit(1);
     }
     XkbSetDetectableAutoRepeat(display, 0, 0);
 
@@ -310,52 +310,52 @@ int Main(int argc, char *argv[])
     Window root = RootWindow(display, screen);
     if (glXQueryExtension(display, 0, 0))
     {
-//	printf("X Server doesn't support GLX extension\n");
+//        printf("X Server doesn't support GLX extension\n");
     }
 
 
     GLXFBConfig fbconfig = ChooseFBConfig(display, screen);
     if (!fbconfig)
     {
-	printf("Failed to get GLXFBConfig\n");
-	exit(EXIT_FAILURE);
+        printf("Failed to get GLXFBConfig\n");
+        exit(EXIT_FAILURE);
     }
 
     XVisualInfo *visinfo = glXGetVisualFromFBConfig(display, fbconfig);
     if (!visinfo)
     {
-	printf("failed to get XVisualInfo\n");
-	exit(EXIT_FAILURE);
+        printf("failed to get XVisualInfo\n");
+        exit(EXIT_FAILURE);
     }
     XSetWindowAttributes winAttr;
     winAttr.event_mask = StructureNotifyMask | KeyPressMask | KeyReleaseMask
-	| ButtonPressMask | ButtonRelease | PointerMotionMask
-	| FocusChangeMask;
+        | ButtonPressMask | ButtonRelease | PointerMotionMask
+        | FocusChangeMask;
     winAttr.background_pixmap = None;
     winAttr.background_pixel = 0;
     winAttr.border_pixel = 0;
     winAttr.colormap = XCreateColormap(display, root, visinfo->visual, AllocNone);
     unsigned int mask = CWBackPixmap | CWBorderPixel | CWColormap | CWEventMask;
     Window window = XCreateWindow(display, root,
-				  0, 0,
-				  WindowWidth, WindowHeight, 0,
-				  visinfo->depth, InputOutput,
-				  visinfo->visual, mask, &winAttr);
+                                  0, 0,
+                                  WindowWidth, WindowHeight, 0,
+                                  visinfo->depth, InputOutput,
+                                  visinfo->visual, mask, &winAttr);
     XStoreName(display, window, "GLX");
     HideCursor(display, window);
     GLXContext context = CreateContext(display, screen, fbconfig, visinfo, window);
     if (!glXMakeCurrent(display, window, context))
     {
-	printf("glxMakeCurrent failed.\n");
+        printf("glxMakeCurrent failed.\n");
     }
     if (!glXIsDirect(display, glXGetCurrentContext()))
     {
-	printf("Indirect GLX rendering context obtained.\n");
+        printf("Indirect GLX rendering context obtained.\n");
     }
     XMapWindow(display, window);
     if (!glXMakeCurrent(display, window, context))
     {
-	printf("glXMakeCurrent 2 failed.\n");
+        printf("glXMakeCurrent 2 failed.\n");
     }
 
     Atom wm_protocols = XInternAtom(display, "WM_PROTOCOLS", False);
@@ -384,39 +384,39 @@ int Main(int argc, char *argv[])
     PlatformData.TempMemory = malloc(PlatformData.TempMemorySize);
 
     XWarpPointer(display, 0, 0, 0, 0, 0, 0,
-		 WindowWidth/2, WindowHeight/2);
+                 WindowWidth/2, WindowHeight/2);
     while(1)
     {
-	PlatformData.NewInput->Keyboard.RightStick.X = 0.0f;
-	PlatformData.NewInput->Keyboard.RightStick.Y = 0.0f;
-	ProcessXEvents(PlatformData.NewInput,
-		       wm_protocols,
-		       wm_delete_window,
-		       &displayed,
-		       display,
-		       window,
-		       WindowWidth,
-		       WindowHeight);
-	
-	UpdateAndRender(&PlatformData);
-	glXSwapBuffers(display, window);
-	
-	float elapsedTime = 0;
+        PlatformData.NewInput->Keyboard.RightStick.X = 0.0f;
+        PlatformData.NewInput->Keyboard.RightStick.Y = 0.0f;
+        ProcessXEvents(PlatformData.NewInput,
+                       wm_protocols,
+                       wm_delete_window,
+                       &displayed,
+                       display,
+                       window,
+                       WindowWidth,
+                       WindowHeight);
+        
+        UpdateAndRender(&PlatformData);
+        glXSwapBuffers(display, window);
+        
+        float elapsedTime = 0;
 
-	while(elapsedTime < msPerFrame)
-	{
-	    gettimeofday(&now, 0);
-	    elapsedTime = ElapsedMilliseconds(&last_xcheck, &now);
-	    if (elapsedTime <= msPerFrame)
-	    {
-		sleep((msPerFrame - elapsedTime)/1000.0f);
-	    }
-	}
+        while(elapsedTime < msPerFrame)
+        {
+            gettimeofday(&now, 0);
+            elapsedTime = ElapsedMilliseconds(&last_xcheck, &now);
+            if (elapsedTime <= msPerFrame)
+            {
+                sleep((msPerFrame - elapsedTime)/1000.0f);
+            }
+        }
 
-	
-	*PlatformData.LastInput = *PlatformData.NewInput;
-	PlatformData.NewInput->dT = elapsedTime/1000.0f;
-	last_xcheck = now;
+        
+        *PlatformData.LastInput = *PlatformData.NewInput;
+        PlatformData.NewInput->dT = elapsedTime/1000.0f;
+        last_xcheck = now;
     }
 
     return EXIT_SUCCESS;

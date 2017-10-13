@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.frag": "cpp",
+        "*.vert": "cpp",
+        "xlocale": "cpp"
+    }
+}

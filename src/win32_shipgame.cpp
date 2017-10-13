@@ -31,9 +31,9 @@ void ShowErrorAlert(const char* Format, const char* Message)
     int errorMessageLength = strlen(Message) + strlen(Format);
     char* errorMessageBuffer = (char*)malloc(errorMessageLength);
     sprintf_s(errorMessageBuffer,
-	      errorMessageLength,
-	      Format,
-	      Message);
+              errorMessageLength,
+              Format,
+              Message);
     ShowAlert(errorMessageBuffer);
     free(errorMessageBuffer);
 }
@@ -170,9 +170,9 @@ float Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
 }
 
 void Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
-				HDC DeviceContext,
-				int WindowWidth,
-				int WindowHeight)
+                                HDC DeviceContext,
+                                int WindowWidth,
+                                int WindowHeight)
 {
     float HorizontalStretch = (float)WindowWidth / (float)Buffer->Width;
     float VerticalStretch = (float)WindowHeight / (float)Buffer->Height;
@@ -218,7 +218,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer* Buffer, int ScreenWidth, int Scree
     }
     Buffer->Width = ScreenWidth;
     Buffer->Height = ScreenHeight;
-	
+        
     Buffer->Info.bmiHeader.biSize = sizeof(Buffer->Info.bmiHeader);
     Buffer->Info.bmiHeader.biWidth = Buffer->Width;
     Buffer->Info.bmiHeader.biHeight = -Buffer->Height;
@@ -247,22 +247,22 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
             CREATESTRUCT* Create = (CREATESTRUCT*)LParam;
             win32_state* State = (win32_state*)Create->lpCreateParams;
             SetWindowLongPtr(Window, GWLP_USERDATA, (LONG_PTR)State);
-	    State->Focused = false;
+            State->Focused = false;
         } break;
         case WM_CLOSE:
         {
             win32_state* State = GetAppState(Window);
             State->Running = false;
 #if OPEN_VR
-	    vr::VR_Shutdown();
-	    State->VRSystem = 0;
+            vr::VR_Shutdown();
+            State->VRSystem = 0;
 #endif
             PostQuitMessage(0);
         } break;
-	case WM_MOUSELEAVE:
-	{
-	    CenterCursor(Window);
-	} break;	
+        case WM_MOUSELEAVE:
+        {
+            CenterCursor(Window);
+        } break;        
         case WM_SETCURSOR:
         {
             Result = DefWindowProcA(Window, Message, WParam, LParam);
@@ -272,20 +272,20 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
             win32_state* State = GetAppState(Window);
             State->Running = false;
         } break;
-	case WM_SETFOCUS:
-	{
-	    win32_state* State = GetAppState(Window);
-	    win32_window_dimension WindowDimension = GetWindowDimension(Window);
-	    CenterCursor(Window);
-	    ShowCursor(false);
-	    State->Focused = true;
-	} break;
-	case WM_KILLFOCUS:
-	{
-	    win32_state* State = GetAppState(Window);
-	    ShowCursor(true);
-	    State->Focused = false;
-	} break;
+        case WM_SETFOCUS:
+        {
+            win32_state* State = GetAppState(Window);
+            win32_window_dimension WindowDimension = GetWindowDimension(Window);
+            CenterCursor(Window);
+            ShowCursor(false);
+            State->Focused = true;
+        } break;
+        case WM_KILLFOCUS:
+        {
+            win32_state* State = GetAppState(Window);
+            ShowCursor(true);
+            State->Focused = false;
+        } break;
         case WM_SYSKEYDOWN:
         case WM_SYSKEYUP:
         case WM_KEYDOWN:
@@ -304,7 +304,7 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
                 SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 128, LWA_ALPHA);
             }
         } break;
-	
+        
         case WM_PAINT:
         {
             win32_state* State = GetAppState(Window);
@@ -318,15 +318,15 @@ LRESULT CALLBACK MainWindowCallback(HWND Window,
             Win32DisplayBufferInWindow(&State->Backbuffer, DeviceContext, Dimension.Width, Dimension.Height);
             EndPaint(Window, &Paint);
         } break;
-	case WM_SIZE:
-	{
+        case WM_SIZE:
+        {
             win32_state* State = GetAppState(Window);
-	    int Width = LOWORD(LParam);
-	    int Height = HIWORD(LParam);
-	    State->WindowWidth = Width;
-	    State->WindowHeight = Height;
-	} break;
-	
+            int Width = LOWORD(LParam);
+            int Height = HIWORD(LParam);
+            State->WindowWidth = Width;
+            State->WindowHeight = Height;
+        } break;
+        
         default:
         {
             Result = DefWindowProc(Window, Message, WParam, LParam);
@@ -347,29 +347,29 @@ void VRProcessPendingMessages(vr::IVRSystem *VRSystem)
     vr::VREvent_t event;
     while(VRSystem->PollNextEvent(&event, sizeof(event)))
     {
-	switch(event.eventType)
-	{
-	    case vr::VREvent_None:
-	    {
-		printf("Invalid event received.\n");
-	    } break;
-	    case vr::VREvent_TrackedDeviceActivated:
-	    {
-		printf("Device %u attached.\n", event.trackedDeviceIndex);
-	    } break;
-	    case vr::VREvent_TrackedDeviceDeactivated:
-	    {
-		printf("Device %u detached.\n", event.trackedDeviceIndex);
-	    } break;
-	    case vr::VREvent_TrackedDeviceUpdated:
-	    {
-		printf("Device %u updated.\n", event.trackedDeviceIndex);
-	    } break;
-	    default:
-	    {
-		printf("Something else happened.\n");
-	    } break;
-	}
+        switch(event.eventType)
+        {
+            case vr::VREvent_None:
+            {
+                printf("Invalid event received.\n");
+            } break;
+            case vr::VREvent_TrackedDeviceActivated:
+            {
+                printf("Device %u attached.\n", event.trackedDeviceIndex);
+            } break;
+            case vr::VREvent_TrackedDeviceDeactivated:
+            {
+                printf("Device %u detached.\n", event.trackedDeviceIndex);
+            } break;
+            case vr::VREvent_TrackedDeviceUpdated:
+            {
+                printf("Device %u updated.\n", event.trackedDeviceIndex);
+            } break;
+            default:
+            {
+                printf("Something else happened.\n");
+            } break;
+        }
     }
 }
 
@@ -378,155 +378,155 @@ Win32ProcessPendingMessages(HWND Window,
                             win32_state *State,
                             mouse *Mouse,
                             controller *KeyboardController)
-{			
-	MSG Message;
-	while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
-	{
-	    switch(Message.message)
-	    {
-		case WM_QUIT:
-		{
-		    State->Running = false;
-		} break;
-		case WM_MOUSEMOVE:
-		{
-		    win32_window_dimension Dimension = GetWindowDimension(Window);
-		    float XRatio = (float)(State->Backbuffer.Width) / Dimension.Width;
-		    float YRatio = (float)(State->Backbuffer.Height) / Dimension.Height;
+{                        
+        MSG Message;
+        while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
+        {
+            switch(Message.message)
+            {
+                case WM_QUIT:
+                {
+                    State->Running = false;
+                } break;
+                case WM_MOUSEMOVE:
+                {
+                    win32_window_dimension Dimension = GetWindowDimension(Window);
+                    float XRatio = (float)(State->Backbuffer.Width) / Dimension.Width;
+                    float YRatio = (float)(State->Backbuffer.Height) / Dimension.Height;
                 
-		    Mouse->X = Clamp(0, roundf(GET_X_LPARAM(Message.lParam)*XRatio), State->Backbuffer.Width);
-		    Mouse->Y = Clamp(0, roundf(GET_Y_LPARAM(Message.lParam)*YRatio), State->Backbuffer.Height);
-		} break;
-		case WM_LBUTTONDOWN:
-		{
-		    Mouse->Mouse1.Down = 1;
-		    SetCapture(Window);
-		} break;
-		case WM_RBUTTONDOWN:
-		{
-		    Mouse->Mouse2.Down = 1;
-		    SetCapture(Window);
-		} break;
-		case WM_MBUTTONDOWN:
-		{
-		    Mouse->Mouse3.Down = 1;
-		    SetCapture(Window);
-		} break;
-		case WM_LBUTTONUP:
-		{
-		    Mouse->Mouse1.Down = 0;
-		    ReleaseCapture();
-		} break;
-		case WM_RBUTTONUP:
-		{
-		    Mouse->Mouse2.Down = 0;
-		    ReleaseCapture();
-		} break;
-		case WM_MBUTTONUP:
-		{
-		    Mouse->Mouse3.Down = 0;
-		    ReleaseCapture();
-		} break;	    
-		case WM_SYSKEYDOWN:
-		case WM_SYSKEYUP:
-		case WM_KEYDOWN:
-		case WM_KEYUP:
-		{
-		    uint32 VKCode = (uint32)Message.wParam;
-		    bool WasDown = ((Message.lParam & (1 << 30)) != 0);
-		    bool IsDown = ((Message.lParam & (1 << 31)) == 0);
-		    
-		    if(WasDown != IsDown)
-		    {
-			if (VKCode == 'C')
-			{
-			    CenterCursor(Window);
-			}
-			else if(VKCode == 'W')
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->Forward, IsDown);
-			}
-			else if(VKCode == 'A')
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
-			}
-			else if(VKCode == 'S')
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
-			}
-			else if(VKCode == 'D')
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
-			}
-			else if(VKCode == 'Q')
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->UpperLeft, IsDown);
-			}
-			else if(VKCode == 'E')
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->UpperRight, IsDown);
-			}
-			else if (VKCode == VK_SHIFT)
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
-			}
-			else if (VKCode == VK_CONTROL)
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
-			}
-			else if(VKCode == VK_UP)
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->ActionUp, IsDown);
-			}
-			else if(VKCode == VK_LEFT)
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->ActionLeft, IsDown);
-			}
-			else if(VKCode == VK_DOWN)
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->ActionDown, IsDown);
-			}
-			else if(VKCode == VK_RIGHT)
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->ActionRight, IsDown);
-			}
-			else if(VKCode == VK_ESCAPE)
-			{
-			    State->Running = false;
-			}
-			else if(VKCode == VK_SPACE)
-			{
-			    Win32ProcessKeyboardMessage(&KeyboardController->Start, IsDown);
-			}
-			if (IsDown)
-			{
-			    bool AltIsDown = (Message.lParam & (1 << 29));
-			    if(VKCode == VK_F4 && AltIsDown)
-			    {
-				State->Running = false;
-			    }
-			    if (VKCode == VK_F12)
-			    {
-				ToggleConsole(State);
-			    }
+                    Mouse->X = Clamp(0, roundf(GET_X_LPARAM(Message.lParam)*XRatio), State->Backbuffer.Width);
+                    Mouse->Y = Clamp(0, roundf(GET_Y_LPARAM(Message.lParam)*YRatio), State->Backbuffer.Height);
+                } break;
+                case WM_LBUTTONDOWN:
+                {
+                    Mouse->Mouse1.Down = 1;
+                    SetCapture(Window);
+                } break;
+                case WM_RBUTTONDOWN:
+                {
+                    Mouse->Mouse2.Down = 1;
+                    SetCapture(Window);
+                } break;
+                case WM_MBUTTONDOWN:
+                {
+                    Mouse->Mouse3.Down = 1;
+                    SetCapture(Window);
+                } break;
+                case WM_LBUTTONUP:
+                {
+                    Mouse->Mouse1.Down = 0;
+                    ReleaseCapture();
+                } break;
+                case WM_RBUTTONUP:
+                {
+                    Mouse->Mouse2.Down = 0;
+                    ReleaseCapture();
+                } break;
+                case WM_MBUTTONUP:
+                {
+                    Mouse->Mouse3.Down = 0;
+                    ReleaseCapture();
+                } break;            
+                case WM_SYSKEYDOWN:
+                case WM_SYSKEYUP:
+                case WM_KEYDOWN:
+                case WM_KEYUP:
+                {
+                    uint32 VKCode = (uint32)Message.wParam;
+                    bool WasDown = ((Message.lParam & (1 << 30)) != 0);
+                    bool IsDown = ((Message.lParam & (1 << 31)) == 0);
+                    
+                    if(WasDown != IsDown)
+                    {
+                        if (VKCode == 'C')
+                        {
+                            CenterCursor(Window);
+                        }
+                        else if(VKCode == 'W')
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->Forward, IsDown);
+                        }
+                        else if(VKCode == 'A')
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
+                        }
+                        else if(VKCode == 'S')
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
+                        }
+                        else if(VKCode == 'D')
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
+                        }
+                        else if(VKCode == 'Q')
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->UpperLeft, IsDown);
+                        }
+                        else if(VKCode == 'E')
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->UpperRight, IsDown);
+                        }
+                        else if (VKCode == VK_SHIFT)
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
+                        }
+                        else if (VKCode == VK_CONTROL)
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
+                        }
+                        else if(VKCode == VK_UP)
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->ActionUp, IsDown);
+                        }
+                        else if(VKCode == VK_LEFT)
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->ActionLeft, IsDown);
+                        }
+                        else if(VKCode == VK_DOWN)
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->ActionDown, IsDown);
+                        }
+                        else if(VKCode == VK_RIGHT)
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->ActionRight, IsDown);
+                        }
+                        else if(VKCode == VK_ESCAPE)
+                        {
+                            State->Running = false;
+                        }
+                        else if(VKCode == VK_SPACE)
+                        {
+                            Win32ProcessKeyboardMessage(&KeyboardController->Start, IsDown);
+                        }
+                        if (IsDown)
+                        {
+                            bool AltIsDown = (Message.lParam & (1 << 29));
+                            if(VKCode == VK_F4 && AltIsDown)
+                            {
+                                State->Running = false;
+                            }
+                            if (VKCode == VK_F12)
+                            {
+                                ToggleConsole(State);
+                            }
 
-			    if (VKCode == VK_RETURN && AltIsDown)
-			    {
-				//ToggleFullScreen(State);
-			    }
-			}
-		    }
-		}
-		break;
-		default:
-		{
-		    TranslateMessage(&Message);
-		    DispatchMessage(&Message);
-		}
-		break;
-	}
+                            if (VKCode == VK_RETURN && AltIsDown)
+                            {
+                                //ToggleFullScreen(State);
+                            }
+                        }
+                    }
+                }
+                break;
+                default:
+                {
+                    TranslateMessage(&Message);
+                    DispatchMessage(&Message);
+                }
+                break;
+        }
     }
-}				
+}                                
 
 int CALLBACK WinMain(
     HINSTANCE Instance,
@@ -562,8 +562,8 @@ int CALLBACK WinMain(
 
     if (!RegisterClassA(&WindowClass))
     {
-	printf("failed to register window class");
-	return 1;
+        printf("failed to register window class");
+        return 1;
     }
     /*End Init Window*/
 
@@ -573,78 +573,78 @@ int CALLBACK WinMain(
     
     if (!vr::VR_IsRuntimeInstalled())
     {
-	ShowAlert("No VR runtime detected");
+        ShowAlert("No VR runtime detected");
     }
     else if (!vr::VR_IsHmdPresent())
     {
-	ShowAlert("No headset detected");
+        ShowAlert("No headset detected");
     }
     else
     {
-	vr::HmdError vrInitError = vr::VRInitError_None;
-	State.VRSystem = vr::VR_Init(&vrInitError, vr::VRApplication_Scene);
-	if (vrInitError != vr::VRInitError_None)
-	{
-	    State.VRSystem = 0;
-	    const char* vrErrorMessage = vr::VR_GetVRInitErrorAsEnglishDescription(vrInitError);
-	    char* errorMessageFormat = "Unable to init VR runtime: %s";
-	    ShowErrorAlert(errorMessageFormat, vrErrorMessage);
-	}
+        vr::HmdError vrInitError = vr::VRInitError_None;
+        State.VRSystem = vr::VR_Init(&vrInitError, vr::VRApplication_Scene);
+        if (vrInitError != vr::VRInitError_None)
+        {
+            State.VRSystem = 0;
+            const char* vrErrorMessage = vr::VR_GetVRInitErrorAsEnglishDescription(vrInitError);
+            char* errorMessageFormat = "Unable to init VR runtime: %s";
+            ShowErrorAlert(errorMessageFormat, vrErrorMessage);
+        }
     }
 
     if (State.VRSystem)
     {
-	vr::EVRInitError vrInitError;
-	VRSettings = (vr::IVRSettings*)VR_GetGenericInterface(vr::IVRSettings_Version, &vrInitError);
-	if (vrInitError != vr::VRInitError_None)
-	{
-	    VRSettings = 0;
-	    const char* vrErrorMessage = vr::VR_GetVRInitErrorAsEnglishDescription(vrInitError);
-	    char* errorMessageFormat = "Unable to init VR settings system: %s";
-	    ShowErrorAlert(errorMessageFormat, vrErrorMessage);
+        vr::EVRInitError vrInitError;
+        VRSettings = (vr::IVRSettings*)VR_GetGenericInterface(vr::IVRSettings_Version, &vrInitError);
+        if (vrInitError != vr::VRInitError_None)
+        {
+            VRSettings = 0;
+            const char* vrErrorMessage = vr::VR_GetVRInitErrorAsEnglishDescription(vrInitError);
+            char* errorMessageFormat = "Unable to init VR settings system: %s";
+            ShowErrorAlert(errorMessageFormat, vrErrorMessage);
 
-	    if (VRSettings)
-	    {
-		vr::EVRSettingsError vrSettingsError;
-		if (VRSettings->GetBool(vr::k_pch_SteamVR_Section,
-					vr::k_pch_SteamVR_ForceFadeOnBadTracking_Bool,
-					&vrSettingsError))
-		{
+            if (VRSettings)
+            {
+                vr::EVRSettingsError vrSettingsError;
+                if (VRSettings->GetBool(vr::k_pch_SteamVR_Section,
+                                        vr::k_pch_SteamVR_ForceFadeOnBadTracking_Bool,
+                                        &vrSettingsError))
+                {
 
-		    if (vrSettingsError != vr::VRSettingsError_None)
-		    {
-			ShowErrorAlert("Unable to get ForceFade bool: %s",
-				       "Unknown");
-		    }
-		    
-		    VRSettings->SetBool(vr::k_pch_SteamVR_Section,
-					vr::k_pch_SteamVR_ForceFadeOnBadTracking_Bool,
-					0,
-					&vrSettingsError);
-		    if (vrSettingsError != vr::VRSettingsError_None)
-		    {
-			ShowErrorAlert("Unable to set ForceFade bool: %s",
-				       "Unknown");
-		    }
-		    VRSettings->Sync(true, &vrSettingsError);
-		    if (vrSettingsError != vr::VRSettingsError_None)
-		    {
-			ShowErrorAlert("Unable to sync settings: %s",
-				       "Unknown");
-		    }
-		}
-	    }
-	}
+                    if (vrSettingsError != vr::VRSettingsError_None)
+                    {
+                        ShowErrorAlert("Unable to get ForceFade bool: %s",
+                                       "Unknown");
+                    }
+                    
+                    VRSettings->SetBool(vr::k_pch_SteamVR_Section,
+                                        vr::k_pch_SteamVR_ForceFadeOnBadTracking_Bool,
+                                        0,
+                                        &vrSettingsError);
+                    if (vrSettingsError != vr::VRSettingsError_None)
+                    {
+                        ShowErrorAlert("Unable to set ForceFade bool: %s",
+                                       "Unknown");
+                    }
+                    VRSettings->Sync(true, &vrSettingsError);
+                    if (vrSettingsError != vr::VRSettingsError_None)
+                    {
+                        ShowErrorAlert("Unable to sync settings: %s",
+                                       "Unknown");
+                    }
+                }
+            }
+        }
 
-	//List tracked devices
-	for(uint32 i = 0; i < vr::k_unMaxTrackedDeviceCount; i++)
-	{
-	    vr::TrackedDeviceClass deviceClass = State.VRSystem->GetTrackedDeviceClass(i);
-	    if (deviceClass != vr::TrackedDeviceClass_Invalid)
-	    {
-		printf("Device %d: %s\n", i, TrackedDeviceClassToEnglishDescription(deviceClass));
-	    }
-	}
+        //List tracked devices
+        for(uint32 i = 0; i < vr::k_unMaxTrackedDeviceCount; i++)
+        {
+            vr::TrackedDeviceClass deviceClass = State.VRSystem->GetTrackedDeviceClass(i);
+            if (deviceClass != vr::TrackedDeviceClass_Invalid)
+            {
+                printf("Device %d: %s\n", i, TrackedDeviceClassToEnglishDescription(deviceClass));
+            }
+        }
     }
 #endif
     
@@ -655,25 +655,25 @@ int CALLBACK WinMain(
     int WindowHeight = 600;
     
     HWND ContextInitWindow = CreateWindowEx(
-	0,
-	WindowClass.lpszClassName,
-	"Ship Game",
-	0,
-	CW_USEDEFAULT,
-	CW_USEDEFAULT,
-	WindowWidth,
-	WindowHeight,
-	0,
-	0,
-	Instance,
-	&State);
+        0,
+        WindowClass.lpszClassName,
+        "Ship Game",
+        0,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        WindowWidth,
+        WindowHeight,
+        0,
+        0,
+        Instance,
+        &State);
     
     PIXELFORMATDESCRIPTOR pfd = {0};
     pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
     pfd.nVersion = 1;
     pfd.dwFlags = PFD_DOUBLEBUFFER |
-	PFD_SUPPORT_OPENGL |
-	PFD_DRAW_TO_WINDOW;
+        PFD_SUPPORT_OPENGL |
+        PFD_DRAW_TO_WINDOW;
     pfd.iPixelType = PFD_TYPE_RGBA;
     pfd.cColorBits = 32;
     pfd.cAlphaBits = 8;
@@ -682,61 +682,61 @@ int CALLBACK WinMain(
 
     HDC TempDeviceContext = GetDC(ContextInitWindow);
     int ChosenPixelFormat = ChoosePixelFormat(TempDeviceContext, &pfd);
-	    
+            
     bool setResult = SetPixelFormat(TempDeviceContext, ChosenPixelFormat, &pfd);
     if (!setResult)
     {
-	ShowAlert("Setting pixel format failed");
+        ShowAlert("Setting pixel format failed");
     }
     HGLRC TempRenderContext = wglCreateContext(TempDeviceContext);
     wglMakeCurrent(TempDeviceContext, TempRenderContext);
     LoadWGLBullshit();
     
     HWND WindowHandle = CreateWindowEx(
-	0,
-	WindowClass.lpszClassName,
-	"Ship Game",
-	WS_OVERLAPPEDWINDOW|WS_VISIBLE,
-	CW_USEDEFAULT,
-	CW_USEDEFAULT,
-	WindowWidth,
-	WindowHeight,
-	0,
-	0,
-	Instance,
-	&State);
+        0,
+        WindowClass.lpszClassName,
+        "Ship Game",
+        WS_OVERLAPPEDWINDOW|WS_VISIBLE,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        WindowWidth,
+        WindowHeight,
+        0,
+        0,
+        Instance,
+        &State);
     
     if(!WindowHandle)
     {
-	DWORD LastError = GetLastError();
-	printf("failed to get window handle: %d\n", LastError);
-	return 1;
+        DWORD LastError = GetLastError();
+        printf("failed to get window handle: %d\n", LastError);
+        return 1;
     }
     HDC DeviceContext = GetDC(WindowHandle);
     
     const int pixelAttribs[] =
-	{
-	    WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-	    WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-	    WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-	    WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-	    WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-	    WGL_COLOR_BITS_ARB, 32,
-	    WGL_ALPHA_BITS_ARB, 8,
-	    WGL_DEPTH_BITS_ARB, 24,
-	    WGL_STENCIL_BITS_ARB, 8,
-	    WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
-	    WGL_SAMPLES_ARB, 4,
-	    0
-	};
+        {
+            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+            WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+            WGL_COLOR_BITS_ARB, 32,
+            WGL_ALPHA_BITS_ARB, 8,
+            WGL_DEPTH_BITS_ARB, 24,
+            WGL_STENCIL_BITS_ARB, 8,
+            WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
+            WGL_SAMPLES_ARB, 4,
+            0
+        };
     
     int pixelFormatID;
     UINT numFormats;
     bool pixelFormatResult = wglChoosePixelFormatARB(DeviceContext, pixelAttribs, 0, 1, &pixelFormatID, &numFormats);
     if (!pixelFormatResult || numFormats == 0)
     {
-	ShowAlert("wglChoosePixelFormatARB() failed");
-	return 1;
+        ShowAlert("wglChoosePixelFormatARB() failed");
+        return 1;
     }
     
     PIXELFORMATDESCRIPTOR PFD;
@@ -744,13 +744,13 @@ int CALLBACK WinMain(
     SetPixelFormat(DeviceContext, pixelFormatID, &PFD);
     
     int glContextAttributes[] =
-	{
-	    WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-	    WGL_CONTEXT_MINOR_VERSION_ARB, 2,
-	    WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-	    WGL_CONTEXT_FLAGS_ARB, 0,
-	    0
-	};
+        {
+            WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+            WGL_CONTEXT_MINOR_VERSION_ARB, 2,
+            WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+            WGL_CONTEXT_FLAGS_ARB, 0,
+            0
+        };
     
     HGLRC RenderContext = wglCreateContextAttribsARB(DeviceContext, 0, glContextAttributes);
 
@@ -761,8 +761,8 @@ int CALLBACK WinMain(
 
     if(!wglMakeCurrent(DeviceContext, RenderContext))
     {
-	ShowAlert("wglMakeCurrent() 2 failed");
-	return 1;
+        ShowAlert("wglMakeCurrent() 2 failed");
+        return 1;
     }
     
     PrintGLVersion();
@@ -777,18 +777,18 @@ int CALLBACK WinMain(
     FramebufferDesc RightEyeBuffer = {0};
     if (State.VRSystem)
     {
-	if (!SetupStereoRenderTargets(State.VRSystem, &VRWidth, &VRHeight, &LeftEyeBuffer, &RightEyeBuffer))
-	{
-	    ShowAlert("Failed to setup render targets!");
-	}
-	GLErrorShow();
-	printf("VR Render target size: %d x %d\n", VRWidth, VRHeight);
+        if (!SetupStereoRenderTargets(State.VRSystem, &VRWidth, &VRHeight, &LeftEyeBuffer, &RightEyeBuffer))
+        {
+            ShowAlert("Failed to setup render targets!");
+        }
+        GLErrorShow();
+        printf("VR Render target size: %d x %d\n", VRWidth, VRHeight);
     
-	if (!vr::VRCompositor())
-	{
-	    ShowAlert("Compositor initialization failed.");
-	    return 1;
-	}
+        if (!vr::VRCompositor())
+        {
+            ShowAlert("Compositor initialization failed.");
+            return 1;
+        }
     }
 #endif
     
@@ -802,9 +802,9 @@ int CALLBACK WinMain(
     PlatformData.TempMemorySize = MEGABYTES(32);
     PlatformData.TotalMemorySize = PlatformData.MainMemorySize + PlatformData.TempMemorySize;
     PlatformData.MainMemory = VirtualAlloc(0,
-					 (size_t)PlatformData.TotalMemorySize,
-					 MEM_RESERVE|MEM_COMMIT,
-					 PAGE_READWRITE);
+                                         (size_t)PlatformData.TotalMemorySize,
+                                         MEM_RESERVE|MEM_COMMIT,
+                                         PAGE_READWRITE);
     PlatformData.TempMemory = (uint8 *)PlatformData.MainMemory+PlatformData.MainMemorySize;
 
     input Inputs[2];
@@ -857,83 +857,83 @@ int CALLBACK WinMain(
                 OldKeyboard->Buttons[ButtonIndex].Down;
         }
         Win32ProcessPendingMessages(WindowHandle, &State, NewMouse, NewKeyboard);
-  	if (State.VRSystem)
-	{
-	    VRProcessPendingMessages(State.VRSystem);
-	    
-	}
+          if (State.VRSystem)
+        {
+            VRProcessPendingMessages(State.VRSystem);
+            
+        }
 
-	NewKeyboard->RightStick.X = 0;
-	NewKeyboard->RightStick.Y = 0;
-	if (State.Focused)
-	{
-	    win32_point WindowCenter = GetWindowCenter(WindowHandle);
-	    win32_point MousePosition = GetCursorPosition();
-	    win32_point dMousePosition = {MousePosition.X - WindowCenter.X,
-					  MousePosition.Y - WindowCenter.Y};
-	    NewKeyboard->RightStick.X = dMousePosition.X;
-	    NewKeyboard->RightStick.Y = dMousePosition.Y;
-	    CenterCursor(WindowHandle);
-	}
-	
-	
+        NewKeyboard->RightStick.X = 0;
+        NewKeyboard->RightStick.Y = 0;
+        if (State.Focused)
+        {
+            win32_point WindowCenter = GetWindowCenter(WindowHandle);
+            win32_point MousePosition = GetCursorPosition();
+            win32_point dMousePosition = {MousePosition.X - WindowCenter.X,
+                                          MousePosition.Y - WindowCenter.Y};
+            NewKeyboard->RightStick.X = dMousePosition.X;
+            NewKeyboard->RightStick.Y = dMousePosition.Y;
+            CenterCursor(WindowHandle);
+        }
+        
+        
         game_screen_buffer Buffer = {};
         Buffer.Memory = State.Backbuffer.Memory;
         Buffer.Width = State.Backbuffer.Width;
         Buffer.Height = State.Backbuffer.Height;
         Buffer.Pitch = State.Backbuffer.Pitch;
         Buffer.BytesPerPixel = State.Backbuffer.BytesPerPixel;
-	
-	PlatformData.WindowWidth = State.WindowWidth;
-	PlatformData.WindowHeight = State.WindowHeight;
-	
-	UpdateAndRender(&PlatformData);
+        
+        PlatformData.WindowWidth = State.WindowWidth;
+        PlatformData.WindowHeight = State.WindowHeight;
+        
+        UpdateAndRender(&PlatformData);
 #if OPEN_VR
-	if (State.VRSystem)
-	{
-	    vr::Texture_t LeftEyeTexture = {(void*)(uintptr_t)PlatformData.LeftEye->ResolveTextureId,
-					    vr::TextureType_OpenGL,
-					    vr::ColorSpace_Gamma };
-	    vr::VRCompositor()->Submit(vr::Eye_Left, &LeftEyeTexture);
-	    vr::Texture_t RightEyeTexture = {(void*)(uintptr_t)PlatformData.RightEye->ResolveTextureId,
-					     vr::TextureType_OpenGL,
-					     vr::ColorSpace_Gamma };
-	    vr::VRCompositor()->Submit(vr::Eye_Right, &RightEyeTexture);
-	}
+        if (State.VRSystem)
+        {
+            vr::Texture_t LeftEyeTexture = {(void*)(uintptr_t)PlatformData.LeftEye->ResolveTextureId,
+                                            vr::TextureType_OpenGL,
+                                            vr::ColorSpace_Gamma };
+            vr::VRCompositor()->Submit(vr::Eye_Left, &LeftEyeTexture);
+            vr::Texture_t RightEyeTexture = {(void*)(uintptr_t)PlatformData.RightEye->ResolveTextureId,
+                                             vr::TextureType_OpenGL,
+                                             vr::ColorSpace_Gamma };
+            vr::VRCompositor()->Submit(vr::Eye_Right, &RightEyeTexture);
+        }
 #endif
-	glFinish();
-	SwapBuffers(DeviceContext);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	glFlush();
-	glFinish();
+        glFinish();
+        SwapBuffers(DeviceContext);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glFlush();
+        glFinish();
 #if OPEN_VR
-	if (State.VRSystem)
-	{
-	    vr::TrackedDevicePose_t TrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
-	    vr::VRCompositor()->WaitGetPoses(TrackedDevicePose, vr::k_unMaxTrackedDeviceCount, 0, 0);
-	}
+        if (State.VRSystem)
+        {
+            vr::TrackedDevicePose_t TrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
+            vr::VRCompositor()->WaitGetPoses(TrackedDevicePose, vr::k_unMaxTrackedDeviceCount, 0, 0);
+        }
 #endif
         //post work
-	float FrameSecondsElapsed = 0;
-	LARGE_INTEGER TimeNow = GetCPUTime();
-	while(FrameSecondsElapsed < TargetFrameSeconds)
-	{
-	    TimeNow = GetCPUTime();
-	    FrameSecondsElapsed = Win32GetSecondsElapsed(LastCounter, TimeNow);
-	    if (FrameSecondsElapsed < TargetFrameSeconds)
-	    {
-		DWORD SleepMS = (DWORD)(1000.0f*(TargetFrameSeconds - FrameSecondsElapsed));
-		if (SleepMS > 0)
-		{
-		    Sleep(SleepMS);
-		    TimeNow = GetCPUTime();
-		}
-	    }
-	}
+        float FrameSecondsElapsed = 0;
+        LARGE_INTEGER TimeNow = GetCPUTime();
+        while(FrameSecondsElapsed < TargetFrameSeconds)
+        {
+            TimeNow = GetCPUTime();
+            FrameSecondsElapsed = Win32GetSecondsElapsed(LastCounter, TimeNow);
+            if (FrameSecondsElapsed < TargetFrameSeconds)
+            {
+                DWORD SleepMS = (DWORD)(1000.0f*(TargetFrameSeconds - FrameSecondsElapsed));
+                if (SleepMS > 0)
+                {
+                    Sleep(SleepMS);
+                    TimeNow = GetCPUTime();
+                }
+            }
+        }
 
-	*PlatformData.LastInput = *PlatformData.NewInput;
-	PlatformData.NewInput->dT = FrameSecondsElapsed;
-	LastCounter = TimeNow;
+        *PlatformData.LastInput = *PlatformData.NewInput;
+        PlatformData.NewInput->dT = FrameSecondsElapsed;
+        LastCounter = TimeNow;
     }
 
     return EXIT_SUCCESS;

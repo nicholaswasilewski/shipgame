@@ -203,8 +203,8 @@ void *GetGLFuncAddress(const char *name)
        (p == (void*)0x1) || (p == (void*)0x2) || (p == (void*)0x3) ||
        (p == (void*)-1))
     {
-	HMODULE module = LoadLibraryA("opengl32.dll");
-	p = (void *)GetProcAddress(module, name);
+        HMODULE module = LoadLibraryA("opengl32.dll");
+        p = (void *)GetProcAddress(module, name);
     }
 
     return p;
@@ -253,7 +253,7 @@ static void PrintAvailableGLExtensions()
     printf("%d\n", numGLExtensions);
     for(int i = 0; i < numGLExtensions; i++)
     {
-	printf("%s\n", glGetStringi(GL_EXTENSIONS, i));
+        printf("%s\n", glGetStringi(GL_EXTENSIONS, i));
     }
 }
 #undef GLE
@@ -282,32 +282,32 @@ void GLErrorShow()
     GLenum error;
     while ((error = glGetError()) != GL_NO_ERROR)
     {
-	char* msg;
-	if (error == GL_INVALID_OPERATION)
-	{
-	    msg = "Invalid Operation";
-	}
-	else if (error == GL_INVALID_ENUM)
-	{
-	    msg = "Invalid enum";
-	}
-	else if (error == GL_INVALID_VALUE)
-	{
-	    msg = "Invalid value";
-	}
-	else if (error == GL_OUT_OF_MEMORY)
-	{
-	    msg = "Out of memory";
-	}
-	else if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
-	{
-	    msg = "Invalid framebuffer operation";
-	}
-	else
-	{
-	    msg = "Unknown GL error";
-	}
-	printf("OpenGL error: %d - %s\n", error, msg);
+        char* msg;
+        if (error == GL_INVALID_OPERATION)
+        {
+            msg = "Invalid Operation";
+        }
+        else if (error == GL_INVALID_ENUM)
+        {
+            msg = "Invalid enum";
+        }
+        else if (error == GL_INVALID_VALUE)
+        {
+            msg = "Invalid value";
+        }
+        else if (error == GL_OUT_OF_MEMORY)
+        {
+            msg = "Out of memory";
+        }
+        else if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
+        {
+            msg = "Invalid framebuffer operation";
+        }
+        else
+        {
+            msg = "Unknown GL error";
+        }
+        printf("OpenGL error: %d - %s\n", error, msg);
     }
 }
 

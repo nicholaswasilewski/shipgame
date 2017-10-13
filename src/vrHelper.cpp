@@ -10,21 +10,21 @@ char* TrackedDeviceClassToEnglishDescription(vr::ETrackedDeviceClass trackedDevi
     switch(trackedDeviceClass)
     {
     case vr::TrackedDeviceClass_HMD:
-	Result = "TrackedDeviceClass_HMD";
-	break;
+        Result = "TrackedDeviceClass_HMD";
+        break;
     case vr::TrackedDeviceClass_Controller:
-	Result = "TrackedDeviceClass_Controller";
-	break;
+        Result = "TrackedDeviceClass_Controller";
+        break;
     case vr::TrackedDeviceClass_TrackingReference:
-	Result = "TrackedDeviceClass_TrackingReference";
-	break;
+        Result = "TrackedDeviceClass_TrackingReference";
+        break;
     case vr::TrackedDeviceClass_DisplayRedirect:
-	Result = "TrackedDeviceClass_DisplayRedirect";
-	break;
+        Result = "TrackedDeviceClass_DisplayRedirect";
+        break;
     case vr::TrackedDeviceClass_Invalid:
     default:
-	Result = "TrackedDeviceClass_Invalid";
-	break;
+        Result = "TrackedDeviceClass_Invalid";
+        break;
     }
 
     return Result;
@@ -56,7 +56,7 @@ bool CreateFramebuffer(int Width, int Height, FramebufferDesc *BufferDesc)
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
     {
-	return false;
+        return false;
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -67,10 +67,10 @@ bool CreateFramebuffer(int Width, int Height, FramebufferDesc *BufferDesc)
 bool SetupStereoRenderTargets(vr::IVRSystem *VRSystem, uint32* RenderWidth, uint32* RenderHeight, FramebufferDesc *LeftEyeDesc, FramebufferDesc *RightEyeDesc)
 {
     if (!VRSystem)
-	return false;
+        return false;
     VRSystem->GetRecommendedRenderTargetSize(RenderWidth, RenderHeight);
     return CreateFramebuffer(*RenderWidth, *RenderHeight, LeftEyeDesc) &&
-	CreateFramebuffer(*RenderWidth, *RenderHeight, RightEyeDesc);
+        CreateFramebuffer(*RenderWidth, *RenderHeight, RightEyeDesc);
 }
 
 

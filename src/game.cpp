@@ -202,17 +202,17 @@ texture LoadDDS(const char * filePath)
     FILE *fp = fopen(filePath, "rb");
     if (fp == 0)
     {
-	DebugLog("File not found: %s", filePath);
-	return NullTexture;
+        DebugLog("File not found: %s", filePath);
+        return NullTexture;
     }
 
     char fileCode[4];
     fread(fileCode, 1, 4, fp);
     if (strncmp(fileCode, "DDS ", 4) != 0)
     {
-	fclose(fp);
-	DebugLog("File is not DDS: %s", filePath);
-	return NullTexture;
+        fclose(fp);
+        DebugLog("File is not DDS: %s", filePath);
+        return NullTexture;
     }
 
     fread(&header, 124, 1, fp);
@@ -238,21 +238,21 @@ texture LoadDDS(const char * filePath)
     format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
     if (strncmp(fourCC, "DXT1", 4) == 0)
     {
-	format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+        format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
     }
     else if (strncmp (fourCC, "DXT3", 4) == 0)
     {
-	format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+        format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
     }
     else if (strncmp(fourCC, "DXT5", 4) == 0)
     {
-	format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+        format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
     }
     else
     {
-	free(buffer);
-	DebugLog("File not DXT compressed: %s", filePath);
-	return NullTexture;
+        free(buffer);
+        DebugLog("File not DXT compressed: %s", filePath);
+        return NullTexture;
     }
 
     GLuint textureID;
@@ -265,18 +265,18 @@ texture LoadDDS(const char * filePath)
     int h = height;
     for(uint32 level = 0; level < mipMapCount && (w || h); ++level)
     {
-	uint32 size = ((w+3)/4)*((h+3)/4)*blockSize;
-	glCompressedTexImage2D(GL_TEXTURE_2D, level, format, w, h, 0, size, buffer + offset);
-	offset += size;
-	w /= 2;
-	h /= 2;
+        uint32 size = ((w+3)/4)*((h+3)/4)*blockSize;
+        glCompressedTexImage2D(GL_TEXTURE_2D, level, format, w, h, 0, size, buffer + offset);
+        offset += size;
+        w /= 2;
+        h /= 2;
     }
 
     texture Result = {
-	width,
-	height,
-	textureID,
-	buffer
+        width,
+        height,
+        textureID,
+        buffer
     };
     return Result;
 }
@@ -293,19 +293,19 @@ texture LoadBMP(char* filePath)
     FILE * file = fopen(filePath, "rb");
     if (!file)
     {
-	DebugLog("File not found: %s\n", filePath);
-	return NullTexture;
+        DebugLog("File not found: %s\n", filePath);
+        return NullTexture;
     }
 
     if (fread(header, 1, 54, file) != 54) {
-	DebugLog("Malformed BMP: %s\n", filePath);
-	return NullTexture;
+        DebugLog("Malformed BMP: %s\n", filePath);
+        return NullTexture;
     }
 
     if (header[0] != 'B' || header[1]!= 'M')
     {
-	DebugLog("Malformed BMP: %s\n", filePath);
-	return NullTexture;
+        DebugLog("Malformed BMP: %s\n", filePath);
+        return NullTexture;
     }
 
     dataPos = *(int32*)&(header[0x0a]);
@@ -315,11 +315,11 @@ texture LoadBMP(char* filePath)
 
     if (imageSize==0)
     {
-	imageSize = width*height*3;
+        imageSize = width*height*3;
     }
     if (dataPos==0)
     {
-	dataPos=54;
+        dataPos=54;
     }
 
     data = (uint8*)malloc(imageSize*sizeof(uint8));
@@ -337,10 +337,10 @@ texture LoadBMP(char* filePath)
 
     //free(data);
     texture Result = {
-	width,
-	height,
-	textureID,
-	data
+        width,
+        height,
+        textureID,
+        data
     };
     glDisable(GL_TEXTURE_2D);
     return Result;
@@ -357,58 +357,58 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
     GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
     GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
     {
-	FILE* vertexShaderFile = fopen(vertexShaderFilePath, "rb");
-	fseek(vertexShaderFile, 0L, SEEK_END);
-	int32 vertexShaderFileLength = ftell(vertexShaderFile);
-	rewind(vertexShaderFile);
+        FILE* vertexShaderFile = fopen(vertexShaderFilePath, "rb");
+        fseek(vertexShaderFile, 0L, SEEK_END);
+        int32 vertexShaderFileLength = ftell(vertexShaderFile);
+        rewind(vertexShaderFile);
  
-	vertexShaderCode = (char*)malloc(vertexShaderFileLength+1);
-	readResult = fread(vertexShaderCode, 1, vertexShaderFileLength, vertexShaderFile);
-	fclose(vertexShaderFile);
-	vertexShaderCode[vertexShaderFileLength] = '\0';
+        vertexShaderCode = (char*)malloc(vertexShaderFileLength+1);
+        readResult = fread(vertexShaderCode, 1, vertexShaderFileLength, vertexShaderFile);
+        fclose(vertexShaderFile);
+        vertexShaderCode[vertexShaderFileLength] = '\0';
     
-	glShaderSource(vertexShaderID, 1, &vertexShaderCode, 0);
-	glCompileShader(vertexShaderID);
+        glShaderSource(vertexShaderID, 1, &vertexShaderCode, 0);
+        glCompileShader(vertexShaderID);
 
-	glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &result);
-	glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-	if (infoLogLength > 0)
-	{
-	    DebugLog("Vertex Shader: %s:%ld:\n%s\n", vertexShaderFilePath, vertexShaderFileLength, vertexShaderCode);
-	    char* error = (char*)malloc(infoLogLength);
-	    glGetShaderInfoLog(vertexShaderID, infoLogLength, 0, error);
-	    DebugLog("%s error:\n%s\n", vertexShaderFilePath, error);
-	    free(error);
-	}
-	free(vertexShaderCode);
+        glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &result);
+        glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if (infoLogLength > 0)
+        {
+            DebugLog("Vertex Shader: %s:%ld:\n%s\n", vertexShaderFilePath, vertexShaderFileLength, vertexShaderCode);
+            char* error = (char*)malloc(infoLogLength);
+            glGetShaderInfoLog(vertexShaderID, infoLogLength, 0, error);
+            DebugLog("%s error:\n%s\n", vertexShaderFilePath, error);
+            free(error);
+        }
+        free(vertexShaderCode);
     }
 
     {
-	FILE* fragmentShaderFile = fopen(fragmentShaderFilePath, "rb");
-	fseek(fragmentShaderFile, 0L, SEEK_END);
-	long fragmentShaderFileLength = ftell(fragmentShaderFile);
-	rewind(fragmentShaderFile);
+        FILE* fragmentShaderFile = fopen(fragmentShaderFilePath, "rb");
+        fseek(fragmentShaderFile, 0L, SEEK_END);
+        long fragmentShaderFileLength = ftell(fragmentShaderFile);
+        rewind(fragmentShaderFile);
 
-	char *fragmentShaderCode = (char*)malloc(fragmentShaderFileLength+1);
-	readResult = fread(fragmentShaderCode, 1, fragmentShaderFileLength, fragmentShaderFile);
-	fragmentShaderCode[fragmentShaderFileLength] = '\0';
+        char *fragmentShaderCode = (char*)malloc(fragmentShaderFileLength+1);
+        readResult = fread(fragmentShaderCode, 1, fragmentShaderFileLength, fragmentShaderFile);
+        fragmentShaderCode[fragmentShaderFileLength] = '\0';
     
-	GLint glFragmentShaderFileLength = fragmentShaderFileLength;
-	glShaderSource(fragmentShaderID, 1, &fragmentShaderCode, &glFragmentShaderFileLength);
-	fclose(fragmentShaderFile);
-	glCompileShader(fragmentShaderID);
+        GLint glFragmentShaderFileLength = fragmentShaderFileLength;
+        glShaderSource(fragmentShaderID, 1, &fragmentShaderCode, &glFragmentShaderFileLength);
+        fclose(fragmentShaderFile);
+        glCompileShader(fragmentShaderID);
 
-	glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &result);
-	glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-	if (infoLogLength > 0)
-	{
-	    DebugLog("Fragment Shader: %s:%ld:\n%s\n", fragmentShaderFilePath, fragmentShaderFileLength, fragmentShaderCode);
-	    char* error = (char*)malloc(infoLogLength+1);
-	    glGetShaderInfoLog(fragmentShaderID, infoLogLength, 0, error);
-	    DebugLog("%s error:\n%s\n", fragmentShaderFilePath, error);
-	    free(error);
-	}
-	free(fragmentShaderCode);
+        glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &result);
+        glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if (infoLogLength > 0)
+        {
+            DebugLog("Fragment Shader: %s:%ld:\n%s\n", fragmentShaderFilePath, fragmentShaderFileLength, fragmentShaderCode);
+            char* error = (char*)malloc(infoLogLength+1);
+            glGetShaderInfoLog(fragmentShaderID, infoLogLength, 0, error);
+            DebugLog("%s error:\n%s\n", fragmentShaderFilePath, error);
+            free(error);
+        }
+        free(fragmentShaderCode);
     }
     
     GLuint programID = glCreateProgram();
@@ -420,11 +420,11 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
     glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &infoLogLength);
     if (infoLogLength > 0)
     {
-	char* error = (char*)malloc(infoLogLength+1);
-	glGetProgramInfoLog(programID, infoLogLength, 0, error);
-	DebugLog("%s\n%s\n%s\n", vertexShaderFilePath, fragmentShaderFilePath, error);
-	//printf("%s\n", error);
-	free(error);
+        char* error = (char*)malloc(infoLogLength+1);
+        glGetProgramInfoLog(programID, infoLogLength, 0, error);
+        DebugLog("%s\n%s\n%s\n", vertexShaderFilePath, fragmentShaderFilePath, error);
+        //printf("%s\n", error);
+        free(error);
     }
     
     glDetachShader(programID, vertexShaderID);
@@ -449,47 +449,47 @@ void Init(platform_data* Platform, game_data *Game)
     glBindVertexArray(VertexArrayID);
     model *BoxModel = &Game->BoxModel;
     GLfloat vertexBufferData[] = {
-	//Front
-	-1.0f, 1.0f, 1.0f,
-	-1.0f, -1.0f, 1.0f,
-	1.0f, 1.0f, 1.0f,
-	1.0f, -1.0f, 1.0f,
-	//Back
-	1.0f, 1.0f, -1.0f,
-	1.0f, -1.0f, -1.0f,
-	-1.0f, 1.0f, -1.0f,
-	-1.0f, -1.0f, -1.0f,
-	//Top
-	-1.0f, 1.0f, -1.0f,
-	-1.0f, 1.0f, 1.0f,
-	1.0f, 1.0f, -1.0f,
-	1.0f, 1.0f, 1.0f,
-	//Bottom
-	-1.0f, -1.0f, 1.0f,
-	-1.0f, -1.0f, -1.0f,
-	1.0f, -1.0f, 1.0f,
-	1.0f, -1.0f, -1.0f,
-	//Left
-	-1.0f, 1.0f, -1.0f,
-	-1.0f, -1.0f, -1.0f,
-	-1.0f, 1.0f, 1.0f,
-	-1.0f, -1.0f, 1.0f,
-	//Right
-	1.0f, 1.0f, 1.0f,
-	1.0f, -1.0f, 1.0f,
-	1.0f, 1.0f, -1.0f,
-	1.0f, -1.0f, -1.0f
+        //Front
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+        //Back
+        1.0f, 1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        //Top
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, 1.0f,
+        //Bottom
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, -1.0f,
+        //Left
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+        //Right
+        1.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f
     };
     size_t vertexBufferSize = sizeof(vertexBufferData);
     BoxModel->Vertices = (GLfloat*)malloc(vertexBufferSize);
     memcpy(BoxModel->Vertices, vertexBufferData, vertexBufferSize);
     glGenBuffers(1, &BoxModel->VertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER,
-		 BoxModel->VertexBuffer);
+                 BoxModel->VertexBuffer);
     glBufferData(GL_ARRAY_BUFFER,
-		 vertexBufferSize,
-		 &BoxModel->Vertices[0],
-		 GL_STATIC_DRAW);
+                 vertexBufferSize,
+                 &BoxModel->Vertices[0],
+                 GL_STATIC_DRAW);
 
 #define FrontNormal 0.0f, 0.0f, 1.0f
 #define BackNormal 0.0f, 0.0f, -1.0f
@@ -499,39 +499,39 @@ void Init(platform_data* Platform, game_data *Game)
 #define RightNormal 1.0f, 0.0f, 0.0f
 #define Zero 0.0f, 0.0f, 0.0f
     GLfloat normalBufferData[] = {
-	FrontNormal, FrontNormal, FrontNormal,FrontNormal,
-	BackNormal, BackNormal, BackNormal,BackNormal,
-	UpNormal, UpNormal, UpNormal,UpNormal,
-	DownNormal, DownNormal, DownNormal,DownNormal,
-	LeftNormal, LeftNormal, LeftNormal,LeftNormal,
-	RightNormal, RightNormal, RightNormal,RightNormal,
+        FrontNormal, FrontNormal, FrontNormal,FrontNormal,
+        BackNormal, BackNormal, BackNormal,BackNormal,
+        UpNormal, UpNormal, UpNormal,UpNormal,
+        DownNormal, DownNormal, DownNormal,DownNormal,
+        LeftNormal, LeftNormal, LeftNormal,LeftNormal,
+        RightNormal, RightNormal, RightNormal,RightNormal,
     };
 
     size_t normalBufferSize = sizeof(normalBufferData);
     BoxModel->Normals = (GLfloat*)malloc(normalBufferSize);
     memcpy(BoxModel->Normals, normalBufferData, normalBufferSize);
-	
+        
     glGenBuffers(1, &BoxModel->NormalBuffer);
     glBindBuffer(GL_ARRAY_BUFFER,
-		 BoxModel->NormalBuffer);
+                 BoxModel->NormalBuffer);
     glBufferData(GL_ARRAY_BUFFER,
-		 normalBufferSize,
-		 &BoxModel->Normals[0],
-		 GL_STATIC_DRAW);
-	
+                 normalBufferSize,
+                 &BoxModel->Normals[0],
+                 GL_STATIC_DRAW);
+        
     GLushort indexBufferData[] = {
-	0,1,2,
-	1,3,2,
-	4,5,6,
-	5,7,6,
-	8,9,10,
-	9,11,10,
-	12,13,14,
-	13,15,14,
-	16,17,18,
-	17,19,18,
-	20,21,22,
-	21,23,22
+        0,1,2,
+        1,3,2,
+        4,5,6,
+        5,7,6,
+        8,9,10,
+        9,11,10,
+        12,13,14,
+        13,15,14,
+        16,17,18,
+        17,19,18,
+        20,21,22,
+        21,23,22
     };
     BoxModel->IndexCount = sizeof(indexBufferData)/sizeof(GLushort);
 
@@ -541,56 +541,56 @@ void Init(platform_data* Platform, game_data *Game)
 
     glGenBuffers(1, &BoxModel->IndexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
-		 BoxModel->IndexBuffer);
+                 BoxModel->IndexBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-		 indexBufferSize,
-		 &BoxModel->Indices[0],
-		 GL_STATIC_DRAW);
+                 indexBufferSize,
+                 &BoxModel->Indices[0],
+                 GL_STATIC_DRAW);
 
 #if DIE
     GLfloat OneThird = 1.0f/3.0f;
     GLfloat TwoThirds = 2.0f/3.0f;
     GLfloat uvBufferData[] = {
-	0.0f, 0.0f,
-	0.0f, OneThird,
-	OneThird, 0.0f,
-	OneThird, OneThird,
+        0.0f, 0.0f,
+        0.0f, OneThird,
+        OneThird, 0.0f,
+        OneThird, OneThird,
 
-	TwoThirds, OneThird,
-	TwoThirds, TwoThirds,
-	1.0f, OneThird,
-	1.0f, TwoThirds,
+        TwoThirds, OneThird,
+        TwoThirds, TwoThirds,
+        1.0f, OneThird,
+        1.0f, TwoThirds,
 
-	OneThird, 0.0f,
-	OneThird, OneThird,
-	TwoThirds, 0.0f,
-	TwoThirds, OneThird,
+        OneThird, 0.0f,
+        OneThird, OneThird,
+        TwoThirds, 0.0f,
+        TwoThirds, OneThird,
 
-	OneThird, OneThird,
-	OneThird, TwoThirds,
-	TwoThirds, OneThird,
-	TwoThirds, TwoThirds,
+        OneThird, OneThird,
+        OneThird, TwoThirds,
+        TwoThirds, OneThird,
+        TwoThirds, TwoThirds,
 
-	TwoThirds,0.0f,
-	TwoThirds,OneThird,
-	1.0f, 0.0f,
-	1.0f, OneThird,
+        TwoThirds,0.0f,
+        TwoThirds,OneThird,
+        1.0f, 0.0f,
+        1.0f, OneThird,
 
-	0.0f, OneThird,
-	0.0f, TwoThirds,
-	OneThird, OneThird,
-	OneThird, TwoThirds,
+        0.0f, OneThird,
+        0.0f, TwoThirds,
+        OneThird, OneThird,
+        OneThird, TwoThirds,
     };
 #elif defined(CONTAINER)
-#define FACE					\
-    0.0f, 0.0f,					\
-	0.0f, 1.0f,				\
-	1.0f, 0.0f,				\
-	1.0f, 1.0f				\
-	
-	
+#define FACE                                        \
+    0.0f, 0.0f,                                        \
+        0.0f, 1.0f,                                \
+        1.0f, 0.0f,                                \
+        1.0f, 1.0f                                \
+        
+        
     GLfloat uvBufferData[] = {
-	FACE, FACE, FACE, FACE, FACE, FACE
+        FACE, FACE, FACE, FACE, FACE, FACE
     };
 #undef FACE
 
@@ -598,7 +598,7 @@ void Init(platform_data* Platform, game_data *Game)
     size_t uvBufferSize = sizeof(uvBufferData);
     BoxModel->UVs = (GLfloat*)malloc(uvBufferSize);
     memcpy(BoxModel->UVs, uvBufferData, uvBufferSize);
-	
+        
     glGenBuffers(1, &BoxModel->UVBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, BoxModel->UVBuffer);
     glBufferData(GL_ARRAY_BUFFER, uvBufferSize, BoxModel->UVs, GL_STATIC_DRAW);
@@ -653,7 +653,7 @@ void Init(platform_data* Platform, game_data *Game)
     ColorShader.Material.Emissive = glGetUniformLocation(ColorShader.Program, "Material.Emissive");
     ColorShader.Material.Shine = glGetUniformLocation(ColorShader.Program, "Material.Shine");
     Game->ColorShader = ColorShader;
-	
+        
     camera Camera = {0};
     Camera.FOV = PI*.5f;
     Camera.Aspect = 800.0f/600.0f;
@@ -735,28 +735,28 @@ void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.VertexBuffer);
     glVertexAttribPointer(0,
-			  3,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
+                          3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          0,
+                          (void*)0
+        );
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.NormalBuffer);
     glVertexAttribPointer(2,
-			  3,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
+                          3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          0,
+                          (void*)0
+        );
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjectModel.IndexBuffer);
     glDrawElements(GL_TRIANGLES,
-		   ObjectModel.IndexCount,
-		   GL_UNSIGNED_SHORT,
-		   (void*)0
-	);
+                   ObjectModel.IndexCount,
+                   GL_UNSIGNED_SHORT,
+                   (void*)0
+        );
     
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -795,39 +795,39 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->VertexBuffer);
     glVertexAttribPointer(0,
-			  3,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
+                          3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          0,
+                          (void*)0
+        );
     
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->UVBuffer);
     glVertexAttribPointer(1,
-			  2,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
+                          2,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          0,
+                          (void*)0
+        );
     
     glEnableVertexAttribArray(2);
     glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->NormalBuffer);
     glVertexAttribPointer(2,
-			  3,
-			  GL_FLOAT,
-			  GL_FALSE,
-			  0,
-			  (void*)0
-	);
+                          3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          0,
+                          (void*)0
+        );
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GameObject.Model->IndexBuffer);
     glDrawElements(GL_TRIANGLES,
-		   GameObject.Model->IndexCount,
-		   GL_UNSIGNED_SHORT,
-		   (void*)0
-	);
+                   GameObject.Model->IndexCount,
+                   GL_UNSIGNED_SHORT,
+                   (void*)0
+        );
     
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -843,44 +843,44 @@ void Update(platform_data *Platform, game_data *Game)
     
     if (Keyboard.Left.Down)
     {
-	CameraStrafe(&Game->Camera, Input->dT, -3.0f);
+        CameraStrafe(&Game->Camera, Input->dT, -3.0f);
     }
-    else if (Keyboard.Right.Down)	
+    else if (Keyboard.Right.Down)        
     {
-	CameraStrafe(&Game->Camera, Input->dT, 3.0f);
+        CameraStrafe(&Game->Camera, Input->dT, 3.0f);
     }
 
     if (Keyboard.Forward.Down)
     {
-	CameraMoveForward(&Game->Camera, Input->dT, 3.0f);
+        CameraMoveForward(&Game->Camera, Input->dT, 3.0f);
     }
     else if (Keyboard.Back.Down)
     {
-	CameraMoveForward(&Game->Camera, Input->dT, -3.0f);
+        CameraMoveForward(&Game->Camera, Input->dT, -3.0f);
     }
     
     if (Keyboard.Up.Down)
     {
-	CameraMoveUp(&Game->Camera, Input->dT, 3.0f);
+        CameraMoveUp(&Game->Camera, Input->dT, 3.0f);
     }
     else if (Keyboard.Down.Down)
     {
-	CameraMoveUp(&Game->Camera, Input->dT, -3.0f);
+        CameraMoveUp(&Game->Camera, Input->dT, -3.0f);
     }
 
     if (Keyboard.UpperLeft.Down)
     {
-	RollCamera(&Game->Camera, Input->dT, 0.5f);
+        RollCamera(&Game->Camera, Input->dT, 0.5f);
     }
     else if (Keyboard.UpperRight.Down)
     {
-	RollCamera(&Game->Camera, Input->dT, -0.5f);
+        RollCamera(&Game->Camera, Input->dT, -0.5f);
     }
 
     TurnCamera(&Game->Camera,
-	       Keyboard.RightStick.X / 100.0f,
-	       Keyboard.RightStick.Y / 100.0f,
-	       Input->dT*1.0f);
+               Keyboard.RightStick.X / 100.0f,
+               Keyboard.RightStick.Y / 100.0f,
+               Input->dT*1.0f);
 
     Game->Box.Angle += PI*(1.0f/120.0f);
 }
@@ -910,8 +910,8 @@ void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, m
     glBindFramebuffer(GL_READ_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TargetBuffer->ResolveFramebufferId);
     glBlitFramebuffer(0, 0, BufferWidth, BufferHeight,
-		      0, 0, BufferWidth, BufferHeight,
-		      GL_COLOR_BUFFER_BIT, GL_LINEAR);
+                      0, 0, BufferWidth, BufferHeight,
+                      GL_COLOR_BUFFER_BIT, GL_LINEAR);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);    
 }
@@ -925,20 +925,20 @@ void Render(platform_data *Platform, game_data *Game)
     float EyeDistance = 1.0f;
     camera LeftEyeCamera = Game->Camera;
     LeftEyeCamera.Position = LeftEyeCamera.Position + -EyeDistance*Cross(LeftEyeCamera.Forward,
-									LeftEyeCamera.Up);
+                                                                        LeftEyeCamera.Up);
     camera RightEyeCamera = Game->Camera;
     RightEyeCamera.Position = RightEyeCamera.Position + EyeDistance*Cross(RightEyeCamera.Forward,
-									   RightEyeCamera.Up);
+                                                                           RightEyeCamera.Up);
     
     mat4 LeftEyeView = GenerateCameraView(LeftEyeCamera);
     mat4 RightEyeView = GenerateCameraView(RightEyeCamera);
     
     if (Platform->LeftEye && Platform->RightEye)
     {
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	
-	RenderToTarget(Platform, Game, Projection, LeftEyeView, Platform->LeftEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
-	RenderToTarget(Platform, Game, Projection, RightEyeView, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        
+        RenderToTarget(Platform, Game, Projection, LeftEyeView, Platform->LeftEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
+        RenderToTarget(Platform, Game, Projection, RightEyeView, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
     }
 #endif
     
@@ -952,10 +952,10 @@ void UpdateAndRender(platform_data *Platform)
 
     if (!Game->Initialized)
     {
-	Init(Platform, Game);
-	printf("GLInit Errors:\n");
-	GLErrorShow();
-	
+        Init(Platform, Game);
+        printf("GLInit Errors:\n");
+        GLErrorShow();
+        
     }
 
     Update(Platform, Game);
