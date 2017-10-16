@@ -282,6 +282,7 @@ bool ReadValues(FBX_Node* node)
 
 void ParseChild(FBX_Node* parentNode, int depth)
 {
+    // TODO -- don't statically allocate 128 children.
     DebugLog("%s[START NODE] '%s'\n", MakeSpaces(depth), parentNode->Name);
     parentNode->Children = (FBX_Node*)malloc(sizeof(FBX_Node) * 128);
 
@@ -346,7 +347,7 @@ void ParseChild(FBX_Node* parentNode, int depth)
     }
 }
 
-FBX_Node ParseFBX(FILE* File)
+void ParseFBX(FILE* File, FBX_Node* outFbxNode)
 { 
     char Token[MAX_TOKEN_LENGTH];
     global_Info.File = File; 
@@ -354,13 +355,10 @@ FBX_Node ParseFBX(FILE* File)
 
     // the outer most section of properties in the fbx doc 
     // will be the root node.
-    FBX_Node rootNode = {0};
-    rootNode.Name = "Root";
+    outFbxNode->Name = "Root";
 
     // fill in properties and attach to the root node
-    ParseChild(&rootNode, 0);
-
-    return rootNode;
+    ParseChild(outFbxNode, 0);
 }
 
 #endif

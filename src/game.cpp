@@ -709,7 +709,8 @@ void Init(platform_data* Platform, game_data *Game)
     // load model from FBX
     //FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
     FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
-    FBX_Node monkey = ParseFBX(monkeyFile);
+    FBX_Node monkey = {0};
+    ParseFBX(monkeyFile, &monkey);
 
     Game->Initialized = true;
 }
