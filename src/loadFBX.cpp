@@ -19,9 +19,25 @@ enum fbx_token_type
     FBXT_String,
     FBXT_Float,
     FBXT_Integer,
-    FBXT_StartTuple,
-    FBXT_EndTuple,
+    FBXT_StartChild,
+    FBXT_EndChild,
     FBXT_Comma
+};
+
+char* fbx_token_type_string [] =
+{
+    "FBXT_Unknown   ",
+    "FBXT_EndOfFile ",
+    "FBXT_Endline   ",
+    "FBXT_WhiteSpace",
+    "FBXT_Comment   ",
+    "FBXT_TypeName  ",
+    "FBXT_String    ",
+    "FBXT_Float     ",
+    "FBXT_Integer   ",
+    "FBXT_StartChild",
+    "FBXT_EndChild  ",
+    "FBXT_Comma     "
 };
 
 struct fbx_parse_info
@@ -29,6 +45,18 @@ struct fbx_parse_info
     FILE* File;
     char* Token;
 };
+
+fbx_token_type global_TokenType;  
+fbx_parse_info global_Info = {0};
+
+char debug_valuestr[128];
+char spaces[64];
+char* MakeSpaces(int depth)
+{
+    memset(spaces,0,sizeof(spaces));
+    memset(spaces,' ', depth*4);
+    return spaces;
+}
 
 int IsAlpha(char c)
 {
@@ -62,42 +90,40 @@ int IsWhiteSpace(char c)
 }
 
 //Returns 0 if EOF
-fbx_token_type ReadFBXToken(FILE* file, char *outString)
+fbx_token_type ReadToken()
 {
     int charCounter = 0;
-    char c = fgetc(file);
-
+    char c;
     fbx_token_type Type;
 
-    if (IsWhiteSpace(c))
+    // always skip whitespace
+    while(IsWhiteSpace(c = fgetc(global_Info.File)));
+
+    //comment start -- skip to end
+    if (c == ';')
     {
-        Type = FBXT_WhiteSpace;
+        while((c = fgetc(global_Info.File)) != '\n');
     }
-    else if (c == '\n')
+    
+    if (c == '\n')
     {
         Type = FBXT_Endline;
     }
-    //comment start
-    else if (c == ';')
-    {
-        Type = FBXT_Comment;
-        while((c = fgetc(file)) != '\n');
-    }
     else if (c == '{')
     {
-        Type = FBXT_StartTuple;
+        Type = FBXT_StartChild;
     }
     else if (c == '}')
     {
-        Type = FBXT_EndTuple;
+        Type = FBXT_EndChild;
     }
     //string start
     else if (c == '"')
     {
         Type = FBXT_String;
-        while((c = fgetc(file)) != '"')
+        while((c = fgetc(global_Info.File)) != '"')
         {
-            outString[charCounter++] = c;
+            global_Info.Token[charCounter++] = c;
         }
     }
     else if (IsNumberStart(c))
@@ -110,23 +136,23 @@ fbx_token_type ReadFBXToken(FILE* file, char *outString)
         {
             Type = FBXT_Integer;
         }
-        outString[charCounter++] = c;
+        global_Info.Token[charCounter++] = c;
         
         while(1)
         {
-            c = fgetc(file);
+            c = fgetc(global_Info.File);
             if (IsNumeric(c))
             {
-                outString[charCounter++] = c;
+                global_Info.Token[charCounter++] = c;
             }
             else if (c == '.')
             {
-                outString[charCounter++] = c;
+                global_Info.Token[charCounter++] = c;
                 Type = FBXT_Float;
             }
             else
             {
-                ungetc(c, file);
+                ungetc(c, global_Info.File);
                 break;
             }
         }
@@ -135,13 +161,13 @@ fbx_token_type ReadFBXToken(FILE* file, char *outString)
     else if (IsAlpha(c))
     {
         Type = FBXT_TypeName;
-        outString[charCounter++] = c;
+        global_Info.Token[charCounter++] = c;
         while(1)
         {
-            c = fgetc(file);
+            c = fgetc(global_Info.File);
             if (IsAlphanumeric(c))
             {
-                outString[charCounter++] = c;
+                global_Info.Token[charCounter++] = c;
             }
             else if (c == ':')
             {
@@ -149,7 +175,7 @@ fbx_token_type ReadFBXToken(FILE* file, char *outString)
             }
             else
             {
-                ungetc(c, file);
+                ungetc(c, global_Info.File);
                 break;
             }
         }
@@ -164,316 +190,177 @@ fbx_token_type ReadFBXToken(FILE* file, char *outString)
     }
     else 
     {
+        DebugLog("  ReadFBXToken FBXT_Unknown %c\n", c);
         Type = FBXT_Unknown;
     }
     
-    outString[charCounter] = '\0';
+    global_Info.Token[charCounter] = '\0';
     return Type;
 }
 
-fbx_token_type ReadToken(fbx_parse_info *Info)
+// merged "properties" and "children" concepts into just one "node" concept
+// A node will have a Name-Value pair, where Value is 0 or more values.
+// A node may or may not have children.
+// ex:  CreationTime has 1 value, 0 children.
+//      CreationTime: "2016-08-16 15:19:02:000"
+// ex:  CreationTimeStamp has 0 values, 8 children.
+//      CreationTimeStamp:  { }
+// ex:  Model has 2 values, 13 children
+//      Model: "Model::Suzanne", "Mesh" { }
+struct FBX_Node
 {
-    return ReadFBXToken(Info->File, Info->Token);
-}
+    char* Name;
+    char** Values;
+    int ValueCount;
 
-struct CreationTimeStamp
-{
-    int Version;
-    int Year;
-    int Month;
-    int Day;
-    int Hour;
-    int Minute;
-    int Second;
-    int Millisecond;
+    FBX_Node* Children;
+    int ChildCount;
 };
 
-struct OtherFlags
+bool ReadValues(FBX_Node* node)
 {
-    int FlagPLE;
-};
+    int startSeek = ftell(global_Info.File);
 
-struct FBXHeaderExtension
-{
-    int FBXHeaderVersion;
-    int FBXVersion;
-    char Creator[128];
-};
+    fbx_token_type type;
+    fbx_token_type lastType;
+    int valueCount = 0;
+    bool hasChildren = false;
 
-struct ObjectType
-{
-    int Count;
-};
-
-struct FBXDefinitions
-{
-    int Version;
-    int Count;
-    ObjectType Model;
-    ObjectType Geometry;
-    ObjectType Material;
-    ObjectType Pose;
-    ObjectType GlobalSettings;
-};
-
-struct Property {
-    char StringProps[3][64];
-    int IntProps[3];
-    float FloatProps[3];
-};
-
-struct FBXModel {
-    int VertexCount;
-    float *Vertices;
-    
-    int IndexCount;
-    int *Indices;
-    
-    int NormalCount;
-    float *Normals;
-    
-    int UVCount;
-    float *UVs;
-};
-
-struct FBXModelFile
-{
-    FBXHeaderExtension Header;
-    char CreationTime[64];
-    char Creator[64];
-    FBXDefinitions Definitions;
-};
-
-int SeekToTypeName(fbx_parse_info *Info, char *SeekTo)
-{
-    fbx_token_type TokenType;
+    // scan to find value count
     while(1)
     {
-        TokenType = ReadToken(Info);
-        if (TokenType == FBXT_TypeName)
+        type = ReadToken();
+        if(type == FBXT_StartChild)
         {
-            if (strcmp(Info->Token, SeekTo) == 0)
-            {
-                return 0;
-            }
-        }
-        else if (TokenType == FBXT_EndOfFile)
-        {
-            return -1;
-        }
-    }
-}
-
-FBXModel ParseModel(fbx_parse_info *Info)
-{
-    FBXModel Error = {0};
-    FBXModel Model = {0};
-    fbx_token_type TokenType;
-    
-    if (SeekToTypeName(Info, "Vertices") != 0)
-    {
-        printf("Unexpected end of file.");
-        return Error;
-    }
-    
-    Model.VertexCount = 0;
-    {
-        int Start = ftell(Info->File);
-        while(1)
-        {
-            TokenType = ReadToken(Info);
-            if (TokenType == FBXT_WhiteSpace)
-            {
-                continue;
-            }
-            else if (TokenType == FBXT_Float)
-            {
-                ++Model.VertexCount;
-                TokenType = ReadToken(Info);
-                
-                if (TokenType == FBXT_Comma)
-                {
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else if (TokenType == FBXT_EndOfFile)
-            {
-                printf("Parse error\n");
-                return Error;
-            }
-        }
-        
-        fseek(Info->File, Start, SEEK_SET);
-        Model.Vertices = (float *)malloc(sizeof(float)*Model.VertexCount);
-        float *Pointer = Model.Vertices;
-        while(1)
-        {
-            TokenType = ReadToken(Info);
-            if (TokenType == FBXT_Float)
-            {
-                *Pointer++ = atof(Info->Token);
-                if (TokenType == FBXT_Comma)
-                {
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else if (TokenType == FBXT_EndOfFile)
-            {
-                printf("Unexpected end of file.");
-                return Error;
-            }
-        }
-    }
-
-    if (SeekToTypeName(Info, "PolygonVertexIndex") != 0)
-    {
-        printf("Unexpected end of file.");
-        return Error;
-    }
-    {
-        int Start = ftell(Info->File);
-        while(1)
-        {
-            TokenType = ReadToken(Info);
-            if (TokenType == FBXT_Integer)
-            {
-                ++Model.IndexCount;
-                TokenType = ReadToken(Info);
-                if (TokenType == FBXT_Comma)
-                {
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else if (TokenType == FBXT_EndOfFile)
-            {
-                printf("Unexpected end of file.\n");
-                return Error;
-            }
-        }
-        fseek(Info->File, Start, SEEK_SET);
-        Model.Indices = (int *)malloc(sizeof(int)*Model.IndexCount);
-        int *Pointer = Model.Indices;
-        while(1)
-        {
-            TokenType = ReadToken(Info);
-            if (TokenType == FBXT_Integer)
-            {
-                *Pointer++ = atoi(Info->Token);
-                TokenType = ReadToken(Info);
-                if (TokenType == FBXT_Comma)
-                {
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else if (TokenType == FBXT_EndOfFile)
-            {
-                printf("Unexpected end of file.\n");
-                return Error;
-            }
-        }
-    }
-    
-    if (SeekToTypeName(Info, "Normals") != 0)
-    {
-        printf("Unexpected end of file.\n");
-        return Error;
-    }
-    {
-        int Start = ftell(Info->File);
-        while(1)
-        {
-            TokenType = ReadToken(Info);
-            if (TokenType == FBXT_Float)
-            {
-                ++Model.NormalCount;
-                TokenType = ReadToken(Info);
-                if (TokenType == FBXT_Comma)
-                {
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else if (TokenType == FBXT_EndOfFile)
-            {
-                printf("Unexpected end of file.\n");
-                return Error;
-            }
-        }
-        fseek(Info->File, Start, SEEK_SET);
-        Model.Normals = (float*)malloc(sizeof(float)*Model.NormalCount);
-    }
-
-    return Model;
-}
-
-void ParseObjects(fbx_parse_info *Info)
-{
-    printf("Start Objects Parse\n");
-    fbx_token_type TokenType;
-    int Go = 1;
-    while(Go)
-    {
-        TokenType = ReadToken(Info);
-        if (TokenType == FBXT_TypeName)
-        {
-            if (strcmp("Model", Info->Token) == 0)
-            {
-                FBXModel model = ParseModel(Info);
-                printf("Vertex Count: %d\n", model.VertexCount); 
-                printf("Index Count: %d\n", model.IndexCount); 
-                printf("Normal Count: %d\n", model.NormalCount); 
-                Go = 0;
-            }
-        }
-    }
-}
-
-FBXModel ParseFBX(FILE* File)
-{
-    fbx_token_type TokenType;    
-    char Token[MAX_TOKEN_LENGTH];
-    fbx_parse_info Info = {
-        File,
-        Token
-    };
-
-    while(1)
-    {
-        TokenType = ReadToken(&Info);
-        if (TokenType == FBXT_TypeName)
-        {
-            if (strcmp(Info.Token, "Objects") == 0)
-            {
-                ParseObjects(&Info);
-            }
-        }
-        else if (TokenType == FBXT_EndOfFile)
-        {
+            hasChildren = true;
             break;
         }
+        else if(type == FBXT_Endline && valueCount == 0)
+        {
+            // values were on a new line for some reason
+            // no action
+        }
+        else if(type == FBXT_Endline && lastType != FBXT_Comma)
+        {
+            hasChildren = false;
+            break;
+        }
+        else if(type == FBXT_Endline || type == FBXT_Comma)
+        {
+        }
+        else 
+        {
+            valueCount++;
+        }
+
+        lastType = type;
+        //DebugLog("PEEK  %d [%s] %s\n", startSeek, fbx_token_type_string[type], global_Info.Token);
     }
-    
-    FBXModel Result = {0};
-    return Result;
+
+    // reset back top
+    node->ValueCount = valueCount;
+    node->Values = (char**) malloc(valueCount * sizeof(char*));
+    fseek(global_Info.File, startSeek, SEEK_SET);
+
+    // iterate and record values
+    for(int i = 0; i < valueCount; i++)
+    {        
+        type = ReadToken();
+        if(type == FBXT_Comma || type == FBXT_Endline)
+        {
+            i--;
+            continue;
+        }
+
+        node->Values[i] = (char*)malloc((strlen(global_Info.Token)+1) * sizeof(char));
+        strcpy(node->Values[i], global_Info.Token);
+        //DebugLog("VALUE %d [%s] %s\n", startSeek, fbx_token_type_string[type], node->Values[i]);
+    }
+
+    return hasChildren;
+}
+
+void ParseChild(FBX_Node* parentNode, int depth)
+{
+    DebugLog("%s[START NODE] '%s'\n", MakeSpaces(depth), parentNode->Name);
+    parentNode->Children = (FBX_Node*)malloc(sizeof(FBX_Node) * 128);
+
+    while(1)
+    {
+        fbx_token_type TokenType = ReadToken();
+        if (TokenType == FBXT_TypeName)
+        {
+            // a child is just any property of this node.
+            // generally, one line in fbx is one child.
+            FBX_Node node = {0};
+            parentNode->Children[parentNode->ChildCount] = node;
+            parentNode->ChildCount++;
+
+            node.Name = (char*)malloc((strlen(global_Info.Token)+1) * sizeof(char));
+            strcpy(node.Name, global_Info.Token);
+            
+            // parse all values of this property
+            // will fill node.Values and node.ValueCount
+            bool hasChildren = ReadValues(&node);
+            
+            // debug out a couple values from this node
+            memset(debug_valuestr, 0, sizeof(debug_valuestr));
+            for(int i = 0; i < 6; i++)
+            {
+                if(i < node.ValueCount)
+                {
+                    strcat(debug_valuestr, node.Values[i]);
+                    if(i != node.ValueCount - 1)
+                    {
+                        strcat(debug_valuestr, ", ");
+                    }
+                }
+            }
+            DebugLog("%s[PROPERTY   ] '%s': %s\n",  MakeSpaces(depth), node.Name, debug_valuestr, node.ValueCount);
+
+            // recurse this child
+            if (hasChildren)
+            {
+                ParseChild(&node, depth + 1);
+            }
+        }
+        else if (TokenType == FBXT_EndChild)
+        {
+            DebugLog("%s[END NODE  ] '%s' PropCount: %d\n",  MakeSpaces(depth), parentNode->Name, parentNode->ChildCount);
+            break;
+        }
+        else if (TokenType == FBXT_EndOfFile)
+        {
+            DebugLog("[END File] '%s' PropCount: %d\n", parentNode->Name, parentNode->ChildCount);
+            break;
+        }
+        else if (TokenType == FBXT_Endline ||
+                 TokenType == FBXT_StartChild)
+        {
+            continue;
+        }
+        else 
+        {
+            DebugLog("huh? [%s]%s\n", fbx_token_type_string[TokenType], global_Info.Token);
+        }
+    }
+}
+
+FBX_Node ParseFBX(FILE* File)
+{ 
+    char Token[MAX_TOKEN_LENGTH];
+    global_Info.File = File; 
+    global_Info.Token = Token;
+
+    // the outer most section of properties in the fbx doc 
+    // will be the root node.
+    FBX_Node rootNode = {0};
+    rootNode.Name = "Root";
+
+    // fill in properties and attach to the root node
+    ParseChild(&rootNode, 0);
+
+    return rootNode;
 }
 
 #endif

@@ -705,6 +705,12 @@ void Init(platform_data* Platform, game_data *Game)
     Box2.Angle = 0.0f;
     Game->ColorBox = ColorBox;
     
+
+    // load model from FBX
+    //FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
+    FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
+    FBX_Node monkey = ParseFBX(monkeyFile);
+
     Game->Initialized = true;
 }
 

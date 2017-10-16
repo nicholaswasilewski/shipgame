@@ -536,7 +536,7 @@ int CALLBACK WinMain(
 {
     win32_state State = {};
     State.Console = CreateConsole();
-    ShowConsole(&State, 0);
+    ShowConsole(&State, 1);
     CreateMutex(0, 0, ConsoleInputMutexName);
 
     DWORD ConsoleReadThreadID;

@@ -9,4 +9,6 @@ set CommonLinkerFlags=/incremental:no /opt:ref /LIBPATH:"../ext/lib/win64"
 rem set CommonLinkerFlags=/incremental:no /opt:ref /LIBPATH:"../ext/lib/win32"
 cl %CommonCompilerFlags% ..\src\win32_shipgame.cpp /link %CommonLinkerFlags%
 
+if %errorlevel%==0 start win32_shipgame.exe
+
 popd
