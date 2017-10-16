@@ -4,6 +4,7 @@
 #include "matrixMath.cpp"
 #include "camera.cpp"
 #include "loadFBX.cpp"
+#include "fbxHelpers.cpp"
 #include "game.h"
 
 #include <stdlib.h>
@@ -709,8 +710,15 @@ void Init(platform_data* Platform, game_data *Game)
     // load model from FBX
     //FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
     FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
-    FBX_Node monkey = {0};
-    ParseFBX(monkeyFile, &monkey);
+    FBX_Node* monkey = (FBX_Node*)malloc(sizeof(FBX_Node));
+    ParseFBX(monkeyFile, monkey);
+
+    // get model info
+    FBX_Node* fbx_objects = FBX_GetChildByName(monkey, "Objects");
+    FBX_Node* fbx_model = FBX_GetChildByName(fbx_objects, "Model");
+    FBX_Node* fbx_vertices = FBX_GetChildByName(fbx_model, "Vertices");
+    DebugLog("Vertex Count: %d\n", fbx_vertices->ValueCount);
+    DebugLog("Vertex0: %s\n", fbx_vertices->Values[0]);
 
     Game->Initialized = true;
 }

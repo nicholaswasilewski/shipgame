@@ -213,7 +213,7 @@ struct FBX_Node
     char** Values;
     int ValueCount;
 
-    FBX_Node* Children;
+    FBX_Node** Children;
     int ChildCount;
 };
 
@@ -284,7 +284,8 @@ void ParseChild(FBX_Node* parentNode, int depth)
 {
     // TODO -- don't statically allocate 128 children.
     DebugLog("%s[START NODE] '%s'\n", MakeSpaces(depth), parentNode->Name);
-    parentNode->Children = (FBX_Node*)malloc(sizeof(FBX_Node) * 128);
+    parentNode->Children = (FBX_Node**)malloc(sizeof(FBX_Node*) * 128);
+    parentNode->ChildCount = 0;
 
     while(1)
     {
@@ -293,36 +294,36 @@ void ParseChild(FBX_Node* parentNode, int depth)
         {
             // a child is just any property of this node.
             // generally, one line in fbx is one child.
-            FBX_Node node = {0};
+            FBX_Node* node = (FBX_Node*) malloc(sizeof(FBX_Node));
             parentNode->Children[parentNode->ChildCount] = node;
             parentNode->ChildCount++;
 
-            node.Name = (char*)malloc((strlen(global_Info.Token)+1) * sizeof(char));
-            strcpy(node.Name, global_Info.Token);
+            node->Name = (char*)malloc((strlen(global_Info.Token)+1) * sizeof(char));
+            strcpy(node->Name, global_Info.Token);
             
             // parse all values of this property
             // will fill node.Values and node.ValueCount
-            bool hasChildren = ReadValues(&node);
+            bool hasChildren = ReadValues(node);
             
             // debug out a couple values from this node
             memset(debug_valuestr, 0, sizeof(debug_valuestr));
             for(int i = 0; i < 6; i++)
             {
-                if(i < node.ValueCount)
+                if(i < node->ValueCount)
                 {
-                    strcat(debug_valuestr, node.Values[i]);
-                    if(i != node.ValueCount - 1)
+                    strcat(debug_valuestr, node->Values[i]);
+                    if(i != node->ValueCount - 1)
                     {
                         strcat(debug_valuestr, ", ");
                     }
                 }
             }
-            DebugLog("%s[PROPERTY   ] '%s': %s\n",  MakeSpaces(depth), node.Name, debug_valuestr, node.ValueCount);
+            DebugLog("%s[PROPERTY   ] '%s': %s\n",  MakeSpaces(depth), node->Name, debug_valuestr, node->ValueCount);
 
             // recurse this child
             if (hasChildren)
             {
-                ParseChild(&node, depth + 1);
+                ParseChild(node, depth + 1);
             }
         }
         else if (TokenType == FBXT_EndChild)
