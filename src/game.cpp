@@ -192,6 +192,10 @@ struct game_data
     game_object LightBox;
     color_game_object ColorBox;
 
+    //New Scene
+    game_object Floor;
+    game_object Player;
+
     float BoxRotation;
 };
 
@@ -438,7 +442,7 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 
 void Init(platform_data* Platform, game_data *Game)
 {
-    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClearColor(0.2, 0.4, 0.6, 0.0);
     glFrontFace(GL_CCW);
     glEnable(GL_CULL_FACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -656,12 +660,12 @@ void Init(platform_data* Platform, game_data *Game)
     Game->ColorShader = ColorShader;
         
     camera Camera = {0};
-    Camera.FOV = PI*.5f;
+    Camera.FOV = PI*.25f;
     Camera.Aspect = 800.0f/600.0f;
     Camera.Near = 0.001f;
     Camera.Far = 1000.0f;
-    Camera.Position = V3(0.0f, 0.0f, 5.0f);
-    Camera.Forward = Normalize(V3(0.0f, 0.0f,-1.0f));
+    Camera.Position = V3(0.0f, 5.0f, 5.0f);
+    Camera.Forward = Normalize(V3(0.0f, -0.5f,-1.0f));
     Camera.Up = V3(0,1,0);
     Game->Camera = Camera;
 
@@ -703,9 +707,24 @@ void Init(platform_data* Platform, game_data *Game)
     ColorBox.Scale = V3(0.5f, 0.5f, 0.5f);
     ColorBox.Position = V3(Light.Position);
     ColorBox.Axis = V3(0.0f, 1.0f, 0.0f);
-    Box2.Angle = 0.0f;
+    ColorBox.Angle = 0.0f;
     Game->ColorBox = ColorBox;
-    
+
+    game_object Floor = { 0 };
+    Floor.Model = &Game->BoxModel;
+    Floor.Scale = V3(100.0f, 0.1f, 100.0f);
+    Floor.Position = V3(0.0f, 0.0f, 0.0f);
+    Floor.Axis = V3(0.0f, 1.0f, 0.0f);
+    Floor.Angle = 0.0f;
+    Game->Floor = Floor;
+
+    game_object Player = { 0 };
+    Player.Model = &Game->BoxModel;
+    Player.Scale = V3(0.5f, 2.0f, 0.5f);
+    Player.Position = V3(0.0f, 0.0f, 0.0f);
+    Player.Axis = V3(0.0f, 1.0f, 0.0f);
+    Player.Angle = 0.0f;
+    Game->Player = Player;
 
     // load model from FBX
     //FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
@@ -904,10 +923,14 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-    RenderObject(Game->Box, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-    RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-    RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-    RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+    //RenderObject(Game->Box, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    //RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    //RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    //RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+
+    // player and floor
+    RenderObject(Game->Floor, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
 }
 
 void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, mat4 View, FramebufferDesc *TargetBuffer, int BufferWidth, int BufferHeight)
