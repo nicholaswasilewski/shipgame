@@ -120,6 +120,19 @@ struct light_texture_shader
     material_binding Material;
 };
 
+struct water_shader
+{
+    GLuint Program;
+    GLuint M;
+    GLuint V;
+    GLuint MVP;
+    
+    GLuint CameraPosition;
+
+    light_binding Light;
+    material_binding Material;
+};
+
 struct model
 {
     GLfloat *Vertices;
@@ -132,6 +145,7 @@ struct model
     
     int IndexCount;
     
+    GLuint VertexArrayID;
     GLuint VertexBuffer;
     GLuint NormalBuffer;
     GLuint IndexBuffer;
@@ -162,7 +176,7 @@ struct game_object
 
 struct color_game_object
 {
-    color_model *Model;
+    color_model *ColorModel;
     v3 Scale;
     v3 Position;
     v3 Axis;
@@ -175,6 +189,7 @@ struct game_data
 
     light_texture_shader LightTextureShader;
     color_shader ColorShader;
+    water_shader WaterShader;
     camera Camera;
 
     texture BoxDiffuseMap;
@@ -193,8 +208,11 @@ struct game_data
     color_game_object ColorBox;
 
     //New Scene
-    game_object Floor;
     game_object Player;
+    color_game_object Water;
+    color_model WaterColorModel;
+    color_material WaterColorMaterial;
+
 
     float BoxRotation;
 };
@@ -442,17 +460,16 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 
 void Init(platform_data* Platform, game_data *Game)
 {
-    glClearColor(0.2, 0.4, 0.6, 0.0);
+    glClearColor(0.6, 0.4, 0.2, 0.0);
     glFrontFace(GL_CCW);
     glEnable(GL_CULL_FACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    GLuint VertexArrayID;
-    glGenVertexArrays(1, &VertexArrayID);
-    glBindVertexArray(VertexArrayID);
     model *BoxModel = &Game->BoxModel;
+    glGenVertexArrays(1, &BoxModel->VertexArrayID);
+    glBindVertexArray(BoxModel->VertexArrayID);
     GLfloat vertexBufferData[] = {
         //Front
         -1.0f, 1.0f, 1.0f,
@@ -552,6 +569,81 @@ void Init(platform_data* Platform, game_data *Game)
                  &BoxModel->Indices[0],
                  GL_STATIC_DRAW);
 
+    // make water model
+    color_game_object Water = {0};
+
+    //Water.ColorModel = &WaterColorModel;
+    //Water.ColorModel->Material = &WaterColorMaterial;
+    Water.ColorModel = &Game->WaterColorModel;
+    Water.ColorModel->Material = &Game->WaterColorMaterial;
+
+    Water.Scale = V3(1.0f, 1.0f, 1.0f);
+    Water.Position = V3(0.0f, 0.0f, 0.0f);
+    Water.Axis = V3(0.25f, 1.0f, .5f);
+    Water.Angle = 0.0f;
+
+    Water.ColorModel->Material->Diffuse = V3(0.0f, 0.0f, 0.0f);
+    Water.ColorModel->Material->Specular = V3(0.0f, 0.0f, 0.0f);
+    Water.ColorModel->Material->Emissive = V3(1.0f, 1.0f, 1.0f);
+    Water.ColorModel->Material->Shine = 0.0f;
+    
+    GLuint WaterVertexID;
+    glGenVertexArrays(1, &Water.ColorModel->Model.VertexArrayID);
+    glBindVertexArray(Water.ColorModel->Model.VertexArrayID);
+    GLfloat waterVertices[] = {
+        -1.0f, 0.0f,  1.0f,
+        -1.0f, 0.0f, -1.0f,
+         1.0f, 0.0f,  1.0f,
+         1.0f, 0.0f, -1.0f
+    };
+
+    int vertCount = 100;
+    float vertWidth = 0.1f; 
+    Water.Position = V3(-0.5f*vertCount*vertWidth, 0.0f, 0.5f*vertCount*vertWidth);
+    size_t waterBufferSize = sizeof(GLfloat)*(vertCount)*(vertCount)*3;
+    Water.ColorModel->Model.Vertices = (GLfloat*)malloc(waterBufferSize); 
+    for(int x = 0; x < vertCount; x++)
+    {
+        for(int z = 0; z < vertCount; z++)
+        {
+            int start = ((x * vertCount) + z) * 3;
+            Water.ColorModel->Model.Vertices[start] = x * vertWidth;
+            Water.ColorModel->Model.Vertices[start+1] = 0.0f;
+            Water.ColorModel->Model.Vertices[start+2] = -z * vertWidth;
+            //DebugLog("start %i: %f\n", start, Water.ColorModel->Model.Vertices[start]);
+            //DebugLog("start %i: %f\n", start+1, Water.ColorModel->Model.Vertices[start+1]);
+            //DebugLog("start %i: %f\n", start+2, Water.ColorModel->Model.Vertices[start+2]);
+        }
+    }
+
+    glGenBuffers(1, &Water.ColorModel->Model.VertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, Water.ColorModel->Model.VertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, waterBufferSize, &Water.ColorModel->Model.Vertices[0], GL_STATIC_DRAW);
+    
+    size_t waterIndexSize = sizeof(GLushort)*(vertCount-1)*(vertCount-1)*6;
+    Water.ColorModel->Model.Indices = (GLushort*)malloc(waterIndexSize);
+    int segmentCount = vertCount-1;
+    for(int x = 0; x < segmentCount; x++)
+    {
+        for(int z = 0; z < segmentCount; z++)
+        {
+            int start = ((x * segmentCount) + z) * 6;
+            Water.ColorModel->Model.Indices[start] = (x * vertCount) + z;
+            Water.ColorModel->Model.Indices[start+1] = ((x+1) * vertCount) + (z+1);
+            Water.ColorModel->Model.Indices[start+2] = (x * vertCount) + (z+1);
+            Water.ColorModel->Model.Indices[start+3] = (x * vertCount) + z;
+            Water.ColorModel->Model.Indices[start+4] = ((x+1) * vertCount) + z;
+            Water.ColorModel->Model.Indices[start+5] = ((x+1) * vertCount) + (z+1);
+        }
+    } 
+
+    Water.ColorModel->Model.IndexCount = waterIndexSize / sizeof(GLushort);
+    glGenBuffers(1, &Water.ColorModel->Model.IndexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Water.ColorModel->Model.IndexBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, waterIndexSize, Water.ColorModel->Model.Indices, GL_STATIC_DRAW);
+
+    Game->Water = Water;
+
 #if DIE
     GLfloat OneThird = 1.0f/3.0f;
     GLfloat TwoThirds = 2.0f/3.0f;
@@ -644,6 +736,16 @@ void Init(platform_data* Platform, game_data *Game)
     Shader.Material = CreateMaterialBinding(Shader.Program);
     Game->LightTextureShader = Shader;
 
+    water_shader WaterShader;
+    WaterShader.Program = LoadShaders("../res/Shaders/waterShader.vert", "../res/Shaders/waterShader.frag");
+    WaterShader.M = glGetUniformLocation(WaterShader.Program, "M");
+    WaterShader.V = glGetUniformLocation(WaterShader.Program, "V");
+    WaterShader.MVP = glGetUniformLocation(WaterShader.Program, "MVP");
+    WaterShader.CameraPosition = glGetUniformLocation(WaterShader.Program, "CameraPosition");
+    WaterShader.Light = CreateLightBinding(WaterShader.Program);
+    WaterShader.Material = CreateMaterialBinding(WaterShader.Program);
+    Game->WaterShader = WaterShader;
+
     color_shader ColorShader;
     ColorShader.Program = LoadShaders("../res/Shaders/vertexShader.vert", "../res/Shaders/fragmentShader.frag");
     ColorShader.M = glGetUniformLocation(ColorShader.Program, "M");
@@ -703,20 +805,12 @@ void Init(platform_data* Platform, game_data *Game)
     Game->LightBox = LightBox;
 
     color_game_object ColorBox = { 0 };
-    ColorBox.Model = &Game->ColorBoxModel;
+    ColorBox.ColorModel = &Game->ColorBoxModel;
     ColorBox.Scale = V3(0.5f, 0.5f, 0.5f);
     ColorBox.Position = V3(Light.Position);
     ColorBox.Axis = V3(0.0f, 1.0f, 0.0f);
     ColorBox.Angle = 0.0f;
     Game->ColorBox = ColorBox;
-
-    game_object Floor = { 0 };
-    Floor.Model = &Game->BoxModel;
-    Floor.Scale = V3(100.0f, 0.1f, 100.0f);
-    Floor.Position = V3(0.0f, 0.0f, 0.0f);
-    Floor.Axis = V3(0.0f, 1.0f, 0.0f);
-    Floor.Angle = 0.0f;
-    Game->Floor = Floor;
 
     game_object Player = { 0 };
     Player.Model = &Game->BoxModel;
@@ -727,12 +821,12 @@ void Init(platform_data* Platform, game_data *Game)
     Game->Player = Player;
 
     // load model from FBX
-    //FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
+    // FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
     FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
     FBX_Node* monkey = (FBX_Node*)malloc(sizeof(FBX_Node));
     ParseFBX(monkeyFile, monkey);
 
-    // get model info
+    // // get model info
     FBX_Node* fbx_objects = FBX_GetChildByName(monkey, "Objects");
     FBX_Node* fbx_model = FBX_GetChildByName(fbx_objects, "Model");
     FBX_Node* fbx_vertices = FBX_GetChildByName(fbx_model, "Vertices");
@@ -759,13 +853,13 @@ void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4
     
     SetPointLightUniforms(Shader.Light, Light);
 
-    color_material *Material = GameObject.Model->Material;
+    color_material *Material = GameObject.ColorModel->Material;
     glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
     glUniformVec3f(Shader.Material.Emissive, Material->Emissive);
     glUniformVec3f(Shader.Material.Specular, Material->Specular);
     glUniform1f(Shader.Material.Shine, Material->Shine);
 
-    model ObjectModel = GameObject.Model->Model;
+    model ObjectModel = GameObject.ColorModel->Model;
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.VertexBuffer);
     glVertexAttribPointer(0,
@@ -796,6 +890,52 @@ void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4
     glDisableVertexAttribArray(1);
 }
 
+void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 Projection, mat4 View, water_shader Shader)
+{
+
+    mat4 Rotation = MakeRotation(GameObject.Axis, GameObject.Angle);
+    mat4 Scale = MakeScale(GameObject.Scale);
+    mat4 Translation = MakeTranslation(GameObject.Position);
+    mat4 Model = Translation * Rotation * Scale;
+    mat4 MVP = Projection * View * Model;
+
+    glBindVertexArray(GameObject.ColorModel->Model.VertexArrayID);
+    glUseProgram(Shader.Program);
+    glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
+    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
+    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+
+    glUniformVec3f(Shader.CameraPosition, Camera.Position);
+    SetPointLightUniforms(Shader.Light, Light);
+
+    color_material *Material = GameObject.ColorModel->Material;
+    glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
+    glUniformVec3f(Shader.Material.Emissive, Material->Emissive);
+    glUniformVec3f(Shader.Material.Specular, Material->Specular);
+    glUniform1f(Shader.Material.Shine, Material->Shine);
+
+    model ObjectModel = GameObject.ColorModel->Model;
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.VertexBuffer);
+    glVertexAttribPointer(0,
+                          3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          0,
+                          (void*)0
+        );
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjectModel.IndexBuffer);
+    glDrawElements(GL_TRIANGLES,
+                   ObjectModel.IndexCount,
+                   GL_UNSIGNED_SHORT,
+                   (void*)0
+        );
+    
+    glDisableVertexAttribArray(0);
+}
+
 void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Projection, mat4 View, light_texture_shader Shader)
 {
     mat4 Rotation = MakeRotation(GameObject.Axis, GameObject.Angle);
@@ -804,6 +944,8 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
     mat4 Model = Translation * Rotation * Scale;
     mat4 MVP = Projection * View * Model;
     
+    glBindVertexArray(GameObject.Model->VertexArrayID);
+
     glUseProgram(Shader.Program);
     glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
     glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
@@ -928,8 +1070,8 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View)
     //RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     //RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
 
-    // player and floor
-    RenderObject(Game->Floor, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    // player and water
+    RenderWater(Game->Water, Game->Camera, Game->Light, Projection, View, Game->WaterShader);
     RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
 }
 
