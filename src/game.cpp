@@ -772,7 +772,7 @@ void Init(platform_data* Platform, game_data *Game)
     Game->Camera = Camera;
 
     light Light = { 0 };
-    Light.Position = V4(4.0f, 4.0f, 4.0f, 1.0f);
+    Light.Position = V4(4.0f, 4.0f, -4.0f, 1.0f);
     Light.Ambient = V3(0.1f, 0.1f, 0.1f);
     Light.Diffuse = V3(0.5f, 0.5f, 0.5f);
     Light.Specular = V3(1.0f, 1.0f, 1.0f);
@@ -822,16 +822,16 @@ void Init(platform_data* Platform, game_data *Game)
 
     // load model from FBX
     // FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
-    FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
-    FBX_Node* monkey = (FBX_Node*)malloc(sizeof(FBX_Node));
-    ParseFBX(monkeyFile, monkey);
+    // FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
+    // FBX_Node* monkey = (FBX_Node*)malloc(sizeof(FBX_Node));
+    // ParseFBX(monkeyFile, monkey);
 
     // // get model info
-    FBX_Node* fbx_objects = FBX_GetChildByName(monkey, "Objects");
-    FBX_Node* fbx_model = FBX_GetChildByName(fbx_objects, "Model");
-    FBX_Node* fbx_vertices = FBX_GetChildByName(fbx_model, "Vertices");
-    DebugLog("Vertex Count: %d\n", fbx_vertices->ValueCount);
-    DebugLog("Vertex0: %s\n", fbx_vertices->Values[0]);
+    // FBX_Node* fbx_objects = FBX_GetChildByName(monkey, "Objects");
+    // FBX_Node* fbx_model = FBX_GetChildByName(fbx_objects, "Model");
+    // FBX_Node* fbx_vertices = FBX_GetChildByName(fbx_model, "Vertices");
+    // DebugLog("Vertex Count: %d\n", fbx_vertices->ValueCount);
+    // DebugLog("Vertex0: %s\n", fbx_vertices->Values[0]);
 
     Game->Initialized = true;
 }
@@ -1067,8 +1067,8 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View)
     glEnable(GL_DEPTH_TEST);
     //RenderObject(Game->Box, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     //RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-    //RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-    //RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+    RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
 
     // player and water
     RenderWater(Game->Water, Game->Camera, Game->Light, Projection, View, Game->WaterShader);
