@@ -56,7 +56,7 @@ void main()
     float diffuseCoefficient = max(dot(lightDir, normal), 0.0f);
     vec3 diffuse = diffuseCoefficient * lightColor * diffusePower;
 
-    float specularPower = 5f;
+    float specularPower = 5.f;
     vec3 lightReflect = normalize(reflect(-lightDir, normal));
     vec3 cameraDir = normalize(CameraPosition - FragPos);
     float specCoefficient = pow(max(dot(lightReflect, cameraDir), 0.0f), 256);
