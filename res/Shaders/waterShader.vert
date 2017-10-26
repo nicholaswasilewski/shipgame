@@ -24,6 +24,16 @@ out vec2 UV;
 out vec3 FragPos;
 out vec3 FragNormal;
 
+highp float rand(vec2 co)
+{
+    highp float a = 12.9898;
+    highp float b = 78.233;
+    highp float c = 43758.5453;
+    highp float dt= dot(co.xy ,vec2(a,b));
+    highp float sn= mod(dt,3.14);
+    return fract(sin(sn) * c);
+}
+
 void main()
 {
     // float x = vertexPosition.x;
@@ -38,5 +48,9 @@ void main()
     
     gl_Position = MVP * vec4(vertexPosition, 1);
     FragPos = vec3(M*vec4(vertexPosition, 1));
-    FragNormal = vec3(0.0f, 1.0f, 0.0f);
+
+    float power = 0.05f;
+    float x = power * rand(vertexPosition.xz);
+    float z = power * rand(vertexPosition.zx);
+    FragNormal = vec3(x, 1.0f, z);
 }

@@ -26,27 +26,31 @@ in vec3 FragNormal;
 
 out vec4 FragColor;
 
-void main()
+highp float rand(vec2 co)
 {
-    /*
-    float x = FragPos.x;
-    float y = 0;
-    if(x - floor(x) > 0.5f)
-    {
-        y = 0.5f;
-    }
-    FragColor = vec4(0.0f, y, 1.0f, 1.0f);
-    */
+    highp float a = 12.9898;
+    highp float b = 78.233;
+    highp float c = 43758.5453;
+    highp float dt= dot(co.xy ,vec2(a,b));
+    highp float sn= mod(dt,3.14);
+    return fract(sin(sn) * c);
+}
+
+void main()
+{    
+    // float normalPower = 0.1f;
+    // float x = normalPower * rand(FragPos.xz);
+    // float z = normalPower * rand(FragPos.zx);
+    // vec3 normal = normalize(vec3(x, 1.0f, z));
 
     vec3 objectColor = vec3(0.3f, 0.7f, 1.0f);
     vec3 lightColor =  vec3(1.0f, 1.0f, 1.0f);
-
     vec3 lightPosition = vec3(Light.Position);
 
     float ambientPower = 0.1f;
     vec3 ambient = ambientPower * lightColor;
 
-    float diffusePower = 1f;
+    float diffusePower = 1.0f;
     vec3 normal = normalize(FragNormal);
     vec3 lightDir = normalize(lightPosition - FragPos);
     float diffuseCoefficient = max(dot(lightDir, normal), 0.0f);

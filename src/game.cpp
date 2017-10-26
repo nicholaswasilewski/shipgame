@@ -464,7 +464,7 @@ void Init(platform_data* Platform, game_data *Game)
     glFrontFace(GL_CCW);
     glEnable(GL_CULL_FACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     model *BoxModel = &Game->BoxModel;
@@ -597,8 +597,9 @@ void Init(platform_data* Platform, game_data *Game)
          1.0f, 0.0f, -1.0f
     };
 
-    int vertCount = 100;
-    float vertWidth = 0.1f; 
+    int vertCount = 200;
+    float vertWidth = 0.05f; 
+    Water.Position = V3(0.0f, 0.0f,0.0f);
     Water.Position = V3(-0.5f*vertCount*vertWidth, 0.0f, 0.5f*vertCount*vertWidth);
     size_t waterBufferSize = sizeof(GLfloat)*(vertCount)*(vertCount)*3;
     Water.ColorModel->Model.Vertices = (GLfloat*)malloc(waterBufferSize); 
@@ -620,9 +621,9 @@ void Init(platform_data* Platform, game_data *Game)
     glBindBuffer(GL_ARRAY_BUFFER, Water.ColorModel->Model.VertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, waterBufferSize, &Water.ColorModel->Model.Vertices[0], GL_STATIC_DRAW);
     
-    size_t waterIndexSize = sizeof(GLushort)*(vertCount-1)*(vertCount-1)*6;
-    Water.ColorModel->Model.Indices = (GLushort*)malloc(waterIndexSize);
     int segmentCount = vertCount-1;
+    size_t waterIndexSize = sizeof(GLushort)*(segmentCount)*(segmentCount)*6;
+    Water.ColorModel->Model.Indices = (GLushort*)malloc(waterIndexSize);
     for(int x = 0; x < segmentCount; x++)
     {
         for(int z = 0; z < segmentCount; z++)
