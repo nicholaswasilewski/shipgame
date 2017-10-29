@@ -19,9 +19,15 @@ void* GetGLFuncAddress(const char* name)
 
 #define GL_MULTISAMPLE                    0x809D
 
+#define GL_TEXTURE_WRAP_R                 0x8072
 #define GL_BGR                            0x80E0
 #define GL_BGRA                           0x80E1
-
+#define GL_MAX_ELEMENTS_VERTICES          0x80E8
+#define GL_MAX_ELEMENTS_INDICES           0x80E9
+#define GL_CLAMP_TO_EDGE                  0x812F
+#define GL_TEXTURE_MIN_LOD                0x813A
+#define GL_TEXTURE_MAX_LOD                0x813B
+#define GL_TEXTURE_BASE_LEVEL             0x813C
 #define GL_TEXTURE_MAX_LEVEL              0x813D
 
 #define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT  0x83F1
@@ -79,6 +85,25 @@ void* GetGLFuncAddress(const char* name)
 #define GL_TEXTURE29                      0x84DD
 #define GL_TEXTURE30                      0x84DE
 #define GL_TEXTURE31                      0x84DF
+#define GL_ACTIVE_TEXTURE                 0x84E0
+#define GL_MULTISAMPLE                    0x809D
+#define GL_SAMPLE_ALPHA_TO_COVERAGE       0x809E
+#define GL_SAMPLE_ALPHA_TO_ONE            0x809F
+#define GL_SAMPLE_COVERAGE                0x80A0
+#define GL_SAMPLE_BUFFERS                 0x80A8
+#define GL_SAMPLES                        0x80A9
+#define GL_SAMPLE_COVERAGE_VALUE          0x80AA
+#define GL_SAMPLE_COVERAGE_INVERT         0x80AB
+#define GL_TEXTURE_CUBE_MAP               0x8513
+#define GL_TEXTURE_BINDING_CUBE_MAP       0x8514
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_X    0x8515
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_X    0x8516
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_Y    0x8517
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Y    0x8518
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_Z    0x8519
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Z    0x851A
+#define GL_PROXY_TEXTURE_CUBE_MAP         0x851B
+#define GL_MAX_CUBE_MAP_TEXTURE_SIZE      0x851C
 
 #define GL_MAX_COLOR_ATTACHMENTS          0x8CDF
 #define GL_COLOR_ATTACHMENT0              0x8CE0

@@ -120,6 +120,16 @@ struct light_texture_shader
     material_binding Material;
 };
 
+struct skybox_shader
+{
+    GLuint Program;
+    GLuint M;
+    GLuint V;
+    GLuint MVP;
+    
+    GLuint SkyBox;
+};
+
 struct water_shader
 {
     GLuint Program;
@@ -155,6 +165,15 @@ struct model
     GLuint IndexBuffer;
     GLuint ColorBuffer;
     GLuint UVBuffer;
+};
+
+struct skybox
+{
+    GLfloat *Vertices;
+    GLuint VertexArrayID;
+    GLuint VertexBuffer;
+
+    texture Texture;
 };
 
 struct color_model
@@ -194,6 +213,7 @@ struct game_data
     light_texture_shader LightTextureShader;
     color_shader ColorShader;
     water_shader WaterShader;
+    skybox_shader SkyBoxShader;
     camera Camera;
 
     texture BoxDiffuseMap;
@@ -217,6 +237,7 @@ struct game_data
     color_model WaterColorModel;
     color_material WaterColorMaterial;
     texture WaterNormalMap;
+    skybox SkyBox;
 
 
     float BoxRotation;
@@ -309,9 +330,18 @@ texture LoadDDS(const char * filePath)
     return Result;
 }
 
-texture LoadBMP(char* filePath)
+struct BMPData
+{    
+    uint32 dataPos;
+    uint32 width;
+    uint32 height;
+    uint32 imageSize;
+    uint8* data;
+};
+
+BMPData LoadBMP(char* filePath)
 {
-    texture NullTexture = { 0 };
+    BMPData NullBMP = { 0 };
     uint8 header[54];
     uint32 dataPos;
     uint32 width, height;
@@ -322,18 +352,18 @@ texture LoadBMP(char* filePath)
     if (!file)
     {
         DebugLog("File not found: %s\n", filePath);
-        return NullTexture;
+        return NullBMP;
     }
 
     if (fread(header, 1, 54, file) != 54) {
         DebugLog("Malformed BMP: %s\n", filePath);
-        return NullTexture;
+        return NullBMP;
     }
 
     if (header[0] != 'B' || header[1]!= 'M')
     {
         DebugLog("Malformed BMP: %s\n", filePath);
-        return NullTexture;
+        return NullBMP;
     }
 
     dataPos = *(int32*)&(header[0x0a]);
@@ -351,26 +381,99 @@ texture LoadBMP(char* filePath)
     }
 
     data = (uint8*)malloc(imageSize*sizeof(uint8));
-    fread(data, 1, imageSize, file);
+
+    // read bmp from bottom to top
+    for(int i = 0; i < height; i++)
+    {
+        int offset = (height-i-1)*width*3;
+        fread(data+offset, 1, width*3, file);
+    }
+
     fclose(file);
+
+    BMPData result = {
+        dataPos,
+        width,
+        height,
+        imageSize,
+        data
+    };
+    return result;
+}
+
+texture GenCubeMapFromBMP(
+    char* rightFile,
+    char* leftFile,
+    char* topFile,
+    char* bottomFile,
+    char* backFile,
+    char* frontFile)
+{
+    BMPData rightBmpData = LoadBMP(rightFile);
+    BMPData leftBmpData = LoadBMP(leftFile);
+    BMPData topBmpData = LoadBMP(topFile);
+    BMPData bottomBmpData = LoadBMP(bottomFile);
+    BMPData backBmpData = LoadBMP(backFile);
+    BMPData frontBmpData = LoadBMP(frontFile);
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, rightBmpData.width, rightBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, rightBmpData.data);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGB, leftBmpData.width, leftBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, leftBmpData.data);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGB, topBmpData.width, topBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, topBmpData.data);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGB, bottomBmpData.width, bottomBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bottomBmpData.data);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGB, backBmpData.width, backBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, backBmpData.data);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, frontBmpData.width, frontBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, frontBmpData.data);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); 
+
+    free(rightBmpData.data);
+    free(leftBmpData.data);
+    free(topBmpData.data);
+    free(bottomBmpData.data);
+    free(backBmpData.data);
+    free(frontBmpData.data);
+
+    texture Result = {
+        rightBmpData.width,
+        rightBmpData.height,
+        textureID,
+        NULL
+    };
+    
+    return Result;
+}
+
+texture GenTextureFromBMP(char* filePath)
+{
+    BMPData bmpData = LoadBMP(filePath);
 
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bmpData.width, bmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bmpData.data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    
     //free(data);
     texture Result = {
-        width,
-        height,
+        bmpData.width,
+        bmpData.height,
         textureID,
-        data
+        bmpData.data
     };
-    glDisable(GL_TEXTURE_2D);
+    
     return Result;
 }
 
@@ -617,9 +720,10 @@ void Init(platform_data* Platform, game_data *Game)
             Water.ColorModel->Model.Vertices[start] = x * vertWidth;
             Water.ColorModel->Model.Vertices[start+1] = 0.0f;
             Water.ColorModel->Model.Vertices[start+2] = -z * vertWidth;
-            //DebugLog("start %i: %f\n", start, Water.ColorModel->Model.Vertices[start]);
-            //DebugLog("start %i: %f\n", start+1, Water.ColorModel->Model.Vertices[start+1]);
-            //DebugLog("start %i: %f\n", start+2, Water.ColorModel->Model.Vertices[start+2]);
+            // DebugLog("Vertex %i\n", (x * vertCount) + z);
+            // DebugLog("Vertices %i: %f\n", start, Water.ColorModel->Model.Vertices[start]);
+            // DebugLog("Vertices %i: %f\n", start+1, Water.ColorModel->Model.Vertices[start+1]);
+            // DebugLog("Vertices %i: %f\n", start+2, Water.ColorModel->Model.Vertices[start+2]);
         }
     }
 
@@ -642,6 +746,13 @@ void Init(platform_data* Platform, game_data *Game)
             Water.ColorModel->Model.Indices[start+3] = (x * vertCount) + z;
             Water.ColorModel->Model.Indices[start+4] = ((x+1) * vertCount) + z;
             Water.ColorModel->Model.Indices[start+5] = ((x+1) * vertCount) + (z+1);
+            // DebugLog("Index %i\n", (x * segmentCount) + z);
+            // DebugLog("Indices %i: %i\n", start, Water.ColorModel->Model.Indices[start]);
+            // DebugLog("Indices %i: %i\n", start+1, Water.ColorModel->Model.Indices[start+1]);
+            // DebugLog("Indices %i: %i\n", start+2, Water.ColorModel->Model.Indices[start+2]);
+            // DebugLog("Indices %i: %i\n", start+3, Water.ColorModel->Model.Indices[start+3]);
+            // DebugLog("Indices %i: %i\n", start+4, Water.ColorModel->Model.Indices[start+4]);
+            // DebugLog("Indices %i: %i\n", start+5, Water.ColorModel->Model.Indices[start+5]);
         }
     } 
 
@@ -658,13 +769,11 @@ void Init(platform_data* Platform, game_data *Game)
         for(int z = 0; z < vertCount; z++)
         {
             int start = ((x * vertCount) + z) * 2;
-            
-            // between 0,1
-            //Water.ColorModel->Model.UVs[start] = (1.0f * x) / (1.0f * (vertCount - 1));
-            //Water.ColorModel->Model.UVs[start+1] = (1.0f * z) / (1.0f * (vertCount - 1));
-
             Water.ColorModel->Model.UVs[start] = x;
             Water.ColorModel->Model.UVs[start+1] = z;
+            // DebugLog("UV %i\n", (x * vertCount) + z);
+            // DebugLog("UVs %i: %f\n", start, Water.ColorModel->Model.UVs[start]);
+            // DebugLog("UVs %i: %f\n", start+1, Water.ColorModel->Model.UVs[start+1]);
         }
     }
 
@@ -738,9 +847,8 @@ void Init(platform_data* Platform, game_data *Game)
 
     Game->BoxSpecularMap = LoadDDS("../res/Textures/containerspecular.dds");
     Game->BoxEmissiveMap = LoadDDS("../res/Textures/containeremissive.dds");
-    //Game->WaterNormalMap = LoadDDS("../res/Textures/waternormals.dds");
-    Game->WaterNormalMap = LoadBMP("../res/Textures/matchingNormalMap.bmp");
-    //Game->WaterNormalMap = LoadBMP("../res/Textures/normalMap.bmp");
+    Game->WaterNormalMap = GenTextureFromBMP("../res/Textures/matchingNormalMap.bmp");
+    //Game->WaterNormalMap = GenTextureFromBMP("../res/Textures/normalMap.bmp");
     
     texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxModel->Material = BoxMaterial;
@@ -757,7 +865,7 @@ void Init(platform_data* Platform, game_data *Game)
     ColorMaterial->Specular = V3(0.0f, 0.0f, 0.0f);
     ColorMaterial->Emissive = V3(1.0f, 1.0f, 1.0f);
     ColorMaterial->Shine = 1.0f;
-    
+
     light_texture_shader Shader;
     Shader.Program = LoadShaders("../res/Shaders/lightTextureShader.vert", "../res/Shaders/lightTextureShader.frag");
     Shader.M = glGetUniformLocation(Shader.Program, "M");
@@ -855,6 +963,83 @@ void Init(platform_data* Platform, game_data *Game)
     Player.Angle = 0.0f;
     Game->Player = Player;
 
+    
+    // ********************************
+    // Start SkyBox
+    // ********************************
+    skybox *SkyBox = &Game->SkyBox;
+    glGenVertexArrays(1, &SkyBox->VertexArrayID);
+    glBindVertexArray(SkyBox->VertexArrayID);
+    GLfloat skyboxVertexBufferData[] = {
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+    
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+    
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+    
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+    
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+    
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f
+    };
+    size_t skyboxVertexBufferSize = sizeof(skyboxVertexBufferData);
+    SkyBox->Vertices = (GLfloat*)malloc(skyboxVertexBufferSize);
+    memcpy(SkyBox->Vertices, skyboxVertexBufferData, skyboxVertexBufferSize);
+    glGenBuffers(1, &SkyBox->VertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER,
+                 SkyBox->VertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 skyboxVertexBufferSize,
+                 &SkyBox->Vertices[0],
+                 GL_STATIC_DRAW);
+
+    SkyBox->Texture = GenCubeMapFromBMP(
+        "../res/Textures/skybox/right.bmp",
+        "../res/Textures/skybox/left.bmp",
+        "../res/Textures/skybox/top.bmp",
+        "../res/Textures/skybox/bottom.bmp",
+        "../res/Textures/skybox/back.bmp",
+        "../res/Textures/skybox/front.bmp");
+        
+    skybox_shader SkyBoxShader;
+    SkyBoxShader.Program = LoadShaders("../res/Shaders/skybox.vert", "../res/Shaders/skybox.frag");
+    SkyBoxShader.M = glGetUniformLocation(SkyBoxShader.Program, "M");
+    SkyBoxShader.V = glGetUniformLocation(SkyBoxShader.Program, "V");
+    SkyBoxShader.MVP = glGetUniformLocation(SkyBoxShader.Program, "MVP");
+    SkyBoxShader.SkyBox = SkyBox->Texture.Handle;
+    Game->SkyBoxShader = SkyBoxShader;
+
     // load model from FBX
     // FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
     // FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
@@ -925,6 +1110,35 @@ void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4
     glDisableVertexAttribArray(1);
 }
 
+
+void RenderSkyBox(skybox SkyBox, camera Camera, light Light, mat4 Projection, mat4 View, skybox_shader Shader)
+{
+    // remove translation part of view matrix
+    View = Mat4(Mat3(View));
+    mat4 MVP = Projection * View;
+
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
+
+    glUseProgram(Shader.Program);
+    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
+    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, Shader.SkyBox);
+
+    glBindBuffer(GL_ARRAY_BUFFER, SkyBox.VertexBuffer);
+    glBindVertexArray(SkyBox.VertexArrayID);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    glDisableVertexAttribArray(0);
+    
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+}
+
 void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 Projection, mat4 View, water_shader Shader)
 {
 
@@ -966,7 +1180,8 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
                           (void*)0
         );
 
-        
+    //DebugLog("ObjectModel.UVs[1] %f,%f\n", ObjectModel.UVs[6],ObjectModel.UVs[7]);
+
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.UVBuffer);
     glVertexAttribPointer(1,
@@ -983,8 +1198,9 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
                    GL_UNSIGNED_SHORT,
                    (void*)0
         );
-    
+
     glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
 }
 
 void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Projection, mat4 View, light_texture_shader Shader)
@@ -1122,6 +1338,7 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
+
     //RenderObject(Game->Box, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     //RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
@@ -1130,6 +1347,9 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View)
     // player and water
     RenderWater(Game->Water, Game->Camera, Game->Light, Projection, View, Game->WaterShader);
     RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+
+    // skybox comes last, to save on performance
+    //RenderSkyBox(Game->SkyBox, Game->Camera, Game->Light, Projection, View, Game->SkyBoxShader);
 }
 
 void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, mat4 View, FramebufferDesc *TargetBuffer, int BufferWidth, int BufferHeight)

@@ -467,6 +467,27 @@ mat4 MakeRotation(v3 u, float theta)
     return Result;
 }
 
+mat3 Mat3(mat4 mat)
+{
+    mat3 Result = {
+        mat.E[0][0], mat.E[0][1], mat.E[0][2], 
+        mat.E[1][0], mat.E[1][1], mat.E[1][2], 
+        mat.E[2][0], mat.E[2][1], mat.E[2][2]
+    };
+    return Result;
+}
+
+mat4 Mat4(mat3 mat)
+{
+    mat4 Result = {
+        mat.E[0][0], mat.E[0][1], mat.E[0][2], 0, 
+        mat.E[1][0], mat.E[1][1], mat.E[1][2], 0, 
+        mat.E[2][0], mat.E[2][1], mat.E[2][2], 0, 
+        0, 0, 0, 1
+    };
+    return Result;
+}
+
 mat4 MakeTranslation(v3 v)
 {
     mat4 Result = {
