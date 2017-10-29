@@ -82,7 +82,7 @@ void SetPointLightUniforms(light_binding LightBinding, light Light)
     glUniformVec3f(LightBinding.Ambient, Light.Ambient);
     glUniformVec3f(LightBinding.Diffuse, Light.Diffuse);
     glUniformVec3f(LightBinding.Specular, Light.Specular);
-    glUniform1f(LightBinding.Power, 100.f);
+    glUniform1f(LightBinding.Power, Light.Power);
 }
 
 struct color_shader
@@ -131,6 +131,10 @@ struct water_shader
 
     light_binding Light;
     material_binding Material;
+    GLuint NormalMapHandle;
+
+    float UVOffset;
+    GLuint UVOffsetHandle;
 };
 
 struct model
@@ -212,6 +216,7 @@ struct game_data
     color_game_object Water;
     color_model WaterColorModel;
     color_material WaterColorMaterial;
+    texture WaterNormalMap;
 
 
     float BoxRotation;
@@ -582,10 +587,10 @@ void Init(platform_data* Platform, game_data *Game)
     Water.Axis = V3(0.25f, 1.0f, .5f);
     Water.Angle = 0.0f;
 
-    Water.ColorModel->Material->Diffuse = V3(0.0f, 0.0f, 0.0f);
-    Water.ColorModel->Material->Specular = V3(0.0f, 0.0f, 0.0f);
-    Water.ColorModel->Material->Emissive = V3(1.0f, 1.0f, 1.0f);
-    Water.ColorModel->Material->Shine = 0.0f;
+    Water.ColorModel->Material->Diffuse = V3(0.1f, 0.5f, 0.9f);
+    Water.ColorModel->Material->Specular = V3(0.4f, 0.7f, 1);
+    Water.ColorModel->Material->Emissive = V3(0.1f, 0.5f, 0.9f);
+    Water.ColorModel->Material->Shine = 100.0f;
     
     GLuint WaterVertexID;
     glGenVertexArrays(1, &Water.ColorModel->Model.VertexArrayID);
@@ -597,8 +602,9 @@ void Init(platform_data* Platform, game_data *Game)
          1.0f, 0.0f, -1.0f
     };
 
-    int vertCount = 200;
-    float vertWidth = 0.05f; 
+    // Water Vertices
+    int vertCount = 20;
+    float vertWidth = 20.0f; 
     Water.Position = V3(0.0f, 0.0f,0.0f);
     Water.Position = V3(-0.5f*vertCount*vertWidth, 0.0f, 0.5f*vertCount*vertWidth);
     size_t waterBufferSize = sizeof(GLfloat)*(vertCount)*(vertCount)*3;
@@ -621,6 +627,7 @@ void Init(platform_data* Platform, game_data *Game)
     glBindBuffer(GL_ARRAY_BUFFER, Water.ColorModel->Model.VertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, waterBufferSize, &Water.ColorModel->Model.Vertices[0], GL_STATIC_DRAW);
     
+    // Water Indices
     int segmentCount = vertCount-1;
     size_t waterIndexSize = sizeof(GLushort)*(segmentCount)*(segmentCount)*6;
     Water.ColorModel->Model.Indices = (GLushort*)malloc(waterIndexSize);
@@ -643,6 +650,28 @@ void Init(platform_data* Platform, game_data *Game)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Water.ColorModel->Model.IndexBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, waterIndexSize, Water.ColorModel->Model.Indices, GL_STATIC_DRAW);
 
+    // Water UVs
+    size_t waterUVBufferSize = sizeof(GLfloat)*(vertCount)*(vertCount)*2;
+    Water.ColorModel->Model.UVs = (GLfloat*)malloc(waterUVBufferSize); 
+    for(int x = 0; x < vertCount; x++)
+    {
+        for(int z = 0; z < vertCount; z++)
+        {
+            int start = ((x * vertCount) + z) * 2;
+            
+            // between 0,1
+            //Water.ColorModel->Model.UVs[start] = (1.0f * x) / (1.0f * (vertCount - 1));
+            //Water.ColorModel->Model.UVs[start+1] = (1.0f * z) / (1.0f * (vertCount - 1));
+
+            Water.ColorModel->Model.UVs[start] = x;
+            Water.ColorModel->Model.UVs[start+1] = z;
+        }
+    }
+
+    glGenBuffers(1, &Water.ColorModel->Model.UVBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, Water.ColorModel->Model.UVBuffer);
+    glBufferData(GL_ARRAY_BUFFER, waterUVBufferSize, &Water.ColorModel->Model.UVs[0], GL_STATIC_DRAW);
+    
     Game->Water = Water;
 
 #if DIE
@@ -709,6 +738,9 @@ void Init(platform_data* Platform, game_data *Game)
 
     Game->BoxSpecularMap = LoadDDS("../res/Textures/containerspecular.dds");
     Game->BoxEmissiveMap = LoadDDS("../res/Textures/containeremissive.dds");
+    //Game->WaterNormalMap = LoadDDS("../res/Textures/waternormals.dds");
+    Game->WaterNormalMap = LoadBMP("../res/Textures/matchingNormalMap.bmp");
+    //Game->WaterNormalMap = LoadBMP("../res/Textures/normalMap.bmp");
     
     texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxModel->Material = BoxMaterial;
@@ -724,7 +756,7 @@ void Init(platform_data* Platform, game_data *Game)
     ColorMaterial->Diffuse = V3(0.0f, 0.0f, 0.0f);
     ColorMaterial->Specular = V3(0.0f, 0.0f, 0.0f);
     ColorMaterial->Emissive = V3(1.0f, 1.0f, 1.0f);
-    ColorMaterial->Shine = 0.0f;
+    ColorMaterial->Shine = 1.0f;
     
     light_texture_shader Shader;
     Shader.Program = LoadShaders("../res/Shaders/lightTextureShader.vert", "../res/Shaders/lightTextureShader.frag");
@@ -745,6 +777,8 @@ void Init(platform_data* Platform, game_data *Game)
     WaterShader.CameraPosition = glGetUniformLocation(WaterShader.Program, "CameraPosition");
     WaterShader.Light = CreateLightBinding(WaterShader.Program);
     WaterShader.Material = CreateMaterialBinding(WaterShader.Program);
+    WaterShader.NormalMapHandle = Game->WaterNormalMap.Handle;
+    WaterShader.UVOffsetHandle = glGetUniformLocation(WaterShader.Program, "UVOffset");
     Game->WaterShader = WaterShader;
 
     color_shader ColorShader;
@@ -768,16 +802,16 @@ void Init(platform_data* Platform, game_data *Game)
     Camera.Near = 0.001f;
     Camera.Far = 1000.0f;
     Camera.Position = V3(0.0f, 5.0f, 5.0f);
-    Camera.Forward = Normalize(V3(0.0f, -0.5f,-1.0f));
+    Camera.Forward = Normalize(V3(0.0f, -0.2f,-1.0f));
     Camera.Up = V3(0,1,0);
     Game->Camera = Camera;
 
     light Light = { 0 };
-    Light.Position = V4(4.0f, 4.0f, -4.0f, 1.0f);
+    Light.Position = V4(4.0f, 3.0f, -40.0f, 1.0f);
     Light.Ambient = V3(0.1f, 0.1f, 0.1f);
     Light.Diffuse = V3(0.5f, 0.5f, 0.5f);
     Light.Specular = V3(1.0f, 1.0f, 1.0f);
-    Light.Power = 100.0f;
+    Light.Power = 50.0f;
     Game->Light = Light;
     
     game_object Box = { 0 };
@@ -909,11 +943,16 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
     glUniformVec3f(Shader.CameraPosition, Camera.Position);
     SetPointLightUniforms(Shader.Light, Light);
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, Shader.NormalMapHandle);
+
     color_material *Material = GameObject.ColorModel->Material;
     glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
     glUniformVec3f(Shader.Material.Emissive, Material->Emissive);
     glUniformVec3f(Shader.Material.Specular, Material->Specular);
     glUniform1f(Shader.Material.Shine, Material->Shine);
+    
+    glUniform1f(Shader.UVOffsetHandle, Shader.UVOffset);
 
     model ObjectModel = GameObject.ColorModel->Model;
 
@@ -921,6 +960,17 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.VertexBuffer);
     glVertexAttribPointer(0,
                           3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          0,
+                          (void*)0
+        );
+
+        
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.UVBuffer);
+    glVertexAttribPointer(1,
+                          2,
                           GL_FLOAT,
                           GL_FALSE,
                           0,
@@ -1060,6 +1110,12 @@ void Update(platform_data *Platform, game_data *Game)
                Input->dT*1.0f);
 
     Game->Box.Angle += PI*(1.0f/120.0f);
+
+    Game->WaterShader.UVOffset += 0.0005f;
+    if(Game->WaterShader.UVOffset >= 1.0f)
+    {
+        Game->WaterShader.UVOffset -= 1.0f;
+    }
 }
 
 void RenderScene(game_data *Game, mat4 Projection, mat4 View)

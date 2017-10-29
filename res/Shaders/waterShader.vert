@@ -18,6 +18,7 @@ uniform mat4 M;
 
 // input
 layout(location = 0) in vec3 vertexPosition;
+layout(location = 1) in vec2 vertexUV;
 
 // output
 out vec2 UV;
@@ -48,9 +49,5 @@ void main()
     
     gl_Position = MVP * vec4(vertexPosition, 1);
     FragPos = vec3(M*vec4(vertexPosition, 1));
-
-    float power = 0.05f;
-    float x = power * rand(vertexPosition.xz);
-    float z = power * rand(vertexPosition.zx);
-    FragNormal = vec3(x, 1.0f, z);
+    UV = vertexUV;
 }

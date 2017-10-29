@@ -20,47 +20,50 @@ uniform light Light;
 uniform color_material Material;
 uniform vec3 CameraPosition;
 
+uniform sampler2D NormalMap;
+uniform float UVOffset;
+
 in vec2 UV;
 in vec3 FragPos;
 in vec3 FragNormal;
 
-out vec4 FragColor;
-
-highp float rand(vec2 co)
-{
-    highp float a = 12.9898;
-    highp float b = 78.233;
-    highp float c = 43758.5453;
-    highp float dt= dot(co.xy ,vec2(a,b));
-    highp float sn= mod(dt,3.14);
-    return fract(sin(sn) * c);
-}
+out vec3 Color;
 
 void main()
 {    
-    // float normalPower = 0.1f;
-    // float x = normalPower * rand(FragPos.xz);
-    // float z = normalPower * rand(FragPos.zx);
-    // vec3 normal = normalize(vec3(x, 1.0f, z));
+    // calculate normals
+    vec3 fragmentNormal = texture(NormalMap, UV+UVOffset).xyz;
+    float normalPower = 2.0f;
+    fragmentNormal = vec3( (fragmentNormal.r-0.5f)*2, fragmentNormal.b*normalPower, (fragmentNormal.g-0.5f)*2);
+    //fragmentNormal = vec3(1, 1, 0);
 
-    vec3 objectColor = vec3(0.3f, 0.7f, 1.0f);
-    vec3 lightColor =  vec3(1.0f, 1.0f, 1.0f);
+    // colors
+    vec3 AmbientColor = Light.Ambient*Material.Diffuse;
+    vec3 DiffuseColor = Light.Diffuse*Material.Diffuse;
+    vec3 SpecularColor = Light.Specular*Material.Specular;
+
+    // point-light values
     vec3 lightPosition = vec3(Light.Position);
+    float lightDistance = length(lightPosition - FragPos);
+    float lightDistanceSquared = lightDistance*lightDistance;
+    float attenuation = Light.Power / (1.0 + (0.09 * lightDistance) + (0.032 * lightDistanceSquared));
+    attenuation = Light.Power / lightDistanceSquared;
 
-    float ambientPower = 0.1f;
-    vec3 ambient = ambientPower * lightColor;
+    // ambient
+    vec3 ambient = AmbientColor * attenuation;
 
-    float diffusePower = 1.0f;
-    vec3 normal = normalize(FragNormal);
+    // diffuse
+    vec3 normal = normalize(fragmentNormal);
     vec3 lightDir = normalize(lightPosition - FragPos);
     float diffuseCoefficient = max(dot(lightDir, normal), 0.0f);
-    vec3 diffuse = diffuseCoefficient * lightColor * diffusePower;
+    vec3 diffuse = diffuseCoefficient * DiffuseColor * attenuation;
 
-    float specularPower = 5.f;
+    // specular
     vec3 lightReflect = normalize(reflect(-lightDir, normal));
     vec3 cameraDir = normalize(CameraPosition - FragPos);
-    float specCoefficient = pow(max(dot(lightReflect, cameraDir), 0.0f), 256);
-    vec3 specular = specCoefficient * lightColor * specularPower;
+    float specCoefficient = pow(max(dot(lightReflect, cameraDir), 0.0f), Material.Shine);
+    vec3 specular = specCoefficient * SpecularColor; // no damping by distance
 
-    FragColor = vec4((ambient + diffuse + specular) * objectColor, 1.0f);
+    Color = ambient + diffuse + specular;
+    //Color = texture(NormalMap, UV+UVOffset).rgb;
 }
