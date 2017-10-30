@@ -280,7 +280,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
     fourCC[4] = '\0';
     
     uint32 bufferSize = mipMapCount > 1 ? linearSize * 2 : linearSize;
-    uint8* buffer = (uint8*)malloc(bufferSize * sizeof(uint8));
+    uint8* buffer = (uint8*)PushSize(Memory, bufferSize * sizeof(uint8));
     fread(buffer, 1, bufferSize, fp);
     fclose(fp);
 
@@ -301,8 +301,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
     }
     else
     {
-        free(buffer);
-//        PopSize(Memory, bufferSize*sizeof(uint8));
+        PopSize(Memory, bufferSize*sizeof(uint8));
         DebugLog("File not DXT compressed: %s", filePath);
         return NullTexture;
     }
