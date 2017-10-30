@@ -345,35 +345,61 @@ struct BMPData
 #pragma pack(push,1)
 struct BMPHeader
 {
-    char BMPIdentifier[2];
-    uint32 ImageSize;
-    char Reserved[2];
-    char Reserved2[2];
-    uint32 PixelArrayOffset;
+    char tag[2];
+    uint32 imageSize;
+    uint16 reserved;
+    uint16 reserved2;
+    uint32 pixelArrayOffset;
 };
 
-struct BitmapInfoHeader {
-  DWORD biSize;
-  LONG  biWidth;
-  LONG  biHeight;
-  WORD  biPlanes;
-  WORD  biBitCount;
-  DWORD biCompression;
-  DWORD biSizeImage;
-  LONG  biXPelsPerMeter;
-  LONG  biYPelsPerMeter;
-  DWORD biClrUsed;
-  DWORD biClrImportant;
+struct BMPInfoHeader {
+    uint32 biSize;
+    int32 biWidth;
+    int32  biHeight;
+    uint16  biPlanes;
+    uint16  biBitCount;
+    uint32 biCompression;
+    uint32 biSizeImage;
+    int32  biXPelsPerMeter;
+    int32  biYPelsPerMeter;
+    uint32 biClrUsed;
+    uint32 biClrImportant;
 };
+
+struct BMPInfoHeaderV5 {
+    DWORD        biSize;
+    LONG         biWidth;
+    LONG         biHeight;
+    WORD         bV5Planes;
+    WORD         bV5BitCount;
+    DWORD        bV5Compression;
+    DWORD        bV5SizeImage;
+    LONG         bV5XPelsPerMeter;
+    LONG         bV5YPelsPerMeter;
+    DWORD        bV5ClrUsed;
+    DWORD        bV5ClrImportant;
+    DWORD        bV5RedMask;
+    DWORD        bV5GreenMask;
+    DWORD        bV5BlueMask;
+    DWORD        bV5AlphaMask;
+    DWORD        bV5CSType;
+    CIEXYZTRIPLE bV5Endpoints;
+    DWORD        bV5GammaRed;
+    DWORD        bV5GammaGreen;
+    DWORD        bV5GammaBlue;
+    DWORD        bV5Intent;
+    DWORD        bV5ProfileData;
+    DWORD        bV5ProfileSize;
+    DWORD        bV5Reserved;
+};
+
 #pragma pack(pop)
 
 BMPData LoadBMP(memory_arena *Memory, char* filePath)
 {
-    int headerSize = sizeof(BMPHeader);
-    int infoHeaderSize = sizeof(BitmapInfoHeader);
     BMPData NullBMP = { 0 };
     BMPHeader bmpHeader = {0};
-    uint8 header[54];
+    BMPInfoHeader bmpInfoHeader = {0};
     uint32 dataPos;
     uint32 width, height;
     uint32 imageSize;
@@ -385,37 +411,31 @@ BMPData LoadBMP(memory_arena *Memory, char* filePath)
         DebugLog("File not found: %s\n", filePath);
         return NullBMP;
     }
-
-//    fread(&bmpHeader, 1, headerSize, file);
-
-    if (fread(header, 1, 54, file) != 54) {
-        DebugLog("Malformed BMP: %s\n", filePath);
+    
+    if (fread(&bmpHeader, sizeof(bmpHeader), 1, file) != 1) {
+        DebugLog("Malformed BMP Header: %s\n", filePath);
         return NullBMP;
     }
 
-    if (header[0] != 'B' || header[1]!= 'M')
-    {
-        DebugLog("Malformed BMP: %s\n", filePath);
+    if (fread(&bmpInfoHeader, sizeof(bmpInfoHeader), 1, file) != 1) {
+        DebugLog("Malformed BMP Info Header: %s\n", filePath);
         return NullBMP;
     }
 
-    dataPos = *(int32*)&(header[0x0a]);
-    imageSize = *(int32*)&(header[0x22]);
-    width = *(int32*)&(header[0x12]);
-    height = *(int32*)&(header[0x16]);
+    if (bmpHeader.tag[0] != 'B' || bmpHeader.tag[1] != 'M') {
+        DebugLog("Not a BMP: %s\n", filePath);
+        return NullBMP;
+    }
 
-    if (imageSize==0)
-    {
-        imageSize = width*height*3;
-    }
-    if (dataPos==0)
-    {
-        dataPos=54;
-    }
+    dataPos = bmpHeader.pixelArrayOffset;
+    imageSize = bmpHeader.imageSize;
+    width = bmpInfoHeader.biWidth;
+    height = bmpInfoHeader.biWidth;
 
     data = (uint8*)PushSize(Memory, imageSize*sizeof(uint8));
 
     // read bmp from bottom to top
+    fseek(file, bmpHeader.pixelArrayOffset, SEEK_SET);
     for(int i = 0; i < height; i++)
     {
         int offset = (height-i-1)*width*3;
@@ -1407,7 +1427,7 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View)
     RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
 
     // skybox comes last, to save on performance
-    //RenderSkyBox(Game->SkyBox, Game->Camera, Game->Light, Projection, View, Game->SkyBoxShader);
+    RenderSkyBox(Game->SkyBox, Game->Camera, Game->Light, Projection, View, Game->SkyBoxShader);
 }
 
 void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, mat4 View, FramebufferDesc *TargetBuffer, int BufferWidth, int BufferHeight)
