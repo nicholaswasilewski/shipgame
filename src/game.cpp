@@ -5,7 +5,6 @@
 #include "camera.cpp"
 #include "loadFBX.cpp"
 #include "fbxHelpers.cpp"
-#include "game.h"
 
 #include <stdlib.h>
 #include <string.h>
