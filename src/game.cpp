@@ -386,7 +386,7 @@ BMPData LoadBMP(memory_arena *Memory, char* filePath)
         return NullBMP;
     }
 
-    fread(&bmpHeader, 1, headerSize, file);
+//    fread(&bmpHeader, 1, headerSize, file);
 
     if (fread(header, 1, 54, file) != 54) {
         DebugLog("Malformed BMP: %s\n", filePath);
@@ -1464,15 +1464,14 @@ void Render(platform_data *Platform, game_data *Game)
 void UpdateAndRender(platform_data *Platform)
 {
     game_data* Game = (game_data*)(((char*)Platform->MainMemory)+0);
-
+    InitArena(&Game->TempArena, Platform->TempMemorySize, (uint8*)Platform->TempMemory);
+    
     if (!Game->Initialized)
     {
         Init(Platform, Game);
         printf("GLInit Errors:\n");
-        GLErrorShow();        
+        GLErrorShow();
     }
-    
-    InitArena(&Game->TempArena, Platform->TempMemorySize, (uint8*)Platform->TempMemory);
     Update(Platform, Game);
     Render(Platform, Game);
 }
