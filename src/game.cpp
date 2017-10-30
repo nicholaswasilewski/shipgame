@@ -141,9 +141,12 @@ struct water_shader
 
     light_binding Light;
     material_binding Material;
-
+    
     GLuint NormalMap;
     GLuint NormalMapHandle;
+    
+    GLuint DuDvMap;
+    GLuint DuDvMapHandle;
 
     float UVOffset;
     GLuint UVOffsetHandle;
@@ -244,6 +247,7 @@ struct game_data
     color_model WaterColorModel;
     color_material WaterColorMaterial;
     texture WaterNormalMap;
+    texture WaterDuDvMap;
     skybox SkyBox;
     GLuint ReflectionFBO;
 
@@ -931,6 +935,7 @@ void Init(platform_data* Platform, game_data *Game)
     Game->BoxEmissiveMap = LoadDDS(&Game->MainArena, "../res/Textures/containeremissive.dds");
     Game->WaterNormalMap = GenTextureFromBMP(&Game->MainArena, "../res/Textures/matchingNormalMap.bmp");
     //Game->WaterNormalMap = GenTextureFromBMP("../res/Textures/normalMap.bmp");
+    Game->WaterDuDvMap = GenTextureFromBMP("../res/Textures/waterDUDV.bmp");
     
     texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxModel->Material = BoxMaterial;
@@ -969,7 +974,9 @@ void Init(platform_data* Platform, game_data *Game)
     WaterShader.Material = CreateMaterialBinding(WaterShader.Program);
     WaterShader.NormalMap = glGetUniformLocation(WaterShader.Program, "NormalMap");
     WaterShader.ReflectionMap = glGetUniformLocation(WaterShader.Program, "ReflectionMap");
+    WaterShader.DuDvMap = glGetUniformLocation(WaterShader.Program, "DuDvMap");
     WaterShader.NormalMapHandle = Game->WaterNormalMap.Handle;
+    WaterShader.DuDvMapHandle = Game->WaterDuDvMap.Handle;
     WaterShader.UVOffsetHandle = glGetUniformLocation(WaterShader.Program, "UVOffset");
     Game->WaterShader = WaterShader;
 
@@ -1189,7 +1196,7 @@ void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4
         );
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.NormalBuffer);
-    glVertexAttribPointer(2,
+    glVertexAttribPointer(1,
                           3,
                           GL_FLOAT,
                           GL_FALSE,
@@ -1258,9 +1265,12 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Shader.NormalMapHandle);
     glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, Shader.DuDvMapHandle);
+    glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, Shader.ReflectionHandle);
     glUniform1i(Shader.NormalMap, 0);
-    glUniform1i(Shader.ReflectionMap, 1);
+    glUniform1i(Shader.DuDvMap, 1);
+    glUniform1i(Shader.ReflectionMap, 2);
     //DebugLog("%i %i %i %i\n", Shader.NormalMapHandle, Shader.ReflectionHandle, Shader.NormalMap, Shader.ReflectionMap);
 
     color_material *Material = GameObject.ColorModel->Material;
@@ -1528,5 +1538,6 @@ void UpdateAndRender(platform_data *Platform)
         GLErrorShow();
     }
     Update(Platform, Game);
+    GLErrorShow();
     Render(Platform, Game);
 }

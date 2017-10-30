@@ -21,6 +21,7 @@ uniform color_material Material;
 uniform vec3 CameraPosition;
 
 uniform sampler2D NormalMap;
+uniform sampler2D DuDvMap;
 uniform sampler2D ReflectionMap;
 uniform float UVOffset;
 
@@ -33,11 +34,31 @@ out vec3 Color;
 
 void main()
 {    
-    // calculate normals
-    vec3 fragmentNormal = texture(NormalMap, UV+UVOffset).xyz;
+    // ******************
+    // reflection + DuDv
+
+    // DuDv sampling, to add ripples to the reflection
+    float distortionPower = 0.05f;
+    vec2 distortedUVs = texture(DuDvMap, vec2(UV.x + UVOffset, UV.y)).rg * 0.1f;
+    distortedUVs = UV + vec2(distortedUVs.x, distortedUVs.y + UVOffset);
+    vec2 dudvDistortion = (texture(DuDvMap, distortedUVs).rg * 2.0f - 1.0f) * distortionPower;
+
+    // reflection
+    vec2 normalizedDeviceSpace = (ClipSpace.xy/ClipSpace.w)/2.0f + 0.5f;
+    vec2 reflectUVs = vec2(normalizedDeviceSpace.x, -normalizedDeviceSpace.y);
+    reflectUVs += dudvDistortion;
+    reflectUVs.x = clamp(reflectUVs.x, 0.001f, 0.999f);
+    reflectUVs.y = clamp(reflectUVs.y, -0.999f, -0.001f);
+    vec3 reflectColor = texture(ReflectionMap, reflectUVs).rgb;
+
+    // ******************
+    // Phong
+
+    // calculate normals, should be distorted similarly to match DuDv distortion.
+    vec3 fragmentNormal = texture(NormalMap, distortedUVs).xyz;
     float normalPower = 2.0f;
-    fragmentNormal = vec3( (fragmentNormal.r-0.5f)*2, fragmentNormal.b*normalPower, (fragmentNormal.g-0.5f)*2);
-    //fragmentNormal = vec3(1, 1, 0);
+    fragmentNormal = vec3(fragmentNormal.r * 2.0f - 1.0f, fragmentNormal.b * normalPower, fragmentNormal.g * 2.0f - 1.0f);
+    vec3 normal = normalize(fragmentNormal);
 
     // colors
     vec3 AmbientColor = Light.Ambient*Material.Diffuse;
@@ -48,14 +69,13 @@ void main()
     vec3 lightPosition = vec3(Light.Position);
     float lightDistance = length(lightPosition - FragPos);
     float lightDistanceSquared = lightDistance*lightDistance;
-    float attenuation = Light.Power / (1.0 + (0.09 * lightDistance) + (0.032 * lightDistanceSquared));
+    float attenuation = Light.Power / (1.0f + (0.09f * lightDistance) + (0.032f * lightDistanceSquared));
     attenuation = Light.Power / lightDistanceSquared;
 
     // ambient
     vec3 ambient = AmbientColor * attenuation;
 
     // diffuse
-    vec3 normal = normalize(fragmentNormal);
     vec3 lightDir = normalize(lightPosition - FragPos);
     float diffuseCoefficient = max(dot(lightDir, normal), 0.0f);
     vec3 diffuse = diffuseCoefficient * DiffuseColor * attenuation;
@@ -66,15 +86,11 @@ void main()
     float specCoefficient = pow(max(dot(lightReflect, cameraDir), 0.0f), Material.Shine);
     vec3 specular = specCoefficient * SpecularColor; // no damping by distance
 
-    // light color
-    vec3 resultColor = ambient + diffuse + specular;
+    // phong color w/ distorted normals
+    vec3 phongColor = ambient + diffuse + specular;
 
-    // reflection
-    vec2 normalizedDeviceSpace = (ClipSpace.xy/ClipSpace.w)/2.0f + 0.5f;
-    normalizedDeviceSpace.y = -normalizedDeviceSpace.y;
-    vec3 reflectColor = texture(ReflectionMap, normalizedDeviceSpace).rgb;
-
-    Color = mix(resultColor, reflectColor, 0.3f);
-    //Color = texture(NormalMap, UV+UVOffset).rgb;
+    Color = mix(phongColor, reflectColor, 0.5f);
+    //Color = reflectColor;
+    //Color = texture(DuDvMap, UV+UVOffset).rgb;
     //Color = texture(ReflectionMap, UV).rgb;
 }
