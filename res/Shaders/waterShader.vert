@@ -24,6 +24,7 @@ layout(location = 1) in vec2 vertexUV;
 out vec2 UV;
 out vec3 FragPos;
 out vec3 FragNormal;
+out vec4 ClipSpace;
 
 highp float rand(vec2 co)
 {
@@ -46,7 +47,7 @@ void main()
     // gl_Position = MVP * vec4(vertexPosition.x, y, vertexPosition.z, 1.0f);
     // Normal = mat3(M) * vec3(0.0f, 1.0f, 0.0f);
 
-    
+    ClipSpace = MVP * vec4(vertexPosition, 1);
     gl_Position = MVP * vec4(vertexPosition, 1);
     FragPos = vec3(M*vec4(vertexPosition, 1));
     UV = vertexUV;

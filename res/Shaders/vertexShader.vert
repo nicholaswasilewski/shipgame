@@ -2,7 +2,7 @@
 
 struct light {
     float Power;
-    vec3 Position;
+    vec4 Position;
 
     vec3 Ambient;
     vec3 Diffuse;
