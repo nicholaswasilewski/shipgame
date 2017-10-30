@@ -21,11 +21,13 @@ uniform color_material Material;
 uniform vec3 CameraPosition;
 
 uniform sampler2D NormalMap;
+uniform sampler2D ReflectionMap;
 uniform float UVOffset;
 
 in vec2 UV;
 in vec3 FragPos;
 in vec3 FragNormal;
+in vec4 ClipSpace;
 
 out vec3 Color;
 
@@ -64,6 +66,15 @@ void main()
     float specCoefficient = pow(max(dot(lightReflect, cameraDir), 0.0f), Material.Shine);
     vec3 specular = specCoefficient * SpecularColor; // no damping by distance
 
-    Color = ambient + diffuse + specular;
+    // light color
+    vec3 resultColor = ambient + diffuse + specular;
+
+    // reflection
+    vec2 normalizedDeviceSpace = (ClipSpace.xy/ClipSpace.w)/2.0f + 0.5f;
+    normalizedDeviceSpace.y = -normalizedDeviceSpace.y;
+    vec3 reflectColor = texture(ReflectionMap, normalizedDeviceSpace).rgb;
+
+    Color = mix(resultColor, reflectColor, 0.3f);
     //Color = texture(NormalMap, UV+UVOffset).rgb;
+    //Color = texture(ReflectionMap, UV).rgb;
 }

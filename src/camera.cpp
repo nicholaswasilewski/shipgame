@@ -36,6 +36,17 @@ mat4 GenerateCameraView(camera Camera)
     return View;
 }
 
+mat4 GenerateReflectionCameraView(camera Camera)
+{
+    // assumes water is at y=0, normal is straight up
+    // move camera below water, turn to face up
+    v3 position = V3(Camera.Position.x, -Camera.Position.y*2, Camera.Position.z);
+    v3 forward = V3(Camera.Forward.x, -Camera.Forward.y, Camera.Forward.z);
+    v3 up = V3(-Camera.Up.x, Camera.Up.y, -Camera.Up.z);
+    mat4 View = LookAtView(position, position+forward, up);
+    return View;
+}
+
 void CameraStrafe(camera *Camera, float dT, float speed)
 {
     Camera->Position = Camera->Position + speed*dT*Normalize(Cross(Camera->Forward, Camera->Up));   

@@ -141,10 +141,15 @@ struct water_shader
 
     light_binding Light;
     material_binding Material;
+
+    GLuint NormalMap;
     GLuint NormalMapHandle;
 
     float UVOffset;
     GLuint UVOffsetHandle;
+
+    GLuint ReflectionMap;
+    GLuint ReflectionHandle;
 };
 
 struct model
@@ -240,7 +245,7 @@ struct game_data
     color_material WaterColorMaterial;
     texture WaterNormalMap;
     skybox SkyBox;
-
+    GLuint ReflectionFBO;
 
     float BoxRotation;
 };
@@ -962,6 +967,8 @@ void Init(platform_data* Platform, game_data *Game)
     WaterShader.CameraPosition = glGetUniformLocation(WaterShader.Program, "CameraPosition");
     WaterShader.Light = CreateLightBinding(WaterShader.Program);
     WaterShader.Material = CreateMaterialBinding(WaterShader.Program);
+    WaterShader.NormalMap = glGetUniformLocation(WaterShader.Program, "NormalMap");
+    WaterShader.ReflectionMap = glGetUniformLocation(WaterShader.Program, "ReflectionMap");
     WaterShader.NormalMapHandle = Game->WaterNormalMap.Handle;
     WaterShader.UVOffsetHandle = glGetUniformLocation(WaterShader.Program, "UVOffset");
     Game->WaterShader = WaterShader;
@@ -1117,6 +1124,19 @@ void Init(platform_data* Platform, game_data *Game)
     SkyBoxShader.MVP = glGetUniformLocation(SkyBoxShader.Program, "MVP");
     SkyBoxShader.SkyBox = SkyBox->Texture.Handle;
     Game->SkyBoxShader = SkyBoxShader;
+    
+    glGenFramebuffers(1, &Game->ReflectionFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+    glGenTextures(1, &Game->WaterShader.ReflectionHandle);
+    glBindTexture(GL_TEXTURE_2D, Game->WaterShader.ReflectionHandle);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Game->WaterShader.ReflectionHandle, 0);
+
+    PrintGlFBOError();
 
     // load model from FBX
     // FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
@@ -1237,6 +1257,11 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Shader.NormalMapHandle);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, Shader.ReflectionHandle);
+    glUniform1i(Shader.NormalMap, 0);
+    glUniform1i(Shader.ReflectionMap, 1);
+    //DebugLog("%i %i %i %i\n", Shader.NormalMapHandle, Shader.ReflectionHandle, Shader.NormalMap, Shader.ReflectionMap);
 
     color_material *Material = GameObject.ColorModel->Material;
     glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
@@ -1412,7 +1437,7 @@ void Update(platform_data *Platform, game_data *Game)
     }
 }
 
-void RenderScene(game_data *Game, mat4 Projection, mat4 View)
+void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
@@ -1421,10 +1446,13 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View)
     //RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+    RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
 
     // player and water
-    RenderWater(Game->Water, Game->Camera, Game->Light, Projection, View, Game->WaterShader);
-    RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    if(includeWater)
+    {
+        RenderWater(Game->Water, Game->Camera, Game->Light, Projection, View, Game->WaterShader);
+    }
 
     // skybox comes last, to save on performance
     RenderSkyBox(Game->SkyBox, Game->Camera, Game->Light, Projection, View, Game->SkyBoxShader);
@@ -1437,7 +1465,7 @@ void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, m
     
     glBindFramebuffer(GL_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
     glViewport(0, 0, BufferWidth, BufferHeight);
-    RenderScene(Game, Projection, View);
+    RenderScene(Game, Projection, View, true);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
     glDisable(GL_MULTISAMPLE);
@@ -1476,9 +1504,16 @@ void Render(platform_data *Platform, game_data *Game)
         RenderToTarget(Platform, Game, Projection, RightEyeView, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
     }
 #endif
-    
+
+    // render reflection
+    mat4 ReflectView = GenerateReflectionCameraView(Game->Camera);
+    glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO);
+    glViewport(0, 0, 800, 600);
+    RenderScene(Game, Projection, ReflectView, false);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, Platform->WindowWidth, Platform->WindowHeight);
-    RenderScene(Game, Projection, View);
+    RenderScene(Game, Projection, View, true);
 }
 
 void UpdateAndRender(platform_data *Platform)
