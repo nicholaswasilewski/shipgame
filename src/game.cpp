@@ -209,6 +209,8 @@ struct color_game_object
 struct game_data
 {
     bool Initialized;
+    memory_arena MainArena;
+    memory_arena TempArena;
 
     light_texture_shader LightTextureShader;
     color_shader ColorShader;
@@ -243,7 +245,7 @@ struct game_data
     float BoxRotation;
 };
 
-texture LoadDDS(const char * filePath)
+texture LoadDDS(memory_arena *Memory, const char * filePath)
 {
     texture NullTexture = {0};
     int8 header[124];
@@ -300,6 +302,7 @@ texture LoadDDS(const char * filePath)
     else
     {
         free(buffer);
+//        PopSize(Memory, bufferSize*sizeof(uint8));
         DebugLog("File not DXT compressed: %s", filePath);
         return NullTexture;
     }
@@ -339,9 +342,37 @@ struct BMPData
     uint8* data;
 };
 
-BMPData LoadBMP(char* filePath)
+#pragma pack(push,1)
+struct BMPHeader
 {
+    char BMPIdentifier[2];
+    uint32 ImageSize;
+    char Reserved[2];
+    char Reserved2[2];
+    uint32 PixelArrayOffset;
+};
+
+struct BitmapInfoHeader {
+  DWORD biSize;
+  LONG  biWidth;
+  LONG  biHeight;
+  WORD  biPlanes;
+  WORD  biBitCount;
+  DWORD biCompression;
+  DWORD biSizeImage;
+  LONG  biXPelsPerMeter;
+  LONG  biYPelsPerMeter;
+  DWORD biClrUsed;
+  DWORD biClrImportant;
+};
+#pragma pack(pop)
+
+BMPData LoadBMP(memory_arena *Memory, char* filePath)
+{
+    int headerSize = sizeof(BMPHeader);
+    int infoHeaderSize = sizeof(BitmapInfoHeader);
     BMPData NullBMP = { 0 };
+    BMPHeader bmpHeader = {0};
     uint8 header[54];
     uint32 dataPos;
     uint32 width, height;
@@ -354,6 +385,8 @@ BMPData LoadBMP(char* filePath)
         DebugLog("File not found: %s\n", filePath);
         return NullBMP;
     }
+
+    fread(&bmpHeader, 1, headerSize, file);
 
     if (fread(header, 1, 54, file) != 54) {
         DebugLog("Malformed BMP: %s\n", filePath);
@@ -380,7 +413,7 @@ BMPData LoadBMP(char* filePath)
         dataPos=54;
     }
 
-    data = (uint8*)malloc(imageSize*sizeof(uint8));
+    data = (uint8*)PushSize(Memory, imageSize*sizeof(uint8));
 
     // read bmp from bottom to top
     for(int i = 0; i < height; i++)
@@ -402,6 +435,7 @@ BMPData LoadBMP(char* filePath)
 }
 
 texture GenCubeMapFromBMP(
+    memory_arena *Memory,
     char* rightFile,
     char* leftFile,
     char* topFile,
@@ -409,23 +443,40 @@ texture GenCubeMapFromBMP(
     char* backFile,
     char* frontFile)
 {
-    BMPData rightBmpData = LoadBMP(rightFile);
-    BMPData leftBmpData = LoadBMP(leftFile);
-    BMPData topBmpData = LoadBMP(topFile);
-    BMPData bottomBmpData = LoadBMP(bottomFile);
-    BMPData backBmpData = LoadBMP(backFile);
-    BMPData frontBmpData = LoadBMP(frontFile);
 
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
+    BMPData rightBmpData = LoadBMP(Memory, rightFile);
     glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, rightBmpData.width, rightBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, rightBmpData.data);
+//    free(rightBmpData.data);
+    PopSize(Memory, rightBmpData.imageSize);
+ 
+    BMPData leftBmpData = LoadBMP(Memory, leftFile);   
     glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGB, leftBmpData.width, leftBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, leftBmpData.data);
+//    free(leftBmpData.data);
+    PopSize(Memory, leftBmpData.imageSize);
+ 
+    BMPData topBmpData = LoadBMP(Memory, topFile);   
     glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGB, topBmpData.width, topBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, topBmpData.data);
+//    free(topBmpData.data);
+    PopSize(Memory, topBmpData.imageSize);
+    
+    BMPData bottomBmpData = LoadBMP(Memory, bottomFile);
     glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGB, bottomBmpData.width, bottomBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bottomBmpData.data);
+//    free(bottomBmpData.data);
+    PopSize(Memory, bottomBmpData.imageSize);
+    
+    BMPData backBmpData = LoadBMP(Memory, backFile);
     glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGB, backBmpData.width, backBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, backBmpData.data);
+//    free(backBmpData.data);
+    PopSize(Memory, backBmpData.imageSize);
+    
+    BMPData frontBmpData = LoadBMP(Memory, frontFile);
     glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, frontBmpData.width, frontBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, frontBmpData.data);
+//    free(frontBmpData.data);
+    PopSize(Memory, frontBmpData.imageSize);
 
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -433,12 +484,14 @@ texture GenCubeMapFromBMP(
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); 
 
+    /*
     free(rightBmpData.data);
     free(leftBmpData.data);
     free(topBmpData.data);
     free(bottomBmpData.data);
     free(backBmpData.data);
     free(frontBmpData.data);
+    */
 
     texture Result = {
         rightBmpData.width,
@@ -450,9 +503,9 @@ texture GenCubeMapFromBMP(
     return Result;
 }
 
-texture GenTextureFromBMP(char* filePath)
+texture GenTextureFromBMP(memory_arena *Memory, char* filePath)
 {
-    BMPData bmpData = LoadBMP(filePath);
+    BMPData bmpData = LoadBMP(Memory, filePath);
 
     GLuint textureID;
     glGenTextures(1, &textureID);
@@ -568,6 +621,10 @@ GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 
 void Init(platform_data* Platform, game_data *Game)
 {
+    InitArena(&Game->MainArena,
+              Platform->MainMemorySize,
+              (uint8*)Platform->MainMemory+sizeof(game_data));
+    
     glClearColor(0.6, 0.4, 0.2, 0.0);
     glFrontFace(GL_CCW);
     glEnable(GL_CULL_FACE);
@@ -840,14 +897,14 @@ void Init(platform_data* Platform, game_data *Game)
     glBufferData(GL_ARRAY_BUFFER, uvBufferSize, BoxModel->UVs, GL_STATIC_DRAW);
 
 #if DIE
-    Game->BoxDiffuseMap = LoadDDS("../res/Textures/uvtemplate.dds");
+    Game->BoxDiffuseMap = LoadDDS(&Game->MainArena, "../res/Textures/uvtemplate.dds");
 #elif defined(CONTAINER)
-    Game->BoxDiffuseMap = LoadDDS("../res/Textures/container.dds");
+    Game->BoxDiffuseMap = LoadDDS(&Game->MainArena, "../res/Textures/container.dds");
 #endif
 
-    Game->BoxSpecularMap = LoadDDS("../res/Textures/containerspecular.dds");
-    Game->BoxEmissiveMap = LoadDDS("../res/Textures/containeremissive.dds");
-    Game->WaterNormalMap = GenTextureFromBMP("../res/Textures/matchingNormalMap.bmp");
+    Game->BoxSpecularMap = LoadDDS(&Game->MainArena, "../res/Textures/containerspecular.dds");
+    Game->BoxEmissiveMap = LoadDDS(&Game->MainArena, "../res/Textures/containeremissive.dds");
+    Game->WaterNormalMap = GenTextureFromBMP(&Game->MainArena, "../res/Textures/matchingNormalMap.bmp");
     //Game->WaterNormalMap = GenTextureFromBMP("../res/Textures/normalMap.bmp");
     
     texture_material *BoxMaterial = &Game->BoxMaterial;
@@ -1025,6 +1082,7 @@ void Init(platform_data* Platform, game_data *Game)
                  GL_STATIC_DRAW);
 
     SkyBox->Texture = GenCubeMapFromBMP(
+        &Game->MainArena,
         "../res/Textures/skybox/right.bmp",
         "../res/Textures/skybox/left.bmp",
         "../res/Textures/skybox/top.bmp",
@@ -1042,9 +1100,9 @@ void Init(platform_data* Platform, game_data *Game)
 
     // load model from FBX
     // FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
-    // FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
-    // FBX_Node* monkey = (FBX_Node*)malloc(sizeof(FBX_Node));
-    // ParseFBX(monkeyFile, monkey);
+     FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
+     FBX_Node* monkey = (FBX_Node*)malloc(sizeof(FBX_Node));
+     ParseFBX(monkeyFile, monkey);
 
     // // get model info
     // FBX_Node* fbx_objects = FBX_GetChildByName(monkey, "Objects");
@@ -1411,10 +1469,10 @@ void UpdateAndRender(platform_data *Platform)
     {
         Init(Platform, Game);
         printf("GLInit Errors:\n");
-        GLErrorShow();
-        
+        GLErrorShow();        
     }
-
+    
+    InitArena(&Game->TempArena, Platform->TempMemorySize, (uint8*)Platform->TempMemory);
     Update(Platform, Game);
     Render(Platform, Game);
 }

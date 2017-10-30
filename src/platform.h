@@ -64,10 +64,10 @@ typedef struct memory_arena
     size_t Used;
 } memory_arena;
 
-#define PushSize(Arena, type) (type *)PushSize_(Arena, sizeof(type))
-#define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
+#define PushObject(Arena, type) (type *)PushSize(Arena, sizeof(type))
+#define PushArray(Arena, Count, type) (type *)PushSize(Arena, (Count)*sizeof(type))
 void*
-PushSize_(memory_arena *Arena, size_t Size)
+PushSize(memory_arena *Arena, size_t Size)
 {
     Assert((Arena->Used + Size) <= (Arena->Size));
     void *NewSpace = Arena->Base + Arena->Used;
@@ -76,8 +76,14 @@ PushSize_(memory_arena *Arena, size_t Size)
     return NewSpace;
 }
 
-inline void
-InitArena(memory_arena *Arena, size_t Size, uint8 *Base)
+void PopSize(memory_arena *Arena, size_t Size)
+{
+    Assert(Arena->Used >= Size);
+    Arena->Size += Size;
+    Arena->Used -= Size;
+}
+
+void InitArena(memory_arena *Arena, size_t Size, uint8 *Base)
 {
     Arena->Size = Size;
     Arena->Base = Base;
@@ -90,7 +96,7 @@ PushArena(memory_arena *Arena, size_t Size)
     memory_arena Result = {0};
     Result.Size = Size;
     Result.Used = 0;
-    Result.Base = (uint8 *)PushSize_(Arena, Size);
+    Result.Base = (uint8 *)PushSize(Arena, Size);
     return Result;
 }
 
