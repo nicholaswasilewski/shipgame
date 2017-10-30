@@ -935,7 +935,7 @@ void Init(platform_data* Platform, game_data *Game)
     Game->BoxEmissiveMap = LoadDDS(&Game->MainArena, "../res/Textures/containeremissive.dds");
     Game->WaterNormalMap = GenTextureFromBMP(&Game->MainArena, "../res/Textures/matchingNormalMap.bmp");
     //Game->WaterNormalMap = GenTextureFromBMP("../res/Textures/normalMap.bmp");
-    Game->WaterDuDvMap = GenTextureFromBMP("../res/Textures/waterDUDV.bmp");
+    Game->WaterDuDvMap = GenTextureFromBMP(&Game->MainArena, "../res/Textures/waterDUDV.bmp");
     
     texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxModel->Material = BoxMaterial;
