@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "matrixMath.cpp"
+#include "graphics.cpp"
 
 #define MAX_TOKEN_LENGTH 1024
 
@@ -280,7 +281,7 @@ bool ReadValues(FBX_Node* node)
     return hasChildren;
 }
 
-void ParseChild(FBX_Node* parentNode, int depth)
+void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
 {
     // TODO -- don't statically allocate 128 children.
     DebugLog("%s[START NODE] '%s'\n", MakeSpaces(depth), parentNode->Name);
@@ -323,7 +324,7 @@ void ParseChild(FBX_Node* parentNode, int depth)
             // recurse this child
             if (hasChildren)
             {
-                ParseChild(node, depth + 1);
+                ParseChild(Memory, node, depth + 1);
             }
         }
         else if (TokenType == FBXT_EndChild)
@@ -348,8 +349,9 @@ void ParseChild(FBX_Node* parentNode, int depth)
     }
 }
 
-void ParseFBX(FILE* File, FBX_Node* outFbxNode)
-{ 
+FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE* File)
+{
+    FBX_Node *outFbxNode = PushObject(TempMemory, FBX_Node);
     char Token[MAX_TOKEN_LENGTH];
     global_Info.File = File; 
     global_Info.Token = Token;
@@ -359,7 +361,23 @@ void ParseFBX(FILE* File, FBX_Node* outFbxNode)
     outFbxNode->Name = "Root";
 
     // fill in properties and attach to the root node
-    ParseChild(outFbxNode, 0);
+    ParseChild(TempMemory, outFbxNode, 0);
+    
+    return outFbxNode;
+}
+
+void CreateVertices(memory_arena *Memory, model *Model, FBX_Node *parentNode)
+{
+    
+}
+
+model *LoadModel(memory_arena *MainMemory, memory_arena *TempMemory, FILE* file)
+{
+    FBX_Node *parentNode = ParseFBX(MainMemory, TempMemory, file);
+    model *Model = PushObject(MainMemory, model);
+    CreateVertices(MainMemory, Model, parentNode);
+
+    return Model;
 }
 
 #endif
