@@ -9,37 +9,33 @@
 
 #define MAX_TOKEN_LENGTH 1024
 
+#define FBX_TOKEN_LIST \
+    FTL(FBXT_Unknown   ) \
+    FTL(FBXT_EndOfFile ) \
+    FTL(FBXT_Endline   ) \
+    FTL(FBXT_Whitespace) \
+    FTL(FBXT_Comment   ) \
+    FTL(FBXT_TypeName  ) \
+    FTL(FBXT_String    ) \
+    FTL(FBXT_Float     ) \
+    FTL(FBXT_Integer   ) \
+    FTL(FBXT_StartChild) \
+    FTL(FBXT_EndChild  ) \
+    FTL(FBXT_Comma     )
+
+#define FTL(TokenName) TokenName,
 enum fbx_token_type
 {
-    FBXT_Unknown,
-    FBXT_EndOfFile,
-    FBXT_Endline,
-    FBXT_WhiteSpace,
-    FBXT_Comment,
-    FBXT_TypeName,
-    FBXT_String,
-    FBXT_Float,
-    FBXT_Integer,
-    FBXT_StartChild,
-    FBXT_EndChild,
-    FBXT_Comma
+    FBX_TOKEN_LIST
 };
 
+#undef FTL
+#define FTL(TokenName) #TokenName,
 char* fbx_token_type_string [] =
 {
-    "FBXT_Unknown   ",
-    "FBXT_EndOfFile ",
-    "FBXT_Endline   ",
-    "FBXT_WhiteSpace",
-    "FBXT_Comment   ",
-    "FBXT_TypeName  ",
-    "FBXT_String    ",
-    "FBXT_Float     ",
-    "FBXT_Integer   ",
-    "FBXT_StartChild",
-    "FBXT_EndChild  ",
-    "FBXT_Comma     "
+    FBX_TOKEN_LIST
 };
+#undef FTL
 
 struct fbx_parse_info
 {
@@ -349,6 +345,20 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
     }
 }
 
+FBX_Node* FBX_GetChildByName(FBX_Node* node, char* name)
+{
+    for(int i = 0; i < node->ChildCount; i++)
+    {
+        FBX_Node* child = node->Children[i];
+        if (strcmp(name, child->Name) == 0)
+        {
+            return child;
+        }
+    }
+
+    return NULL;
+}
+
 FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE* File)
 {
     FBX_Node *outFbxNode = PushObject(TempMemory, FBX_Node);
@@ -366,16 +376,45 @@ FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE* Fil
     return outFbxNode;
 }
 
-void CreateVertices(memory_arena *Memory, model *Model, FBX_Node *parentNode)
+void CreateVertices(memory_arena *Memory, model *Model, FBX_Node *fbxNode)
 {
-    
+    FBX_Node *verticesNode = FBX_GetChildByName(FBX_GetChildByName(FBX_GetChildByName(fbxNode, "Objects"), "Model"), "Vertices");
+    FBX_Node *modelNode = FBX_GetChildByName(FBX_GetChildByName(fbxNode, "Objects"), "Model");
+    Model->Vertices = (float*)PushArray(Memory, verticesNode->ValueCount, float);
+    for (int i = 0; i < verticesNode->ValueCount; i++) {
+        float value = atof(verticesNode->Values[i]);
+        Model->Vertices[i] = value;
+    }
+}
+
+void CreateIndices(memory_arena *Memory, model *Model, FBX_Node *fbxNode)
+{
+    FBX_Node *node = FBX_GetChildByName(FBX_GetChildByName(FBX_GetChildByName(fbxNode, "Objects"), "Model"), "PolygonVertexIndex");
+    int i =0;
+    while (i < node->ValueCount)
+    {
+        int square = 0;
+        int indices[4];
+        indices[0] = atoi(node->Values[i++]);
+        indices[1] = atoi(node->Values[i++]);
+        indices[2] = atoi(node->Values[i++]);
+        if (indices[2] < 0)
+        {
+            indices[2] *= -1;
+        }
+        else
+        {
+            square = 1;
+            indices[3] = -atoi(node->Values[i++]);
+        }
+    }
 }
 
 model *LoadModel(memory_arena *MainMemory, memory_arena *TempMemory, FILE* file)
 {
-    FBX_Node *parentNode = ParseFBX(MainMemory, TempMemory, file);
+    FBX_Node *fbxNode = ParseFBX(MainMemory, TempMemory, file);
     model *Model = PushObject(MainMemory, model);
-    CreateVertices(MainMemory, Model, parentNode);
+    CreateVertices(MainMemory, Model, fbxNode);
 
     return Model;
 }
