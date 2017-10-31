@@ -962,7 +962,7 @@ void Init(platform_data* Platform, game_data *Game)
     // load model from FBX
     // FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
      FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
-     model* monkey = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
+     model monkey = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
 
     // // get model info
     // FBX_Node* fbx_objects = FBX_GetChildByName(monkey, "Objects");

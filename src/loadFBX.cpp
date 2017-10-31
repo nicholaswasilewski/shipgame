@@ -376,28 +376,28 @@ FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE* Fil
     return outFbxNode;
 }
 
-void CreateVertices(memory_arena *Memory, model *Model, FBX_Node *fbxNode)
+void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
 {
-    FBX_Node *verticesNode = FBX_GetChildByName(FBX_GetChildByName(FBX_GetChildByName(fbxNode, "Objects"), "Model"), "Vertices");
-    FBX_Node *modelNode = FBX_GetChildByName(FBX_GetChildByName(fbxNode, "Objects"), "Model");
+    FBX_Node *verticesNode = FBX_GetChildByName(modelNode, "Vertices");
     Model->Vertices = (float*)PushArray(Memory, verticesNode->ValueCount, float);
-    for (int i = 0; i < verticesNode->ValueCount; i++) {
+    for (int i = 0; i < verticesNode->ValueCount; i++)
+    {
         float value = atof(verticesNode->Values[i]);
         Model->Vertices[i] = value;
     }
-}
-
-void CreateIndices(memory_arena *Memory, model *Model, FBX_Node *fbxNode)
-{
-    FBX_Node *node = FBX_GetChildByName(FBX_GetChildByName(FBX_GetChildByName(fbxNode, "Objects"), "Model"), "PolygonVertexIndex");
-    int i =0;
-    while (i < node->ValueCount)
+    
+    FBX_Node *indexNode = FBX_GetChildByName(modelNode, "PolygonVertexIndex");
+    FBX_Node *normalNode = FBX_GetChildByName(FBX_GetChildByName(modelNode, "LayerElementNormal"), "Normals");
+    
+    int i = 0;
+    int j = 0;
+    while (i < indexNode->ValueCount)
     {
         int square = 0;
         int indices[4];
-        indices[0] = atoi(node->Values[i++]);
-        indices[1] = atoi(node->Values[i++]);
-        indices[2] = atoi(node->Values[i++]);
+        indices[0] = atoi(indexNode->Values[i++]);
+        indices[1] = atoi(indexNode->Values[i++]);
+        indices[2] = atoi(indexNode->Values[i++]);
         if (indices[2] < 0)
         {
             indices[2] *= -1;
@@ -405,17 +405,19 @@ void CreateIndices(memory_arena *Memory, model *Model, FBX_Node *fbxNode)
         else
         {
             square = 1;
-            indices[3] = -atoi(node->Values[i++]);
+            indices[3] = -atoi(indexNode->Values[i++]);
         }
+
+	
     }
 }
 
-model *LoadModel(memory_arena *MainMemory, memory_arena *TempMemory, FILE* file)
+model LoadModel(memory_arena *MainMemory, memory_arena *TempMemory, FILE* file)
 {
     FBX_Node *fbxNode = ParseFBX(MainMemory, TempMemory, file);
-    model *Model = PushObject(MainMemory, model);
-    CreateVertices(MainMemory, Model, fbxNode);
-
+    FBX_Node *modelNode = FBX_GetChildByName(FBX_GetChildByName(fbxNode, "Objects"), "Model");
+    model Model = {0};
+    ProcessModelNode(MainMemory, &Model, modelNode);
     return Model;
 }
 
