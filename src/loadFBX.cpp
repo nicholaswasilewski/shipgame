@@ -464,13 +464,6 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
         indicesToWrite[0] = indexCount++;
         indicesToWrite[1] = indexCount++;
         indicesToWrite[2] = indexCount++;
-        Model->Indices[indexWriteIndex++] = indicesToWrite[0];
-        Model->Vertices[vertexWriteIndex++] = vertices[0];
-        Model->Vertices[vertexWriteIndex++] = vertices[1];
-        Model->Vertices[vertexWriteIndex++] = vertices[2];
-        Model->Normals[normalWriteIndex++] = normals[0];
-        Model->Normals[normalWriteIndex++] = normals[1];
-        Model->Normals[normalWriteIndex++] = normals[2];
         
         Model->Indices[indexWriteIndex++] = indicesToWrite[1];
         Model->Vertices[vertexWriteIndex++] = vertices[3];
@@ -480,6 +473,14 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
         Model->Normals[normalWriteIndex++] = normals[4];
         Model->Normals[normalWriteIndex++] = normals[5];
         
+        Model->Indices[indexWriteIndex++] = indicesToWrite[0];
+        Model->Vertices[vertexWriteIndex++] = vertices[0];
+        Model->Vertices[vertexWriteIndex++] = vertices[1];
+        Model->Vertices[vertexWriteIndex++] = vertices[2];
+        Model->Normals[normalWriteIndex++] = normals[0];
+        Model->Normals[normalWriteIndex++] = normals[1];
+        Model->Normals[normalWriteIndex++] = normals[2];
+        
         Model->Indices[indexWriteIndex++] = indicesToWrite[2];
         Model->Vertices[vertexWriteIndex++] = vertices[6];
         Model->Vertices[vertexWriteIndex++] = vertices[7];
@@ -487,7 +488,6 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
         Model->Normals[normalWriteIndex++] = normals[6];
         Model->Normals[normalWriteIndex++] = normals[7];
         Model->Normals[normalWriteIndex++] = normals[8];
-        
         i++;
         
         if (quad)
