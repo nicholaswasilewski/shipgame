@@ -483,7 +483,6 @@ void Init(platform_data* Platform, game_data *Game)
     
     Game->MonkeyModel = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
     BindModel(&Game->MonkeyModel);
-    Game->BoxModel = Game->MonkeyModel;
     
     texture_material *BoxMaterial = &Game->BoxMaterial;
     Game->MonkeyModel.Material = BoxMaterial;
