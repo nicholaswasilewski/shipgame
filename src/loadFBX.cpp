@@ -413,9 +413,10 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
         }
         originalFaceCount += 1;
     }
-    Model->Vertices = PushArray(Memory, triangleCount*3*3, float);
-    Model->VertexBufferSize = triangleCount*3*3*sizeof(float);
-    Model->Normals = PushArray(Memory, triangleCount*3*3, float);
+    int vertexCount = originalQuadCount*4+originalTriangleCount*3;
+    Model->Vertices = PushArray(Memory, vertexCount*3, float);
+    Model->VertexBufferSize = vertexCount*3*sizeof(float);
+    Model->Normals = PushArray(Memory, vertexCount*3, float);
     
     Model->Indices = PushArray(Memory, triangleCount*3, uint16);
     Model->IndexCount = triangleCount*3;
@@ -515,8 +516,6 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
             i++;
         }
     }
-    //DebugLog("Triangle Count: %d\n", triangleCount);
-    Assert(normalIndex == indexIndex*3);
 }
 
 model LoadModel(memory_arena *MainMemory, memory_arena *TempMemory, FILE* file)
