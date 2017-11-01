@@ -395,11 +395,6 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
     int originalFaceCount = 0;
     int originalTriangleCount = 0;
     int originalQuadCount = 0;
-
-    for(int x = 0; x < indexNode->ValueCount; x++)
-    {
-        printf("%s,", indexNode->Values[x]);
-    }
     
     while(faceIndex < indexNode->ValueCount)
     {
