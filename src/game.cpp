@@ -47,7 +47,7 @@ struct game_data
     texture_material BoxMaterial;
     color_material ColorMaterial;
     model BoxModel;
-    model MonkeyModel;
+    color_model MonkeyModel;
     color_model ColorBoxModel;
     
     //Scene
@@ -56,7 +56,7 @@ struct game_data
     game_object Box2;
     game_object LightBox;
     color_game_object ColorBox;
-    game_object Monkey;
+    color_game_object Monkey;
 
     //New Scene
     game_object Player;
@@ -478,14 +478,7 @@ void Init(platform_data* Platform, game_data *Game)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     
-    
-    FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
-    
-    Game->MonkeyModel = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
-    BindModel(&Game->MonkeyModel);
-    
     texture_material *BoxMaterial = &Game->BoxMaterial;
-    Game->MonkeyModel.Material = BoxMaterial;
     BoxMaterial->DiffuseMap = Game->BoxDiffuseMap.Handle;
     BoxMaterial->SpecularMap = Game->BoxSpecularMap.Handle;
 //    BoxMaterial->EmissiveMap = Game->BoxEmissiveMap.Handle;
@@ -781,6 +774,12 @@ void Init(platform_data* Platform, game_data *Game)
     ColorMaterial->Specular = V3(0.0f, 0.0f, 0.0f);
     ColorMaterial->Emissive = V3(1.0f, 1.0f, 1.0f);
     ColorMaterial->Shine = 1.0f;
+    
+    FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
+    model MonkeyModel = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
+    BindModel(&MonkeyModel);
+    Game->MonkeyModel.Model = MonkeyModel;
+    Game->MonkeyModel.Material = ColorMaterial;
 
     light_texture_shader Shader;
     Shader.Program = LoadShaders("../res/Shaders/lightTextureShader.vert", "../res/Shaders/lightTextureShader.frag");
@@ -842,8 +841,8 @@ void Init(platform_data* Platform, game_data *Game)
     Light.Power = 50.0f;
     Game->Light = Light;
 
-    game_object Monkey = { 0 };
-    Monkey.Model = &Game->MonkeyModel;
+    color_game_object Monkey = { 0 };
+    Monkey.ColorModel = &Game->MonkeyModel;
     Monkey.Scale = V3(1.0f, 1.0f, 1.0f);
     Monkey.Position = V3(0.0f, 10.0f, 0.0f);
     Monkey.Axis = V3(0.25f, 1.0f, .5f);
@@ -1292,7 +1291,7 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
     RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
     RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-    RenderObject(Game->Monkey, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    RenderObject(Game->Monkey, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
 
     // player and water
     if(includeWater)

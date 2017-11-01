@@ -280,7 +280,7 @@ bool ReadValues(FBX_Node* node)
 void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
 {
     // TODO -- don't statically allocate 128 children.
-    DebugLog("%s[START NODE] '%s'\n", MakeSpaces(depth), parentNode->Name);
+    //DebugLog("%s[START NODE] '%s'\n", MakeSpaces(depth), parentNode->Name);
     parentNode->Children = (FBX_Node**)malloc(sizeof(FBX_Node*) * 128);
     parentNode->ChildCount = 0;
 
@@ -315,7 +315,7 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
                     }
                 }
             }
-            DebugLog("%s[PROPERTY   ] '%s': %s\n",  MakeSpaces(depth), node->Name, debug_valuestr, node->ValueCount);
+            //DebugLog("%s[PROPERTY   ] '%s': %s\n",  MakeSpaces(depth), node->Name, debug_valuestr, node->ValueCount);
 
             // recurse this child
             if (hasChildren)
@@ -325,12 +325,12 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
         }
         else if (TokenType == FBXT_EndChild)
         {
-            DebugLog("%s[END NODE  ] '%s' PropCount: %d\n",  MakeSpaces(depth), parentNode->Name, parentNode->ChildCount);
+            //DebugLog("%s[END NODE  ] '%s' PropCount: %d\n",  MakeSpaces(depth), parentNode->Name, parentNode->ChildCount);
             break;
         }
         else if (TokenType == FBXT_EndOfFile)
         {
-            DebugLog("[END File] '%s' PropCount: %d\n", parentNode->Name, parentNode->ChildCount);
+            //DebugLog("[END File] '%s' PropCount: %d\n", parentNode->Name, parentNode->ChildCount);
             break;
         }
         else if (TokenType == FBXT_Endline ||
@@ -340,7 +340,7 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
         }
         else 
         {
-            DebugLog("huh? [%s]%s\n", fbx_token_type_string[TokenType], global_Info.Token);
+            //DebugLog("huh? [%s]%s\n", fbx_token_type_string[TokenType], global_Info.Token);
         }
     }
 }
@@ -515,7 +515,7 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
             i++;
         }
     }
-    DebugLog("Triangle Count: %d\n", triangleCount);
+    //DebugLog("Triangle Count: %d\n", triangleCount);
     Assert(normalIndex == indexIndex*3);
 }
 
