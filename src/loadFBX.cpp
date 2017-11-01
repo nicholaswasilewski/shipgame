@@ -378,38 +378,150 @@ FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE* Fil
 
 void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
 {
-    FBX_Node *verticesNode = FBX_GetChildByName(modelNode, "Vertices");
-    Model->Vertices = (float*)PushArray(Memory, verticesNode->ValueCount, float);
-    for (int i = 0; i < verticesNode->ValueCount; i++)
+    FBX_Node *vertexNode = FBX_GetChildByName(modelNode, "Vertices");
+    Model->Vertices = (float*)PushArray(Memory, vertexNode->ValueCount, float);
+    for (int i = 0; i < vertexNode->ValueCount; i++)
     {
-        float value = atof(verticesNode->Values[i]);
+        float value = atof(vertexNode->Values[i]);
         Model->Vertices[i] = value;
     }
     
     FBX_Node *indexNode = FBX_GetChildByName(modelNode, "PolygonVertexIndex");
     FBX_Node *normalNode = FBX_GetChildByName(FBX_GetChildByName(modelNode, "LayerElementNormal"), "Normals");
     
-    int i = 0;
-    int j = 0;
-    while (i < indexNode->ValueCount)
+    //Count up how many triangles you need, double count quads
+    int faceIndex = 0;
+    int triangleCount = 0;
+    int originalFaceCount = 0;
+    int originalTriangleCount = 0;
+    int originalQuadCount = 0;
+
+    for(int x = 0; x < indexNode->ValueCount; x++)
     {
-        int square = 0;
-        int indices[4];
-        indices[0] = atoi(indexNode->Values[i++]);
-        indices[1] = atoi(indexNode->Values[i++]);
-        indices[2] = atoi(indexNode->Values[i++]);
-        if (indices[2] < 0)
+        printf("%s,", indexNode->Values[x]);
+    }
+    
+    while(faceIndex < indexNode->ValueCount)
+    {
+        faceIndex++;
+        faceIndex++;
+        triangleCount += 1;
+        if (atoi(indexNode->Values[faceIndex++]) > 0)
         {
-            indices[2] *= -1;
+            faceIndex++;
+            triangleCount += 1;
+            originalQuadCount += 1;
         }
         else
         {
-            square = 1;
-            indices[3] = -atoi(indexNode->Values[i++]);
+            originalTriangleCount += 1;
         }
-
-	
+        originalFaceCount += 1;
     }
+    Model->Vertices = PushArray(Memory, triangleCount*3*3, float);
+    Model->VertexBufferSize = triangleCount*3*3*sizeof(float);
+    Model->Normals = PushArray(Memory, triangleCount*3*3, float);
+    
+    Model->Indices = PushArray(Memory, triangleCount*3, uint16);
+    Model->IndexCount = triangleCount*3;
+
+    int i = 0;
+    int vertexWriteIndex = 0;
+    int normalWriteIndex = 0;
+    int indexWriteIndex = 0;
+    int normalIndex = 0;
+    int indexIndex = 0;
+    int indexCount = 0;
+    while (i < triangleCount)
+    {
+        int quad = 1;
+        
+        int32 indices[4];
+        float normals[12];
+        float vertices[12];
+        indices[0] = atoi(indexNode->Values[indexIndex++]);
+        vertices[0] = atof(vertexNode->Values[indices[0]*3+0]);
+        vertices[1] = atof(vertexNode->Values[indices[0]*3+1]);
+        vertices[2] = atof(vertexNode->Values[indices[0]*3+2]);
+        normals[0] = atof(normalNode->Values[normalIndex++]);
+        normals[1] = atof(normalNode->Values[normalIndex++]);
+        normals[2] = atof(normalNode->Values[normalIndex++]);
+                           
+        indices[1] = atoi(indexNode->Values[indexIndex++]);
+        vertices[3] = atof(vertexNode->Values[indices[1]*3+0]);
+        vertices[4] = atof(vertexNode->Values[indices[1]*3+1]);
+        vertices[5] = atof(vertexNode->Values[indices[1]*3+2]);
+        normals[3] = atof(normalNode->Values[normalIndex++]);
+        normals[4] = atof(normalNode->Values[normalIndex++]);
+        normals[5] = atof(normalNode->Values[normalIndex++]);
+
+        int thirdIndex = atoi(indexNode->Values[indexIndex++]);
+        if (thirdIndex < 0) { quad = 0; thirdIndex = -thirdIndex-1;}
+        indices[2] = thirdIndex;
+        vertices[6] = atof(vertexNode->Values[indices[2]*3+0]);
+        vertices[7] = atof(vertexNode->Values[indices[2]*3+1]);
+        vertices[8] = atof(vertexNode->Values[indices[2]*3+2]);
+        normals[6] = atof(normalNode->Values[normalIndex++]);
+        normals[7] = atof(normalNode->Values[normalIndex++]);
+        normals[8] = atof(normalNode->Values[normalIndex++]);
+
+        uint16 indicesToWrite[4] = {0};
+        indicesToWrite[0] = indexCount++;
+        indicesToWrite[1] = indexCount++;
+        indicesToWrite[2] = indexCount++;
+        Model->Indices[indexWriteIndex++] = indicesToWrite[0];
+        Model->Vertices[vertexWriteIndex++] = vertices[0];
+        Model->Vertices[vertexWriteIndex++] = vertices[1];
+        Model->Vertices[vertexWriteIndex++] = vertices[2];
+        Model->Normals[normalWriteIndex++] = normals[0];
+        Model->Normals[normalWriteIndex++] = normals[1];
+        Model->Normals[normalWriteIndex++] = normals[2];
+        
+        Model->Indices[indexWriteIndex++] = indicesToWrite[1];
+        Model->Vertices[vertexWriteIndex++] = vertices[3];
+        Model->Vertices[vertexWriteIndex++] = vertices[4];
+        Model->Vertices[vertexWriteIndex++] = vertices[5];
+        Model->Normals[normalWriteIndex++] = normals[3];
+        Model->Normals[normalWriteIndex++] = normals[4];
+        Model->Normals[normalWriteIndex++] = normals[5];
+        
+        Model->Indices[indexWriteIndex++] = indicesToWrite[2];
+        Model->Vertices[vertexWriteIndex++] = vertices[6];
+        Model->Vertices[vertexWriteIndex++] = vertices[7];
+        Model->Vertices[vertexWriteIndex++] = vertices[8];
+        Model->Normals[normalWriteIndex++] = normals[6];
+        Model->Normals[normalWriteIndex++] = normals[7];
+        Model->Normals[normalWriteIndex++] = normals[8];
+        
+        i++;
+        
+        if (quad)
+        {
+            Model->Indices[indexWriteIndex++] = indicesToWrite[1];
+            Model->Indices[indexWriteIndex++] = indicesToWrite[2];
+
+            indices[3] = -atoi(indexNode->Values[indexIndex++])-1;
+            vertices[9] = atof(vertexNode->Values[indices[3]*3+0]);
+            vertices[10] = atof(vertexNode->Values[indices[3]*3+1]);
+            vertices[11] = atof(vertexNode->Values[indices[3]*3+2]);
+            normals[9] = atof(normalNode->Values[normalIndex++]);
+            normals[10] = atof(normalNode->Values[normalIndex++]);
+            normals[11] = atof(normalNode->Values[normalIndex++]);
+            
+            indicesToWrite[3] = indexCount++;
+            
+            Model->Indices[indexWriteIndex++] = indicesToWrite[3];
+            Model->Vertices[vertexWriteIndex++] = vertices[9];
+            Model->Vertices[vertexWriteIndex++] = vertices[10];
+            Model->Vertices[vertexWriteIndex++] = vertices[11];
+            Model->Normals[normalWriteIndex++] = normals[9];
+            Model->Normals[normalWriteIndex++] = normals[10];
+            Model->Normals[normalWriteIndex++] = normals[11];
+            i++;
+        }
+    }
+    DebugLog("Triangle Count: %d\n", triangleCount);
+    Assert(normalIndex == indexIndex*3);
 }
 
 model LoadModel(memory_arena *MainMemory, memory_arena *TempMemory, FILE* file)

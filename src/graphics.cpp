@@ -151,6 +151,9 @@ struct model
     GLfloat *UVs;
     GLfloat *Colors;
     
+    //vertex buffer size and normal buffer size need to be the same so 
+    GLsizei VertexBufferSize;
+    
     texture_material *Material;
     
     int IndexCount;
@@ -183,6 +186,34 @@ struct texture_model
     model Model;
     texture_material *Material;
 };
+
+void BindModel(model *Model)
+{
+    glGenVertexArrays(1, &Model->VertexArrayID);
+    glBindVertexArray(Model->VertexArrayID);
+    glGenBuffers(1, &Model->VertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER,
+                 Model->VertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 Model->VertexBufferSize,
+                 Model->Vertices,
+                 GL_STATIC_DRAW);
+
+    glGenBuffers(1, &Model->NormalBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER,
+                 Model->NormalBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 Model->VertexBufferSize,
+                 Model->Normals,
+                 GL_STATIC_DRAW);
+    glGenBuffers(1, &Model->IndexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                 Model->IndexBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 sizeof(GLushort)*Model->IndexCount,
+                 Model->Indices,
+                 GL_STATIC_DRAW);
+}
 
 #define _GRAPHICS_CPP__
 #endif

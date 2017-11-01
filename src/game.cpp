@@ -47,6 +47,7 @@ struct game_data
     texture_material BoxMaterial;
     color_material ColorMaterial;
     model BoxModel;
+    model MonkeyModel;
     color_model ColorBoxModel;
     
     //Scene
@@ -55,6 +56,7 @@ struct game_data
     game_object Box2;
     game_object LightBox;
     color_game_object ColorBox;
+    game_object Monkey;
 
     //New Scene
     game_object Player;
@@ -475,6 +477,21 @@ void Init(platform_data* Platform, game_data *Game)
 //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    
+    
+    FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
+    
+    Game->MonkeyModel = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
+    BindModel(&Game->MonkeyModel);
+    Game->BoxModel = Game->MonkeyModel;
+    
+    texture_material *BoxMaterial = &Game->BoxMaterial;
+    Game->MonkeyModel.Material = BoxMaterial;
+    BoxMaterial->DiffuseMap = Game->BoxDiffuseMap.Handle;
+    BoxMaterial->SpecularMap = Game->BoxSpecularMap.Handle;
+//    BoxMaterial->EmissiveMap = Game->BoxEmissiveMap.Handle;
+    BoxMaterial->Shine = 60.0f;
+    
     model *BoxModel = &Game->BoxModel;
     glGenVertexArrays(1, &BoxModel->VertexArrayID);
     glBindVertexArray(BoxModel->VertexArrayID);
@@ -576,7 +593,6 @@ void Init(platform_data* Platform, game_data *Game)
                  indexBufferSize,
                  &BoxModel->Indices[0],
                  GL_STATIC_DRAW);
-
     // make water model
     color_game_object Water = {0};
 
@@ -750,13 +766,13 @@ void Init(platform_data* Platform, game_data *Game)
     Game->WaterNormalMap = GenTextureFromBMP(&Game->MainArena, "../res/Textures/matchingNormalMap.bmp");
     //Game->WaterNormalMap = GenTextureFromBMP("../res/Textures/normalMap.bmp");
     Game->WaterDuDvMap = GenTextureFromBMP(&Game->MainArena, "../res/Textures/waterDUDV.bmp");
-    
+    /*
     texture_material *BoxMaterial = &Game->BoxMaterial;
-    BoxModel->Material = BoxMaterial;
     BoxMaterial->DiffuseMap = Game->BoxDiffuseMap.Handle;
     BoxMaterial->SpecularMap = Game->BoxSpecularMap.Handle;
 //    BoxMaterial->EmissiveMap = Game->BoxEmissiveMap.Handle;
-    BoxMaterial->Shine = 60.0f;
+    BoxMaterial->Shine = 60.0f;*/
+    BoxModel->Material = BoxMaterial;
     
     color_model *ColorBoxModel = &Game->ColorBoxModel;
     ColorBoxModel->Model = *BoxModel;
@@ -826,6 +842,14 @@ void Init(platform_data* Platform, game_data *Game)
     Light.Specular = V3(1.0f, 1.0f, 1.0f);
     Light.Power = 50.0f;
     Game->Light = Light;
+
+    game_object Monkey = { 0 };
+    Monkey.Model = &Game->MonkeyModel;
+    Monkey.Scale = V3(1.0f, 1.0f, 1.0f);
+    Monkey.Position = V3(0.0f, 10.0f, 0.0f);
+    Monkey.Axis = V3(0.25f, 1.0f, .5f);
+    Monkey.Angle = 0.0f;
+    Game->Monkey = Monkey;
     
     game_object Box = { 0 };
     Box.Model = &Game->BoxModel;
@@ -961,8 +985,7 @@ void Init(platform_data* Platform, game_data *Game)
 
     // load model from FBX
     // FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
-     FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
-     model monkey = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
+     
 
     // // get model info
     // FBX_Node* fbx_objects = FBX_GetChildByName(monkey, "Objects");
@@ -1270,6 +1293,7 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
     RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
     RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+    RenderObject(Game->Monkey, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
 
     // player and water
     if(includeWater)
