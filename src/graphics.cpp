@@ -213,7 +213,7 @@ void BindModel(model *Model)
                  sizeof(GLushort)*Model->IndexCount,
                  Model->Indices,
                  GL_STATIC_DRAW);
-
+/*
     for(int a = 0; a < Model->IndexCount; a+=3)
     {
         printf("index %i: %i, %i, %i\n",a/3,Model->Indices[a],Model->Indices[a+1],Model->Indices[a+2]);
@@ -228,6 +228,7 @@ void BindModel(model *Model)
     {
         printf("normal %i: %f, %f, %f\n",a/3,Model->Normals[a],Model->Normals[a+1],Model->Normals[a+2]);
     }
+*/
 }
 
 #define _GRAPHICS_CPP__
