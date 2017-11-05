@@ -806,6 +806,7 @@ void Init(platform_data* Platform, game_data *Game)
     WaterShader.NormalMapHandle = Game->WaterNormalMap.Handle;
     WaterShader.DuDvMapHandle = Game->WaterDuDvMap.Handle;
     WaterShader.UVOffsetHandle = glGetUniformLocation(WaterShader.Program, "UVOffset");
+    WaterShader.UVOffset = 0;
     Game->WaterShader = WaterShader;
 
     color_shader ColorShader;
