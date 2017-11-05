@@ -775,7 +775,7 @@ void Init(platform_data* Platform, game_data *Game)
     ColorMaterial->Emissive = V3(1.0f, 1.0f, 1.0f);
     ColorMaterial->Shine = 1.0f;
     
-    FILE* monkeyFile =  fopen("../res/Models/monkey.fbx", "r");
+    FILE* monkeyFile =  fopen("../res/Models/hull.fbx", "r");
     model MonkeyModel = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
     BindModel(&MonkeyModel);
     Game->MonkeyModel.Model = MonkeyModel;

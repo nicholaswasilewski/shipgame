@@ -122,6 +122,8 @@ fbx_token_type ReadToken()
         {
             global_Info.Token[charCounter++] = c;
         }
+        global_Info.Token[charCounter] = '\0';
+        printf("%s\n", global_Info.Token);
     }
     else if (IsNumberStart(c))
     {
