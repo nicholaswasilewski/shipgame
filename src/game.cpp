@@ -775,11 +775,16 @@ void Init(platform_data* Platform, game_data *Game)
     ColorMaterial->Emissive = V3(1.0f, 1.0f, 1.0f);
     ColorMaterial->Shine = 1.0f;
     
-    FILE* monkeyFile =  fopen("../res/Models/hull.fbx", "r");
+    color_material *MonkeyMaterial = PushObject(&Game->MainArena, color_material);
+    MonkeyMaterial->Diffuse = V3(0.5f, 0.5f, 0.5f);
+    MonkeyMaterial->Specular = V3(0.0f, 0.0f, 0.0f);
+    MonkeyMaterial->Emissive = V3(0.0f, 0.0f, 0.0f);
+    MonkeyMaterial->Shine = 60.0f;
+    FILE* monkeyFile =  fopen("../res/Models/hull.fbx", "rb");
     model MonkeyModel = LoadModel(&Game->MainArena, &Game->TempArena, monkeyFile);
     BindModel(&MonkeyModel);
     Game->MonkeyModel.Model = MonkeyModel;
-    Game->MonkeyModel.Material = ColorMaterial;
+    Game->MonkeyModel.Material = MonkeyMaterial;
 
     light_texture_shader Shader;
     Shader.Program = LoadShaders("../res/Shaders/lightTextureShader.vert", "../res/Shaders/lightTextureShader.frag");
@@ -845,7 +850,7 @@ void Init(platform_data* Platform, game_data *Game)
     color_game_object Monkey = { 0 };
     Monkey.ColorModel = &Game->MonkeyModel;
     Monkey.Scale = V3(1.0f, 1.0f, 1.0f);
-    Monkey.Position = V3(0.0f, 10.0f, 0.0f);
+    Monkey.Position = V3(4.0f, 0.0f, -40.0f);
     Monkey.Axis = V3(0.25f, 1.0f, .5f);
     Monkey.Angle = 0.0f;
     Game->Monkey = Monkey;
