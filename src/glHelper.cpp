@@ -148,6 +148,7 @@ void* GetGLFuncAddress(const char* name)
 #define GL_FRAMEBUFFER_UNSUPPORTED        0x8CDD
 #define GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE 0x8D56
 #define GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS 0x8DA8
+#define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS 0x8CD9
 
 #define GL_MAX_COLOR_ATTACHMENTS          0x8CDF
 #define GL_COLOR_ATTACHMENT0              0x8CE0
@@ -219,63 +220,65 @@ typedef ptrdiff_t GLintptr;
 typedef char GLchar;
 
 #define GLExtensionList \
-    GLE(GLint, GetUniformLocation, GLuint program, const GLchar *name) \
-    GLE(void, Uniform1i, GLint location, GLint v0) \
-    GLE(void, Uniform1f, GLint location, GLfloat v0) \
-    GLE(void, Uniform3f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2) \
-    GLE(void, Uniform4f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) \
-    GLE(void, UniformMatrix4fv, GLint location, GLsizei count, GLboolean transpose, const GLfloat *value) \
-    GLE(void, CompressedTexImage2D, GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data) \
-    GLE(void, TexImage2DMultisample, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations) \
-    GLE(void, TextureParameteri, GLuint texture, GLenum pname, GLint param) \
-    GLE(void, GenerateMipmap, GLenum target) \
-    GLE(GLuint, CreateShader, GLenum type) \
-    GLE(void, DeleteShader, GLuint shader) \
-    GLE(void, ShaderSource, GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length) \
-    GLE(void, CompileShader, GLuint shader) \
-    GLE(void, AttachShader, GLuint program, GLuint shader) \
-    GLE(void, DetachShader, GLuint program, GLuint shader) \
-    GLE(void, GetShaderiv, GLuint shader, GLenum pname, GLint *params) \
-    GLE(void, GetShaderInfoLog, GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog) \
-    GLE(GLuint, CreateProgram) \
-    GLE(void, DeleteProgram, GLuint program) \
-    GLE(void, LinkProgram, GLuint program) \
-    GLE(void, GetProgramiv, GLuint program, GLenum pname, GLint *params) \
-    GLE(void, GetProgramInfoLog, GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog) \
-    GLE(void, UseProgram, GLuint program) \
-    GLE(void, GenVertexArrays, GLsizei n, GLuint *arrays) \
-    GLE(void, BindVertexArray, GLuint array) \
-    GLE(void, EnableVertexAttribArray, GLuint index) \
-    GLE(void, DisableVertexAttribArray, GLuint index) \
-    GLE(void, GenBuffers, GLsizei n, GLuint *buffers) \
-    GLE(void, BindBuffer, GLenum target, GLuint buffer) \
-    GLE(void, DeleteBuffers, GLsizei n, const GLuint *buffer) \
-    GLE(void, BufferData, GLenum target, GLsizeiptr size, const void *data, GLenum usage) \
-    GLE(void, VertexAttribPointer, GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer) \
-    GLE(void, ActiveTexture, GLenum texture) \
-    GLE(void, GenFramebuffers, GLsizei n, GLuint *framebuffers) \
-    GLE(void, FramebufferTexture2D, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) \
-    GLE(GLenum, CheckFramebufferStatus, GLenum target) \
-    GLE(void, BindFramebuffer, GLenum target, GLuint framebuffer) \
-    GLE(void, DeleteFramebuffers, GLsizei n, const GLuint *framebuffers) \
-    GLE(void, GenRenderbuffers, GLsizei n, GLuint *renderbuffers) \
-    GLE(void, BindRenderbuffer, GLenum target, GLuint renderbuffer) \
-    GLE(void, DeleteRenderbuffers, GLsizei n, const GLuint *renderbuffers) \
-    GLE(void, RenderbufferStorageMultisample, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height) \
-    GLE(void, FramebufferRenderbuffer, GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer) \
-    GLE(void, BlitFramebuffer, GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
+GLE(GLint, GetUniformLocation, GLuint program, const GLchar *name) \
+GLE(void, Uniform1i, GLint location, GLint v0) \
+GLE(void, Uniform1f, GLint location, GLfloat v0) \
+GLE(void, Uniform3f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2) \
+GLE(void, Uniform4f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) \
+GLE(void, UniformMatrix4fv, GLint location, GLsizei count, GLboolean transpose, const GLfloat *value) \
+GLE(void, CompressedTexImage2D, GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data) \
+GLE(void, TexImage2DMultisample, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations) \
+GLE(void, TextureParameteri, GLuint texture, GLenum pname, GLint param) \
+GLE(void, GenerateMipmap, GLenum target) \
+GLE(GLuint, CreateShader, GLenum type) \
+GLE(void, DeleteShader, GLuint shader) \
+GLE(void, ShaderSource, GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length) \
+GLE(void, CompileShader, GLuint shader) \
+GLE(void, AttachShader, GLuint program, GLuint shader) \
+GLE(void, DetachShader, GLuint program, GLuint shader) \
+GLE(void, GetShaderiv, GLuint shader, GLenum pname, GLint *params) \
+GLE(void, GetShaderInfoLog, GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog) \
+GLE(GLuint, CreateProgram) \
+GLE(void, DeleteProgram, GLuint program) \
+GLE(void, LinkProgram, GLuint program) \
+GLE(void, GetProgramiv, GLuint program, GLenum pname, GLint *params) \
+GLE(void, GetProgramInfoLog, GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog) \
+GLE(void, UseProgram, GLuint program) \
+GLE(void, GenVertexArrays, GLsizei n, GLuint *arrays) \
+GLE(void, BindVertexArray, GLuint array) \
+GLE(void, EnableVertexAttribArray, GLuint index) \
+GLE(void, DisableVertexAttribArray, GLuint index) \
+GLE(void, GenBuffers, GLsizei n, GLuint *buffers) \
+GLE(void, BindBuffer, GLenum target, GLuint buffer) \
+GLE(void, DeleteBuffers, GLsizei n, const GLuint *buffer) \
+GLE(void, BufferData, GLenum target, GLsizeiptr size, const void *data, GLenum usage) \
+GLE(void, VertexAttribPointer, GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer) \
+GLE(void, ActiveTexture, GLenum texture) \
+GLE(void, GenFramebuffers, GLsizei n, GLuint *framebuffers) \
+GLE(void, FramebufferTexture2D, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) \
+GLE(GLenum, CheckFramebufferStatus, GLenum target) \
+GLE(void, BindFramebuffer, GLenum target, GLuint framebuffer) \
+GLE(void, DeleteFramebuffers, GLsizei n, const GLuint *framebuffers) \
+GLE(void, GenRenderbuffers, GLsizei n, GLuint *renderbuffers) \
+GLE(void, BindRenderbuffer, GLenum target, GLuint renderbuffer) \
+GLE(void, DeleteRenderbuffers, GLsizei n, const GLuint *renderbuffers) \
+GLE(void, RenderbufferStorage, GLenum target, GLenum internalformat, GLsizei width, GLsizei height) \
+GLE(void, RenderbufferStorageMultisample, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height) \
+GLE(void, FramebufferRenderbuffer, GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer) \
+GLE(void, BlitFramebuffer, GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter) \
+GLE(void, BlitNamedFramebuffer, GLuint readFramebuffer, GLuint drawFramebuffer, GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
 
 void *GetGLFuncAddress(const char *name)
 {
     void *p = (void *)wglGetProcAddress(name);
     if (p == 0 ||
-       (p == (void*)0x1) || (p == (void*)0x2) || (p == (void*)0x3) ||
-       (p == (void*)-1))
+        (p == (void*)0x1) || (p == (void*)0x2) || (p == (void*)0x3) ||
+        (p == (void*)-1))
     {
         HMODULE module = LoadLibraryA("opengl32.dll");
         p = (void *)GetProcAddress(module, name);
     }
-
+    
     return p;
 }
 
@@ -346,7 +349,9 @@ void glUniformVec4f(GLuint location, v4 vec)
     glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
 }
 
-void GLErrorShow()
+#define GLErrorShow() GLErrorShowInternal(__FILE__, __LINE__)
+
+void GLErrorShowInternal(char* file, int line)
 {
     GLenum error;
     while ((error = glGetError()) != GL_NO_ERROR)
@@ -376,7 +381,7 @@ void GLErrorShow()
         {
             msg = "Unknown GL error";
         }
-        printf("OpenGL error: %d - %s\n", error, msg);
+        printf("OpenGL error: %s:%d - %d - %s\n", file, line, error, msg);
     }
 }
 
@@ -419,6 +424,10 @@ void PrintGlFBOError()
     else if(status == GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)
     {
         msg = "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
+    }
+    else if (status == GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS)
+    {
+        msg = "GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS";
     }
     printf("OpenGL FBO status: %s\n", msg);
 }

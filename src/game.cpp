@@ -34,13 +34,13 @@ struct game_data
     bool Initialized;
     memory_arena MainArena;
     memory_arena TempArena;
-
+    
     light_texture_shader LightTextureShader;
     color_shader ColorShader;
     water_shader WaterShader;
     skybox_shader SkyBoxShader;
     camera Camera;
-
+    
     texture BoxDiffuseMap;
     texture BoxSpecularMap;
     texture BoxEmissiveMap;
@@ -57,7 +57,7 @@ struct game_data
     game_object LightBox;
     color_game_object ColorBox;
     color_game_object Monkey;
-
+    
     //New Scene
     game_object Player;
     color_game_object Water;
@@ -67,22 +67,24 @@ struct game_data
     texture WaterDuDvMap;
     skybox SkyBox;
     GLuint ReflectionFBO;
-
+    
     float BoxRotation;
+    
+    postprocessor Postprocessor;
 };
 
 texture LoadDDS(memory_arena *Memory, const char * filePath)
 {
     texture NullTexture = {0};
     int8 header[124];
-
+    
     FILE *fp = fopen(filePath, "rb");
     if (fp == 0)
     {
         DebugLog("File not found: %s", filePath);
         return NullTexture;
     }
-
+    
     char fileCode[4];
     fread(fileCode, 1, 4, fp);
     if (strncmp(fileCode, "DDS ", 4) != 0)
@@ -91,9 +93,9 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
         DebugLog("File is not DDS: %s", filePath);
         return NullTexture;
     }
-
+    
     fread(&header, 124, 1, fp);
-
+    
     uint32 height = *(uint32*)&(header[8]);
     uint32 width = *(uint32*)&(header[12]);
     uint32 linearSize = *(uint32*)&(header[16]);
@@ -109,7 +111,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
     uint8* buffer = (uint8*)PushSize(Memory, bufferSize * sizeof(uint8));
     fread(buffer, 1, bufferSize, fp);
     fclose(fp);
-
+    
     uint32 format;
     
     format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
@@ -131,7 +133,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
         DebugLog("File not DXT compressed: %s", filePath);
         return NullTexture;
     }
-
+    
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
@@ -148,7 +150,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
         w /= 2;
         h /= 2;
     }
-
+    
     texture Result = {
         width,
         height,
@@ -229,7 +231,7 @@ BMPData LoadBMP(memory_arena *Memory, char* filePath)
     uint32 width, height;
     uint32 imageSize;
     uint8* data;
-
+    
     FILE * file = fopen(filePath, "rb");
     if (!file)
     {
@@ -241,24 +243,24 @@ BMPData LoadBMP(memory_arena *Memory, char* filePath)
         DebugLog("Malformed BMP Header: %s\n", filePath);
         return NullBMP;
     }
-
+    
     if (fread(&bmpInfoHeader, sizeof(bmpInfoHeader), 1, file) != 1) {
         DebugLog("Malformed BMP Info Header: %s\n", filePath);
         return NullBMP;
     }
-
+    
     if (bmpHeader.tag[0] != 'B' || bmpHeader.tag[1] != 'M') {
         DebugLog("Not a BMP: %s\n", filePath);
         return NullBMP;
     }
-
+    
     dataPos = bmpHeader.pixelArrayOffset;
     imageSize = bmpHeader.imageSize;
     width = bmpInfoHeader.biWidth;
     height = bmpInfoHeader.biWidth;
-
+    
     data = (uint8*)PushSize(Memory, imageSize*sizeof(uint8));
-
+    
     // read bmp from bottom to top
     fseek(file, bmpHeader.pixelArrayOffset, SEEK_SET);
     for(int i = 0; i < height; i++)
@@ -266,9 +268,9 @@ BMPData LoadBMP(memory_arena *Memory, char* filePath)
         int offset = (height-i-1)*width*3;
         fread(data+offset, 1, width*3, file);
     }
-
+    
     fclose(file);
-
+    
     BMPData result = {
         dataPos,
         width,
@@ -280,55 +282,55 @@ BMPData LoadBMP(memory_arena *Memory, char* filePath)
 }
 
 texture GenCubeMapFromBMP(
-    memory_arena *Memory,
-    char* rightFile,
-    char* leftFile,
-    char* topFile,
-    char* bottomFile,
-    char* backFile,
-    char* frontFile)
+memory_arena *Memory,
+char* rightFile,
+char* leftFile,
+char* topFile,
+char* bottomFile,
+char* backFile,
+char* frontFile)
 {
-
+    
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
+    
     BMPData rightBmpData = LoadBMP(Memory, rightFile);
     glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, rightBmpData.width, rightBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, rightBmpData.data);
-//    free(rightBmpData.data);
+    //    free(rightBmpData.data);
     PopSize(Memory, rightBmpData.imageSize);
- 
+    
     BMPData leftBmpData = LoadBMP(Memory, leftFile);   
     glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGB, leftBmpData.width, leftBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, leftBmpData.data);
-//    free(leftBmpData.data);
+    //    free(leftBmpData.data);
     PopSize(Memory, leftBmpData.imageSize);
- 
+    
     BMPData topBmpData = LoadBMP(Memory, topFile);   
     glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGB, topBmpData.width, topBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, topBmpData.data);
-//    free(topBmpData.data);
+    //    free(topBmpData.data);
     PopSize(Memory, topBmpData.imageSize);
     
     BMPData bottomBmpData = LoadBMP(Memory, bottomFile);
     glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGB, bottomBmpData.width, bottomBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bottomBmpData.data);
-//    free(bottomBmpData.data);
+    //    free(bottomBmpData.data);
     PopSize(Memory, bottomBmpData.imageSize);
     
     BMPData backBmpData = LoadBMP(Memory, backFile);
     glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGB, backBmpData.width, backBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, backBmpData.data);
-//    free(backBmpData.data);
+    //    free(backBmpData.data);
     PopSize(Memory, backBmpData.imageSize);
     
     BMPData frontBmpData = LoadBMP(Memory, frontFile);
     glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, frontBmpData.width, frontBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, frontBmpData.data);
-//    free(frontBmpData.data);
+    //    free(frontBmpData.data);
     PopSize(Memory, frontBmpData.imageSize);
-
+    
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); 
-
+    
     /*
     free(rightBmpData.data);
     free(leftBmpData.data);
@@ -337,7 +339,7 @@ texture GenCubeMapFromBMP(
     free(backBmpData.data);
     free(frontBmpData.data);
     */
-
+    
     texture Result = {
         rightBmpData.width,
         rightBmpData.height,
@@ -351,16 +353,16 @@ texture GenCubeMapFromBMP(
 texture GenTextureFromBMP(memory_arena *Memory, char* filePath)
 {
     BMPData bmpData = LoadBMP(Memory, filePath);
-
+    
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
-
+    
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
+    
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bmpData.width, bmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bmpData.data);
     glGenerateMipmap(GL_TEXTURE_2D);
     
@@ -378,90 +380,32 @@ texture GenTextureFromBMP(memory_arena *Memory, char* filePath)
 GLuint LoadShaders(char* vertexShaderFilePath, char* fragmentShaderFilePath)
 {
     DebugLog("Loading %s & %s\n", vertexShaderFilePath, fragmentShaderFilePath);
-    char* vertexShaderCode;
-    GLint result = GL_FALSE;
-    int32 infoLogLength;
     int readResult;
+    FILE* vertexShaderFile = fopen(vertexShaderFilePath, "rb");
+    fseek(vertexShaderFile, 0L, SEEK_END);
+    int32 vertexShaderFileLength = ftell(vertexShaderFile);
+    rewind(vertexShaderFile);
     
-    GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-    {
-        FILE* vertexShaderFile = fopen(vertexShaderFilePath, "rb");
-        fseek(vertexShaderFile, 0L, SEEK_END);
-        int32 vertexShaderFileLength = ftell(vertexShaderFile);
-        rewind(vertexShaderFile);
- 
-        vertexShaderCode = (char*)malloc(vertexShaderFileLength+1);
-        readResult = fread(vertexShaderCode, 1, vertexShaderFileLength, vertexShaderFile);
-        fclose(vertexShaderFile);
-        vertexShaderCode[vertexShaderFileLength] = '\0';
+    char* vertexShaderCode = (char*)malloc(vertexShaderFileLength+1);
+    readResult = fread(vertexShaderCode, 1, vertexShaderFileLength, vertexShaderFile);
+    fclose(vertexShaderFile);
+    vertexShaderCode[vertexShaderFileLength] = '\0';
     
-        glShaderSource(vertexShaderID, 1, &vertexShaderCode, 0);
-        glCompileShader(vertexShaderID);
-
-        glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &result);
-        glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-        if (infoLogLength > 0)
-        {
-            DebugLog("Vertex Shader: %s:%ld:\n%s\n", vertexShaderFilePath, vertexShaderFileLength, vertexShaderCode);
-            char* error = (char*)malloc(infoLogLength);
-            glGetShaderInfoLog(vertexShaderID, infoLogLength, 0, error);
-            DebugLog("%s error:\n%s\n", vertexShaderFilePath, error);
-            free(error);
-        }
-        free(vertexShaderCode);
-    }
-
-    {
-        FILE* fragmentShaderFile = fopen(fragmentShaderFilePath, "rb");
-        fseek(fragmentShaderFile, 0L, SEEK_END);
-        long fragmentShaderFileLength = ftell(fragmentShaderFile);
-        rewind(fragmentShaderFile);
-
-        char *fragmentShaderCode = (char*)malloc(fragmentShaderFileLength+1);
-        readResult = fread(fragmentShaderCode, 1, fragmentShaderFileLength, fragmentShaderFile);
-        fragmentShaderCode[fragmentShaderFileLength] = '\0';
+    FILE* fragmentShaderFile = fopen(fragmentShaderFilePath, "rb");
+    fseek(fragmentShaderFile, 0L, SEEK_END);
+    long fragmentShaderFileLength = ftell(fragmentShaderFile);
+    rewind(fragmentShaderFile);
     
-        GLint glFragmentShaderFileLength = fragmentShaderFileLength;
-        glShaderSource(fragmentShaderID, 1, &fragmentShaderCode, &glFragmentShaderFileLength);
-        fclose(fragmentShaderFile);
-        glCompileShader(fragmentShaderID);
-
-        glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &result);
-        glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-        if (infoLogLength > 0)
-        {
-            DebugLog("Fragment Shader: %s:%ld:\n%s\n", fragmentShaderFilePath, fragmentShaderFileLength, fragmentShaderCode);
-            char* error = (char*)malloc(infoLogLength+1);
-            glGetShaderInfoLog(fragmentShaderID, infoLogLength, 0, error);
-            DebugLog("%s error:\n%s\n", fragmentShaderFilePath, error);
-            free(error);
-        }
-        free(fragmentShaderCode);
-    }
+    char *fragmentShaderCode = (char*)malloc(fragmentShaderFileLength+1);
+    readResult = fread(fragmentShaderCode, 1, fragmentShaderFileLength, fragmentShaderFile);
+    fragmentShaderCode[fragmentShaderFileLength] = '\0';
     
-    GLuint programID = glCreateProgram();
-    glAttachShader(programID, vertexShaderID);
-    glAttachShader(programID, fragmentShaderID);
-    glLinkProgram(programID);
-
-    glGetProgramiv(programID, GL_LINK_STATUS, &result);
-    glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    if (infoLogLength > 0)
-    {
-        char* error = (char*)malloc(infoLogLength+1);
-        glGetProgramInfoLog(programID, infoLogLength, 0, error);
-        DebugLog("%s\n%s\n%s\n", vertexShaderFilePath, fragmentShaderFilePath, error);
-        //printf("%s\n", error);
-        free(error);
-    }
+    GLuint ShaderProgram = CreateShaderProgram(vertexShaderCode, fragmentShaderCode);
     
-    glDetachShader(programID, vertexShaderID);
-    glDetachShader(programID, fragmentShaderID);
-    glDeleteShader(vertexShaderID);
-    glDeleteShader(fragmentShaderID);
-
-    return programID;
+    free(vertexShaderCode);
+    free(fragmentShaderCode);
+    
+    return ShaderProgram;
 }
 
 void Init(platform_data* Platform, game_data *Game)
@@ -474,14 +418,20 @@ void Init(platform_data* Platform, game_data *Game)
     glFrontFace(GL_CCW);
     glEnable(GL_CULL_FACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    
+    GLuint PostprocessorProgram = LoadShaders("../res/Shaders/postprocessor.vert", "../res/Shaders/postprocessor.frag");
+
+    framebuffer_object RBOFBO = CreateRenderTarget(GL_RENDERBUFFER, GL_RGB, GL_RGB, GL_DEPTH24_STENCIL8, 4, Platform->WindowWidth, Platform->WindowHeight);
+    framebuffer_object TextureFBO = CreateRenderTarget(GL_TEXTURE_2D, GL_RGB, GL_RGB, GL_DEPTH24_STENCIL8, 1, Platform->WindowWidth, Platform->WindowHeight);
+    Game->Postprocessor = CreatePostprocessor(PostprocessorProgram, RBOFBO, TextureFBO);
     
     texture_material *BoxMaterial = &Game->BoxMaterial;
     BoxMaterial->DiffuseMap = Game->BoxDiffuseMap.Handle;
     BoxMaterial->SpecularMap = Game->BoxSpecularMap.Handle;
-//    BoxMaterial->EmissiveMap = Game->BoxEmissiveMap.Handle;
+    //    BoxMaterial->EmissiveMap = Game->BoxEmissiveMap.Handle;
     BoxMaterial->Shine = 60.0f;
     
     model *BoxModel = &Game->BoxModel;
@@ -529,7 +479,7 @@ void Init(platform_data* Platform, game_data *Game)
                  vertexBufferSize,
                  &BoxModel->Vertices[0],
                  GL_STATIC_DRAW);
-
+    
 #define FrontNormal 0.0f, 0.0f, 1.0f
 #define BackNormal 0.0f, 0.0f, -1.0f
 #define UpNormal 0.0f, 1.0f, 0.0f
@@ -545,11 +495,11 @@ void Init(platform_data* Platform, game_data *Game)
         LeftNormal, LeftNormal, LeftNormal,LeftNormal,
         RightNormal, RightNormal, RightNormal,RightNormal,
     };
-
+    
     size_t normalBufferSize = sizeof(normalBufferData);
     BoxModel->Normals = (GLfloat*)malloc(normalBufferSize);
     memcpy(BoxModel->Normals, normalBufferData, normalBufferSize);
-        
+    
     glGenBuffers(1, &BoxModel->NormalBuffer);
     glBindBuffer(GL_ARRAY_BUFFER,
                  BoxModel->NormalBuffer);
@@ -557,7 +507,7 @@ void Init(platform_data* Platform, game_data *Game)
                  normalBufferSize,
                  &BoxModel->Normals[0],
                  GL_STATIC_DRAW);
-        
+    
     GLushort indexBufferData[] = {
         0,1,2,
         1,3,2,
@@ -573,11 +523,11 @@ void Init(platform_data* Platform, game_data *Game)
         21,23,22
     };
     BoxModel->IndexCount = sizeof(indexBufferData)/sizeof(GLushort);
-
+    
     size_t indexBufferSize = sizeof(indexBufferData);
     BoxModel->Indices = (GLushort*)malloc(indexBufferSize);
     memcpy(BoxModel->Indices, indexBufferData, indexBufferSize);
-
+    
     glGenBuffers(1, &BoxModel->IndexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
                  BoxModel->IndexBuffer);
@@ -587,17 +537,17 @@ void Init(platform_data* Platform, game_data *Game)
                  GL_STATIC_DRAW);
     // make water model
     color_game_object Water = {0};
-
+    
     //Water.ColorModel = &WaterColorModel;
     //Water.ColorModel->Material = &WaterColorMaterial;
     Water.ColorModel = &Game->WaterColorModel;
     Water.ColorModel->Material = &Game->WaterColorMaterial;
-
+    
     Water.Scale = V3(1.0f, 1.0f, 1.0f);
     Water.Position = V3(0.0f, 0.0f, 0.0f);
     Water.Axis = V3(0.25f, 1.0f, .5f);
     Water.Angle = 0.0f;
-
+    
     Water.ColorModel->Material->Diffuse = V3(0.1f, 0.5f, 0.9f);
     Water.ColorModel->Material->Specular = V3(0.4f, 0.7f, 1);
     Water.ColorModel->Material->Emissive = V3(0.1f, 0.5f, 0.9f);
@@ -609,10 +559,10 @@ void Init(platform_data* Platform, game_data *Game)
     GLfloat waterVertices[] = {
         -1.0f, 0.0f,  1.0f,
         -1.0f, 0.0f, -1.0f,
-         1.0f, 0.0f,  1.0f,
-         1.0f, 0.0f, -1.0f
+        1.0f, 0.0f,  1.0f,
+        1.0f, 0.0f, -1.0f
     };
-
+    
     // Water Vertices
     int vertCount = 20;
     float vertWidth = 20.0f; 
@@ -634,7 +584,7 @@ void Init(platform_data* Platform, game_data *Game)
             // DebugLog("Vertices %i: %f\n", start+2, Water.ColorModel->Model.Vertices[start+2]);
         }
     }
-
+    
     glGenBuffers(1, &Water.ColorModel->Model.VertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, Water.ColorModel->Model.VertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, waterBufferSize, &Water.ColorModel->Model.Vertices[0], GL_STATIC_DRAW);
@@ -663,12 +613,12 @@ void Init(platform_data* Platform, game_data *Game)
             // DebugLog("Indices %i: %i\n", start+5, Water.ColorModel->Model.Indices[start+5]);
         }
     } 
-
+    
     Water.ColorModel->Model.IndexCount = waterIndexSize / sizeof(GLushort);
     glGenBuffers(1, &Water.ColorModel->Model.IndexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Water.ColorModel->Model.IndexBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, waterIndexSize, Water.ColorModel->Model.Indices, GL_STATIC_DRAW);
-
+    
     // Water UVs
     size_t waterUVBufferSize = sizeof(GLfloat)*(vertCount)*(vertCount)*2;
     Water.ColorModel->Model.UVs = (GLfloat*)malloc(waterUVBufferSize); 
@@ -684,13 +634,13 @@ void Init(platform_data* Platform, game_data *Game)
             // DebugLog("UVs %i: %f\n", start+1, Water.ColorModel->Model.UVs[start+1]);
         }
     }
-
+    
     glGenBuffers(1, &Water.ColorModel->Model.UVBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, Water.ColorModel->Model.UVBuffer);
     glBufferData(GL_ARRAY_BUFFER, waterUVBufferSize, &Water.ColorModel->Model.UVs[0], GL_STATIC_DRAW);
     
     Game->Water = Water;
-
+    
 #if DIE
     GLfloat OneThird = 1.0f/3.0f;
     GLfloat TwoThirds = 2.0f/3.0f;
@@ -699,27 +649,27 @@ void Init(platform_data* Platform, game_data *Game)
         0.0f, OneThird,
         OneThird, 0.0f,
         OneThird, OneThird,
-
+        
         TwoThirds, OneThird,
         TwoThirds, TwoThirds,
         1.0f, OneThird,
         1.0f, TwoThirds,
-
+        
         OneThird, 0.0f,
         OneThird, OneThird,
         TwoThirds, 0.0f,
         TwoThirds, OneThird,
-
+        
         OneThird, OneThird,
         OneThird, TwoThirds,
         TwoThirds, OneThird,
         TwoThirds, TwoThirds,
-
+        
         TwoThirds,0.0f,
         TwoThirds,OneThird,
         1.0f, 0.0f,
         1.0f, OneThird,
-
+        
         0.0f, OneThird,
         0.0f, TwoThirds,
         OneThird, OneThird,
@@ -728,31 +678,31 @@ void Init(platform_data* Platform, game_data *Game)
 #elif defined(CONTAINER)
 #define FACE                                        \
     0.0f, 0.0f,                                        \
-        0.0f, 1.0f,                                \
-        1.0f, 0.0f,                                \
-        1.0f, 1.0f                                \
-        
-        
+    0.0f, 1.0f,                                \
+    1.0f, 0.0f,                                \
+    1.0f, 1.0f                                \
+    
+    
     GLfloat uvBufferData[] = {
         FACE, FACE, FACE, FACE, FACE, FACE
     };
 #undef FACE
-
+    
 #endif
     size_t uvBufferSize = sizeof(uvBufferData);
     BoxModel->UVs = (GLfloat*)malloc(uvBufferSize);
     memcpy(BoxModel->UVs, uvBufferData, uvBufferSize);
-        
+    
     glGenBuffers(1, &BoxModel->UVBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, BoxModel->UVBuffer);
     glBufferData(GL_ARRAY_BUFFER, uvBufferSize, BoxModel->UVs, GL_STATIC_DRAW);
-
+    
 #if DIE
     Game->BoxDiffuseMap = LoadDDS(&Game->MainArena, "../res/Textures/uvtemplate.dds");
 #elif defined(CONTAINER)
     Game->BoxDiffuseMap = LoadDDS(&Game->MainArena, "../res/Textures/container.dds");
 #endif
-
+    
     Game->BoxSpecularMap = LoadDDS(&Game->MainArena, "../res/Textures/containerspecular.dds");
     Game->BoxEmissiveMap = LoadDDS(&Game->MainArena, "../res/Textures/containeremissive.dds");
     Game->WaterNormalMap = GenTextureFromBMP(&Game->MainArena, "../res/Textures/matchingNormalMap.bmp");
@@ -785,7 +735,7 @@ void Init(platform_data* Platform, game_data *Game)
     BindModel(&MonkeyModel);
     Game->MonkeyModel.Model = MonkeyModel;
     Game->MonkeyModel.Material = MonkeyMaterial;
-
+    
     light_texture_shader Shader;
     Shader.Program = LoadShaders("../res/Shaders/lightTextureShader.vert", "../res/Shaders/lightTextureShader.frag");
     Shader.M = glGetUniformLocation(Shader.Program, "M");
@@ -796,7 +746,7 @@ void Init(platform_data* Platform, game_data *Game)
     Shader.Light = CreateLightBinding(Shader.Program);
     Shader.Material = CreateMaterialBinding(Shader.Program);
     Game->LightTextureShader = Shader;
-
+    
     water_shader WaterShader;
     WaterShader.Program = LoadShaders("../res/Shaders/waterShader.vert", "../res/Shaders/waterShader.frag");
     WaterShader.M = glGetUniformLocation(WaterShader.Program, "M");
@@ -813,22 +763,22 @@ void Init(platform_data* Platform, game_data *Game)
     WaterShader.UVOffsetHandle = glGetUniformLocation(WaterShader.Program, "UVOffset");
     WaterShader.UVOffset = 0;
     Game->WaterShader = WaterShader;
-
+    
     color_shader ColorShader;
     ColorShader.Program = LoadShaders("../res/Shaders/vertexShader.vert", "../res/Shaders/fragmentShader.frag");
     ColorShader.M = glGetUniformLocation(ColorShader.Program, "M");
     ColorShader.V = glGetUniformLocation(ColorShader.Program, "V");
     ColorShader.MVP = glGetUniformLocation(ColorShader.Program, "MVP");
-
+    
     ColorShader.CameraPosition = glGetUniformLocation(ColorShader.Program, "CameraPosition");
     ColorShader.Light = CreateLightBinding(ColorShader.Program);
-
+    
     ColorShader.Material.Diffuse = glGetUniformLocation(ColorShader.Program, "Material.Diffuse");
     ColorShader.Material.Specular = glGetUniformLocation(ColorShader.Program, "Material.Specular");
     ColorShader.Material.Emissive = glGetUniformLocation(ColorShader.Program, "Material.Emissive");
     ColorShader.Material.Shine = glGetUniformLocation(ColorShader.Program, "Material.Shine");
     Game->ColorShader = ColorShader;
-        
+    
     camera Camera = {0};
     Camera.FOV = PI*.25f;
     Camera.Aspect = 800.0f/600.0f;
@@ -838,7 +788,7 @@ void Init(platform_data* Platform, game_data *Game)
     Camera.Forward = Normalize(V3(0.0f, -0.2f,-1.0f));
     Camera.Up = V3(0,1,0);
     Game->Camera = Camera;
-
+    
     light Light = { 0 };
     Light.Position = V4(4.0f, 3.0f, -40.0f, 1.0f);
     Light.Ambient = V3(0.1f, 0.1f, 0.1f);
@@ -846,7 +796,7 @@ void Init(platform_data* Platform, game_data *Game)
     Light.Specular = V3(1.0f, 1.0f, 1.0f);
     Light.Power = 50.0f;
     Game->Light = Light;
-
+    
     color_game_object Monkey = { 0 };
     Monkey.ColorModel = &Game->MonkeyModel;
     Monkey.Scale = V3(1.0f, 1.0f, 1.0f);
@@ -857,13 +807,13 @@ void Init(platform_data* Platform, game_data *Game)
     
     game_object Box = { 0 };
     Box.Model = &Game->BoxModel;
-
+    
     Box.Scale = V3(1.0f, 1.0f, 1.0f);
     Box.Position = V3(0.0f, 0.0f, 0.0f);
     Box.Axis = V3(0.25f, 1.0f, .5f);
     Box.Angle = 0.0f;
     Game->Box = Box;
-
+    
     game_object Box2 = { 0 };
     Box2.Model = &Game->BoxModel;
     Box2.Scale = V3(0.5f, 0.5f, 0.5f);
@@ -871,7 +821,7 @@ void Init(platform_data* Platform, game_data *Game)
     Box2.Axis = V3(0.0f, 1.0f, 0.0f);
     Box2.Angle = PI*0.25f;
     Game->Box2 = Box2;
-
+    
     game_object LightBox = { 0 };
     LightBox.Model = &Game->BoxModel;
     LightBox.Scale = V3(0.5f, 0.5f, 0.5f);
@@ -879,7 +829,7 @@ void Init(platform_data* Platform, game_data *Game)
     LightBox.Axis = V3(0.0f, 1.0f, 0.0f);
     LightBox.Angle = 0.0f;
     Game->LightBox = LightBox;
-
+    
     color_game_object ColorBox = { 0 };
     ColorBox.ColorModel = &Game->ColorBoxModel;
     ColorBox.Scale = V3(0.5f, 0.5f, 0.5f);
@@ -887,7 +837,7 @@ void Init(platform_data* Platform, game_data *Game)
     ColorBox.Axis = V3(0.0f, 1.0f, 0.0f);
     ColorBox.Angle = 0.0f;
     Game->ColorBox = ColorBox;
-
+    
     game_object Player = { 0 };
     Player.Model = &Game->BoxModel;
     Player.Scale = V3(0.5f, 2.0f, 0.5f);
@@ -895,7 +845,7 @@ void Init(platform_data* Platform, game_data *Game)
     Player.Axis = V3(0.0f, 1.0f, 0.0f);
     Player.Angle = 0.0f;
     Game->Player = Player;
-
+    
     
     // ********************************
     // Start SkyBox
@@ -906,45 +856,45 @@ void Init(platform_data* Platform, game_data *Game)
     GLfloat skyboxVertexBufferData[] = {
         -1.0f,  1.0f, -1.0f,
         -1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f,  1.0f, -1.0f,
         -1.0f,  1.0f, -1.0f,
-    
+        
         -1.0f, -1.0f,  1.0f,
         -1.0f, -1.0f, -1.0f,
         -1.0f,  1.0f, -1.0f,
         -1.0f,  1.0f, -1.0f,
         -1.0f,  1.0f,  1.0f,
         -1.0f, -1.0f,  1.0f,
-    
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-    
+        
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        
         -1.0f, -1.0f,  1.0f,
         -1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f, -1.0f,  1.0f,
         -1.0f, -1.0f,  1.0f,
-    
+        
         -1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f, -1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
         -1.0f,  1.0f,  1.0f,
         -1.0f,  1.0f, -1.0f,
-    
+        
         -1.0f, -1.0f, -1.0f,
         -1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
         -1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f
+        1.0f, -1.0f,  1.0f
     };
     size_t skyboxVertexBufferSize = sizeof(skyboxVertexBufferData);
     SkyBox->Vertices = (GLfloat*)malloc(skyboxVertexBufferSize);
@@ -956,7 +906,7 @@ void Init(platform_data* Platform, game_data *Game)
                  skyboxVertexBufferSize,
                  &SkyBox->Vertices[0],
                  GL_STATIC_DRAW);
-
+    
     SkyBox->Texture = GenCubeMapFromBMP(
         &Game->MainArena,
         "../res/Textures/skybox/right.bmp",
@@ -965,7 +915,7 @@ void Init(platform_data* Platform, game_data *Game)
         "../res/Textures/skybox/bottom.bmp",
         "../res/Textures/skybox/back.bmp",
         "../res/Textures/skybox/front.bmp");
-        
+    
     skybox_shader SkyBoxShader;
     SkyBoxShader.Program = LoadShaders("../res/Shaders/skybox.vert", "../res/Shaders/skybox.frag");
     SkyBoxShader.M = glGetUniformLocation(SkyBoxShader.Program, "M");
@@ -977,27 +927,27 @@ void Init(platform_data* Platform, game_data *Game)
     glGenFramebuffers(1, &Game->ReflectionFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
+    
     glGenTextures(1, &Game->WaterShader.ReflectionHandle);
     glBindTexture(GL_TEXTURE_2D, Game->WaterShader.ReflectionHandle);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Game->WaterShader.ReflectionHandle, 0);
-
+    
     PrintGlFBOError();
-
+    
     // load model from FBX
     // FILE* monkeyFile =  fopen("../res/Models/Rock_Medium_SPR.fbx", "r");
-     
-
+    
+    
     // // get model info
     // FBX_Node* fbx_objects = FBX_GetChildByName(monkey, "Objects");
     // FBX_Node* fbx_model = FBX_GetChildByName(fbx_objects, "Model");
     // FBX_Node* fbx_vertices = FBX_GetChildByName(fbx_model, "Vertices");
     // DebugLog("Vertex Count: %d\n", fbx_vertices->ValueCount);
     // DebugLog("Vertex0: %s\n", fbx_vertices->Values[0]);
-
+    
     Game->Initialized = true;
 }
 
@@ -1008,22 +958,22 @@ void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4
     mat4 Translation = MakeTranslation(GameObject.Position);
     mat4 Model = Translation * Rotation * Scale;
     mat4 MVP = Projection * View * Model;
-
+    
     glUseProgram(Shader.Program);
     glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
     glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
     glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
-
+    
     glUniformVec3f(Shader.CameraPosition, Camera.Position);
     
     SetPointLightUniforms(Shader.Light, Light);
-
+    
     color_material *Material = GameObject.ColorModel->Material;
     glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
     glUniformVec3f(Shader.Material.Emissive, Material->Emissive);
     glUniformVec3f(Shader.Material.Specular, Material->Specular);
     glUniform1f(Shader.Material.Shine, Material->Shine);
-
+    
     model ObjectModel = GameObject.ColorModel->Model;
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.VertexBuffer);
@@ -1033,7 +983,7 @@ void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4
                           GL_FALSE,
                           0,
                           (void*)0
-        );
+                          );
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.NormalBuffer);
     glVertexAttribPointer(1,
@@ -1042,14 +992,14 @@ void RenderObject(color_game_object GameObject, camera Camera, light Light, mat4
                           GL_FALSE,
                           0,
                           (void*)0
-        );
-
+                          );
+    
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjectModel.IndexBuffer);
     glDrawElements(GL_TRIANGLES,
                    ObjectModel.IndexCount,
                    GL_UNSIGNED_SHORT,
                    (void*)0
-        );
+                   );
     
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -1061,23 +1011,23 @@ void RenderSkyBox(skybox SkyBox, camera Camera, light Light, mat4 Projection, ma
     // remove translation part of view matrix
     View = Mat4(Mat3(View));
     mat4 MVP = Projection * View;
-
+    
     glDepthMask(GL_FALSE);
     glDepthFunc(GL_LEQUAL);
-
+    
     glUseProgram(Shader.Program);
     glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
     glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
     
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, Shader.SkyBox);
-
+    
     glBindBuffer(GL_ARRAY_BUFFER, SkyBox.VertexBuffer);
     glBindVertexArray(SkyBox.VertexArrayID);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glDrawArrays(GL_TRIANGLES, 0, 36);
-
+    
     glDisableVertexAttribArray(0);
     
     glDepthMask(GL_TRUE);
@@ -1086,22 +1036,22 @@ void RenderSkyBox(skybox SkyBox, camera Camera, light Light, mat4 Projection, ma
 
 void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 Projection, mat4 View, water_shader Shader)
 {
-
+    
     mat4 Rotation = MakeRotation(GameObject.Axis, GameObject.Angle);
     mat4 Scale = MakeScale(GameObject.Scale);
     mat4 Translation = MakeTranslation(GameObject.Position);
     mat4 Model = Translation * Rotation * Scale;
     mat4 MVP = Projection * View * Model;
-
+    
     glBindVertexArray(GameObject.ColorModel->Model.VertexArrayID);
     glUseProgram(Shader.Program);
     glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
     glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
     glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
-
+    
     glUniformVec3f(Shader.CameraPosition, Camera.Position);
     SetPointLightUniforms(Shader.Light, Light);
-
+    
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Shader.NormalMapHandle);
     glActiveTexture(GL_TEXTURE1);
@@ -1112,7 +1062,7 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
     glUniform1i(Shader.DuDvMap, 1);
     glUniform1i(Shader.ReflectionMap, 2);
     //DebugLog("%i %i %i %i\n", Shader.NormalMapHandle, Shader.ReflectionHandle, Shader.NormalMap, Shader.ReflectionMap);
-
+    
     color_material *Material = GameObject.ColorModel->Material;
     glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
     glUniformVec3f(Shader.Material.Emissive, Material->Emissive);
@@ -1120,9 +1070,9 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
     glUniform1f(Shader.Material.Shine, Material->Shine);
     
     glUniform1f(Shader.UVOffsetHandle, Shader.UVOffset);
-
+    
     model ObjectModel = GameObject.ColorModel->Model;
-
+    
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.VertexBuffer);
     glVertexAttribPointer(0,
@@ -1131,10 +1081,10 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
                           GL_FALSE,
                           0,
                           (void*)0
-        );
-
+                          );
+    
     //DebugLog("ObjectModel.UVs[1] %f,%f\n", ObjectModel.UVs[6],ObjectModel.UVs[7]);
-
+    
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, ObjectModel.UVBuffer);
     glVertexAttribPointer(1,
@@ -1143,15 +1093,15 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
                           GL_FALSE,
                           0,
                           (void*)0
-        );
-
+                          );
+    
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjectModel.IndexBuffer);
     glDrawElements(GL_TRIANGLES,
                    ObjectModel.IndexCount,
                    GL_UNSIGNED_SHORT,
                    (void*)0
-        );
-
+                   );
+    
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
 }
@@ -1165,16 +1115,16 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
     mat4 MVP = Projection * View * Model;
     
     glBindVertexArray(GameObject.Model->VertexArrayID);
-
+    
     glUseProgram(Shader.Program);
     glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
     glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
     glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
-
+    
     glUniformVec3f(Shader.CameraPosition, Camera.Position);
-
+    
     SetPointLightUniforms(Shader.Light, Light);
-
+    
     texture_material *Material = GameObject.Model->Material;
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Material->DiffuseMap);
@@ -1187,7 +1137,7 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
     glUniform1i(Shader.Material.Specular, 1);
     glUniform1f(Shader.Material.Shine, Material->Shine);
     glUniform1i(Shader.Material.Emissive, 2);
-
+    
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->VertexBuffer);
     glVertexAttribPointer(0,
@@ -1196,7 +1146,7 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
                           GL_FALSE,
                           0,
                           (void*)0
-        );
+                          );
     
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->UVBuffer);
@@ -1206,7 +1156,7 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
                           GL_FALSE,
                           0,
                           (void*)0
-        );
+                          );
     
     glEnableVertexAttribArray(2);
     glBindBuffer(GL_ARRAY_BUFFER, GameObject.Model->NormalBuffer);
@@ -1216,14 +1166,14 @@ void RenderObject(game_object GameObject, camera Camera, light Light, mat4 Proje
                           GL_FALSE,
                           0,
                           (void*)0
-        );
-
+                          );
+    
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GameObject.Model->IndexBuffer);
     glDrawElements(GL_TRIANGLES,
                    GameObject.Model->IndexCount,
                    GL_UNSIGNED_SHORT,
                    (void*)0
-        );
+                   );
     
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -1245,7 +1195,7 @@ void Update(platform_data *Platform, game_data *Game)
     {
         CameraStrafe(&Game->Camera, Input->dT, 3.0f);
     }
-
+    
     if (Keyboard.Forward.Down)
     {
         CameraMoveForward(&Game->Camera, Input->dT, 3.0f);
@@ -1263,7 +1213,7 @@ void Update(platform_data *Platform, game_data *Game)
     {
         CameraMoveUp(&Game->Camera, Input->dT, -3.0f);
     }
-
+    
     if (Keyboard.UpperLeft.Down)
     {
         RollCamera(&Game->Camera, Input->dT, 0.5f);
@@ -1272,14 +1222,14 @@ void Update(platform_data *Platform, game_data *Game)
     {
         RollCamera(&Game->Camera, Input->dT, -0.5f);
     }
-
+    
     TurnCamera(&Game->Camera,
                Keyboard.RightStick.X / 100.0f,
                Keyboard.RightStick.Y / 100.0f,
                Input->dT*1.0f);
-
+    
     Game->Box.Angle += PI*(1.0f/120.0f);
-
+    
     Game->WaterShader.UVOffset += 0.0005f;
     if(Game->WaterShader.UVOffset >= 1.0f)
     {
@@ -1291,20 +1241,20 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-
+    
     //RenderObject(Game->Box, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     //RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->ColorBox, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
     RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
     RenderObject(Game->Monkey, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
-
+    
     // player and water
     if(includeWater)
     {
         RenderWater(Game->Water, Game->Camera, Game->Light, Projection, View, Game->WaterShader);
     }
-
+    
     // skybox comes last, to save on performance
     RenderSkyBox(Game->SkyBox, Game->Camera, Game->Light, Projection, View, Game->SkyBoxShader);
 }
@@ -1320,7 +1270,7 @@ void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, m
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
     glDisable(GL_MULTISAMPLE);
-
+    
     glBindFramebuffer(GL_READ_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TargetBuffer->ResolveFramebufferId);
     glBlitFramebuffer(0, 0, BufferWidth, BufferHeight,
@@ -1332,17 +1282,17 @@ void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, m
 
 void Render(platform_data *Platform, game_data *Game)
 {
-
+    
     mat4 Projection = GenerateCameraPerspective(Game->Camera);
     mat4 View = GenerateCameraView(Game->Camera);
 #if OPEN_VR
     float EyeDistance = 1.0f;
     camera LeftEyeCamera = Game->Camera;
     LeftEyeCamera.Position = LeftEyeCamera.Position + -EyeDistance*Cross(LeftEyeCamera.Forward,
-                                                                        LeftEyeCamera.Up);
+                                                                         LeftEyeCamera.Up);
     camera RightEyeCamera = Game->Camera;
     RightEyeCamera.Position = RightEyeCamera.Position + EyeDistance*Cross(RightEyeCamera.Forward,
-                                                                           RightEyeCamera.Up);
+                                                                          RightEyeCamera.Up);
     
     mat4 LeftEyeView = GenerateCameraView(LeftEyeCamera);
     mat4 RightEyeView = GenerateCameraView(RightEyeCamera);
@@ -1355,16 +1305,37 @@ void Render(platform_data *Platform, game_data *Game)
         RenderToTarget(Platform, Game, Projection, RightEyeView, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
     }
 #endif
-
+    
     // render reflection
     mat4 ReflectView = GenerateReflectionCameraView(Game->Camera);
     glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO);
     glViewport(0, 0, 800, 600);
     RenderScene(Game, Projection, ReflectView, false);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    BindRenderTarget(Game->Postprocessor.RBOFBO);
     glViewport(0, 0, Platform->WindowWidth, Platform->WindowHeight);
     RenderScene(Game, Projection, View, true);
+    
+    // Resolve renderbuffer to Texture
+    GLuint ReadBuffer = Game->Postprocessor.RBOFBO.Id;
+    GLuint DrawBuffer = Game->Postprocessor.TextureFBO.Id;
+    glBlitNamedFramebuffer(ReadBuffer, DrawBuffer, 
+                           0, 0, Platform->WindowWidth, Platform->WindowHeight, 
+                           0, 0, Platform->WindowWidth, Platform->WindowHeight,
+                           GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    
+    glBlitNamedFramebuffer(DrawBuffer, 0, 
+                           0, 0, Platform->WindowWidth, Platform->WindowHeight, 
+                           0, 0, Platform->WindowWidth, Platform->WindowHeight,
+                           GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    // Post-process scene texture into front buffer.
+    glBindVertexArray(Game->Postprocessor.VAO);
+    glUseProgram(Game->Postprocessor.Program);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, Game->Postprocessor.TextureFBO.ColorBufferId);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
 }
 
 void UpdateAndRender(platform_data *Platform)
@@ -1377,6 +1348,7 @@ void UpdateAndRender(platform_data *Platform)
         Init(Platform, Game);
         printf("GLInit Errors:\n");
         GLErrorShow();
+        printf("End errors\n");
     }
     Update(Platform, Game);
     GLErrorShow();
