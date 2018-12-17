@@ -1,5 +1,7 @@
 #ifndef _GRAPHICS_CPP__
 
+#include "texture.cpp"
+
 struct light
 {
     v4 Position;
@@ -8,15 +10,6 @@ struct light
     v3 Specular;
     float Power;
 };
-
-struct texture
-{
-    uint32 Height;
-    uint32 Width;
-    GLuint Handle;
-    uint8* Data;
-};
-
 struct color_material
 {
     v3 Ambient;
@@ -42,6 +35,63 @@ material_binding CreateMaterialBinding(GLuint ShaderProgram)
     MaterialBinding.Emissive = glGetUniformLocation(ShaderProgram, "Material.Emissive");
     MaterialBinding.Shine = glGetUniformLocation(ShaderProgram, "Material.Shine");
     return MaterialBinding;
+};
+
+enum uniform_type {
+    Uniform1f,
+    Uniform1fv,
+    Uniform1i,
+    Uniform1iv,
+    Uniform1ui,
+    Uniform1uiv,
+    Uniform2f,
+    Unifom2fv,
+    Uniform2i,
+    Uniform2iv,
+    Uniform2ui,
+    Uniform2uiv,
+    Uniform3f,
+    Uniform3fv,
+    Uniform3i,
+    Uniform3iv,
+    Uniform3ui,
+    Uniform3uiv,
+    Uniform4f,
+    Uniform4fv,
+    Uniform4i,
+    Uniform4iv,
+    Uniform4ui,
+    Uniform4uiv,
+    UniformMatrix2fv,
+    UniformMatrix2x3fv,
+    UniformMatrix2x4fv,
+    UniformMatrix3fv,
+    UniformMatrix3x2fv,
+    UniformMatrix3x4fv,
+    UniformMatrix4fv,
+    UniformMatrix4x2fv,
+    UniformMatrix4x3fv
+};
+
+struct uniform 
+{
+    uniform_type Type;
+    GLint Location;
+    void* Value;
+};
+
+struct mat_texture
+{
+    GLenum TextureUnit;
+    texture Texture;
+};
+
+struct material
+{
+    int TextureCount;
+    mat_texture* Textures;
+    int UniformCount;
+    uniform* Uniforms;
 };
 
 struct light_binding
@@ -84,6 +134,30 @@ struct color_shader
     
     light_binding Light;
     material_binding Material;
+};
+
+struct circle_shader {
+    GLuint Program;
+    GLuint M;
+    GLuint V;
+    GLuint MVP;
+    GLuint Radius;
+    GLuint Width;
+    GLuint FilledAngle;
+    GLuint FillColor;
+};
+
+struct shader
+{
+    GLuint Program;
+    
+    GLuint M;
+    GLuint V;
+    GLuint MVP;
+    GLuint Radius;
+    GLuint Width;
+    GLuint FilledAngle;
+    GLuint FillColor;
 };
 
 struct texture_material
@@ -143,6 +217,219 @@ struct water_shader
     GLuint ReflectionHandle;
 };
 
+struct vertex_attrib_info 
+{
+    GLuint Index;
+    GLint Size;
+    GLenum Type;
+    GLboolean Normalized;
+    GLsizei Stride;
+    GLvoid* Offset;
+};
+
+vertex_attrib_info STANDARD_3D_VERTEX_ATTRIB_INFO = {
+    0,
+    3,
+    GL_FLOAT,
+    GL_FALSE,
+    0,
+    (GLvoid*)0
+};
+
+vertex_attrib_info STANDARD_NORMAL_VERTEX_ATTRIB_INFO = {
+    1,
+    3,
+    GL_FLOAT,
+    GL_FALSE,
+    0,
+    (GLvoid*)0
+};
+
+struct buffer_info
+{
+    GLuint DataBufferId;
+    GLenum Target;
+    vertex_attrib_info VertexAttribInfo;
+    
+    int BufferLength;
+    void* Data;
+};
+
+struct index_buffer_info
+{
+    GLuint Id;
+    GLsizei Count;
+    GLenum Type;  // GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INT
+    void* Offset;
+    void* Data;
+};
+
+void SetIndexBuffer(GLuint IndexBufferId)
+{
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IndexBufferId);
+}
+
+void SetVertexAttribPointerInfo(vertex_attrib_info VertexAttribInfo)
+{
+    glEnableVertexAttribArray(VertexAttribInfo.Index);
+    glVertexAttribPointer(VertexAttribInfo.Index,
+                          VertexAttribInfo.Size,
+                          VertexAttribInfo.Type,
+                          VertexAttribInfo.Normalized,
+                          VertexAttribInfo.Stride,
+                          VertexAttribInfo.Offset);
+}
+
+void EnableVertexAttributeBuffer(buffer_info BufferInfo)
+{
+    glBindBuffer(BufferInfo.Target, BufferInfo.DataBufferId);
+    SetVertexAttribPointerInfo(BufferInfo.VertexAttribInfo);
+}
+
+void DisableVertexAttributeBuffer(buffer_info BufferInfo)
+{
+    glDisableVertexAttribArray(BufferInfo.VertexAttribInfo.Index);
+}
+
+struct model2
+{
+    GLfloat *Vertices;
+    GLfloat *Normals;
+    GLushort *Indices;
+    GLfloat *UVs;
+    GLfloat *Colors;
+    
+    //vertex buffer size and normal buffer size need to be the same so just keep one I guess.
+    GLsizei VertexBufferSize;
+    int IndexCount;
+    int VertexAttributeCount;
+    /*Stuff above this line should be set before the BindModel process.*/
+    
+    color_material* Material;
+    
+    GLuint VertexArrayId;
+    GLuint IndexBufferId;
+    union {
+        struct {
+            buffer_info VertexBufferInfo;
+            buffer_info NormalBufferInfo;
+            buffer_info IndexBufferInfo;
+            buffer_info ColorBufferInfo;
+            buffer_info UVBufferInfo;
+        };
+        buffer_info VertexAttributeBuffers[5];
+    };
+};
+
+struct attribute_buffer
+{
+    int Size;
+    GLenum Usage;
+    void* Data;
+};
+
+struct model3
+{
+    GLuint Shader;
+    
+    int IndexCount;
+    index_buffer_info* IndexBuffer;
+    
+    int VertexCount;
+    int AttributeCount;
+    buffer_info* Attributes;
+    
+    int UniformCount;
+    uniform* Uniforms;
+};
+
+model3 LoadBuffersToGpu(memory_arena* Arena, int vertexCount, attribute_buffer* unloadedBuffers, int bufferCount, GLushort* indices, int indexCount)
+{
+    model3 Model = {0};
+    Model.VertexCount = vertexCount;
+    GLuint* BufferIds = PushArray(Arena, bufferCount, GLuint);
+    glGenBuffers(bufferCount, BufferIds);
+    buffer_info* LoadedBuffers = PushArray(Arena, bufferCount, buffer_info);
+    
+    for(int i = 0; i < bufferCount; i++)
+    {
+        glBindBuffer(1, BufferIds[i]);
+        glBufferData(GL_ARRAY_BUFFER,
+                     unloadedBuffers[i].Size,
+                     unloadedBuffers[i].Data,
+                     unloadedBuffers[i].Usage);
+        
+        LoadedBuffers[i].DataBufferId = BufferIds[i];
+        LoadedBuffers[i].Data = unloadedBuffers[i].Data;
+        LoadedBuffers[i].Target = GL_ARRAY_BUFFER;
+    }
+    
+    Model.AttributeCount = bufferCount;
+    Model.Attributes = LoadedBuffers;
+    
+    if (indexCount > 0 && indices != 0)
+    {
+        index_buffer_info* IndexBufferInfo = PushObject(Arena, index_buffer_info);
+        Model.IndexBuffer = IndexBufferInfo;
+        
+        glGenBuffers(1, &IndexBufferInfo->Id);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                     IndexBufferInfo->Id);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     sizeof(GLushort)*indexCount,
+                     indices,
+                     GL_STATIC_DRAW);
+        
+        IndexBufferInfo->Count = indexCount;
+        IndexBufferInfo->Type = GL_UNSIGNED_SHORT;
+        IndexBufferInfo->Offset = 0;
+        IndexBufferInfo->Data = indices;
+        
+    }
+    
+    return Model;
+}
+
+void LoadModelGpu(model2 *Model)
+{
+    glGenVertexArrays(1, &Model->VertexArrayId);
+    glBindVertexArray(Model->VertexArrayId);
+    
+    buffer_info* VertexBufferInfo = &Model->VertexBufferInfo;
+    VertexBufferInfo->Target = GL_ARRAY_BUFFER;
+    glGenBuffers(1, &VertexBufferInfo->DataBufferId);
+    glBindBuffer(VertexBufferInfo->Target,
+                 VertexBufferInfo->DataBufferId);
+    glBufferData(GL_ARRAY_BUFFER,
+                 Model->VertexBufferSize,
+                 Model->Vertices,
+                 GL_STATIC_DRAW);
+    VertexBufferInfo->VertexAttribInfo = STANDARD_3D_VERTEX_ATTRIB_INFO;
+    SetVertexAttribPointerInfo(VertexBufferInfo->VertexAttribInfo);
+    
+    buffer_info* NormalBufferInfo = &Model->NormalBufferInfo;
+    NormalBufferInfo->Target = GL_ARRAY_BUFFER;
+    glGenBuffers(1, &NormalBufferInfo->DataBufferId);
+    glBindBuffer(NormalBufferInfo->Target,
+                 NormalBufferInfo->DataBufferId);
+    glBufferData(GL_ARRAY_BUFFER,
+                 Model->VertexBufferSize,
+                 Model->Normals,
+                 GL_STATIC_DRAW);
+    NormalBufferInfo->VertexAttribInfo = STANDARD_NORMAL_VERTEX_ATTRIB_INFO;
+    SetVertexAttribPointerInfo(NormalBufferInfo->VertexAttribInfo);
+    
+    glGenBuffers(1, &Model->IndexBufferId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                 Model->IndexBufferId);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 sizeof(GLushort)*Model->IndexCount,
+                 Model->Indices,
+                 GL_STATIC_DRAW);
+    
+    glBindVertexArray(0);
+}
+
 struct model
 {
     GLfloat *Vertices;
@@ -151,6 +438,7 @@ struct model
     GLfloat *UVs;
     GLfloat *Colors;
     
+    
     //vertex buffer size and normal buffer size need to be the same so 
     GLsizei VertexBufferSize;
     
@@ -158,18 +446,29 @@ struct model
     
     int IndexCount;
     
-    GLuint VertexArrayID;
+    GLuint VertexArrayId;
     GLuint VertexBuffer;
     GLuint NormalBuffer;
     GLuint IndexBuffer;
     GLuint ColorBuffer;
     GLuint UVBuffer;
+    
+    union {
+        struct {
+            buffer_info VertexBufferInfo;
+            buffer_info NormalBufferInfo;
+            buffer_info IndexBufferInfo;
+            buffer_info ColorBufferInfo;
+            buffer_info UVBufferInfo;
+        };
+        buffer_info BufferInfo[5];
+    };
 };
 
 struct skybox
 {
     GLfloat *Vertices;
-    GLuint VertexArrayID;
+    GLuint VertexArrayId;
     GLuint VertexBuffer;
     
     texture Texture;
@@ -186,6 +485,79 @@ struct texture_model
     model Model;
     texture_material *Material;
 };
+
+GLfloat QuadVertexData[] {
+    0.0f, 1.0f, 0.0f, //UL
+    0.0f, 0.0f, 0.0f, //LL
+    1.0f, 1.0f, 0.0f, //UR
+    1.0f, 0.0f, 0.0f  //LR
+};
+
+GLushort QuadIndexData[] {
+    0, 1, 2, //UL
+    1, 3, 2  //LR
+};
+
+GLfloat QuadCircleData[] {
+    -1.0f, 1.0f,
+    -1.0f, -1.0f,
+    1.0f, 1.0f,
+    1.0f, -1.0f
+};
+
+void DrawModel(model* Model)
+{
+    //TODO: Add capacity to draw unindexed values
+    glBindVertexArray(Model->VertexArrayId);
+    glDrawElements(GL_TRIANGLES,
+                   Model->IndexCount,
+                   GL_UNSIGNED_SHORT,
+                   (void*)0);
+    glBindVertexArray(0);
+}
+
+model CreateQuad() {
+    model Quad = {};
+    Quad.Vertices = &QuadVertexData[0];
+    Quad.Indices = &QuadIndexData[0];
+    Quad.IndexCount = 6;
+    
+    glGenVertexArrays(1, &Quad.VertexArrayId);
+    glBindVertexArray(Quad.VertexArrayId);
+    
+    glGenBuffers(1, &Quad.VertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, 
+                 Quad.VertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(QuadVertexData),
+                 &Quad.Vertices[0],
+                 GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    
+    GLuint CircleDataBuffer;
+    glGenBuffers(1, &CircleDataBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, CircleDataBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(QuadCircleData),
+                 &QuadCircleData[0],
+                 GL_STATIC_DRAW);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    
+    
+    glGenBuffers(1, &Quad.IndexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                 Quad.IndexBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 sizeof(QuadIndexData),
+                 &Quad.Indices[0],
+                 GL_STATIC_DRAW);
+    
+    glBindVertexArray(0);
+    
+    return Quad;
+}
 
 GLuint CompileShader(char* shaderCode, GLenum shaderType)
 {
@@ -231,7 +603,6 @@ GLuint CreateShaderProgram(char* vertexShaderCode, char* fragmentShaderCode)
         char* error = (char*)malloc(infoLogLength+1);
         glGetProgramInfoLog(programID, infoLogLength, 0, error);
         DebugLog("%s\n%s\n%s\n", vertexShaderCode, fragmentShaderCode, error);
-        //printf("%s\n", error);
         free(error);
     }
     
@@ -333,6 +704,11 @@ GLfloat screen_quad_vertices[] = {
     1.0f, 1.0f, 1.0f, 1.0f,
 };
 
+void BindRenderTarget(framebuffer_object FBO)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO.Id);
+}
+
 struct postprocessor {
     framebuffer_object RBOFBO;
     framebuffer_object TextureFBO;
@@ -362,52 +738,35 @@ postprocessor CreatePostprocessor(GLuint ShaderProgram, framebuffer_object RBOFB
     return pp;
 }
 
-void BindRenderTarget(framebuffer_object FBO)
+void BeginPostprocessor(platform_data *Platform, postprocessor Postprocessor)
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO.Id);
+    BindRenderTarget(Postprocessor.RBOFBO);
+    glViewport(0, 0, Platform->WindowWidth, Platform->WindowHeight);
 }
 
-void BindModel(model *Model)
+void EndPostprocessor(platform_data *Platform, postprocessor Postprocessor)
 {
-    glGenVertexArrays(1, &Model->VertexArrayID);
-    glBindVertexArray(Model->VertexArrayID);
-    glGenBuffers(1, &Model->VertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER,
-                 Model->VertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER,
-                 Model->VertexBufferSize,
-                 Model->Vertices,
-                 GL_STATIC_DRAW);
+    GLuint ReadBuffer = Postprocessor.RBOFBO.Id;
+    GLuint DrawBuffer = Postprocessor.TextureFBO.Id;
+    glBlitNamedFramebuffer(ReadBuffer, DrawBuffer,
+                           0, 0, Platform->WindowWidth, Platform->WindowHeight, 
+                           0, 0, Platform->WindowWidth, Platform->WindowHeight,
+                           GL_COLOR_BUFFER_BIT, GL_LINEAR);
     
-    glGenBuffers(1, &Model->NormalBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER,
-                 Model->NormalBuffer);
-    glBufferData(GL_ARRAY_BUFFER,
-                 Model->VertexBufferSize,
-                 Model->Normals,
-                 GL_STATIC_DRAW);
-    glGenBuffers(1, &Model->IndexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
-                 Model->IndexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 sizeof(GLushort)*Model->IndexCount,
-                 Model->Indices,
-                 GL_STATIC_DRAW);
+    glBlitNamedFramebuffer(DrawBuffer, 0, 
+                           0, 0, Platform->WindowWidth, Platform->WindowHeight, 
+                           0, 0, Platform->WindowWidth, Platform->WindowHeight,
+                           GL_COLOR_BUFFER_BIT, GL_LINEAR);
     /*
-    for(int a = 0; a < Model->IndexCount; a+=3)
-    {
-    printf("index %i: %i, %i, %i\n",a/3,Model->Indices[a],Model->Indices[a+1],Model->Indices[a+2]);
-    }
-    
-    for(int a = 0; a < Model->VertexBufferSize/sizeof(float); a+=3)
-    {
-    printf("vertex %i: %f, %f, %f\n",a/3,Model->Vertices[a],Model->Vertices[a+1],Model->Vertices[a+2]);
-    }
-    
-    for(int a = 0; a < Model->VertexBufferSize/sizeof(float); a+=3)
-    {
-    printf("normal %i: %f, %f, %f\n",a/3,Model->Normals[a],Model->Normals[a+1],Model->Normals[a+2]);
-    }
+    // Post-process scene texture into front buffer.
+    glBindVertexArray(Postprocessor.VAO);
+    glUseProgram(Postprocessor.Program);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, Postprocessor.TextureFBO.ColorBufferId);
+    // Bind front buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
     */
 }
 

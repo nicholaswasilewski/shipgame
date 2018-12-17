@@ -10,18 +10,18 @@
 #define MAX_TOKEN_LENGTH 1024
 
 #define FBX_TOKEN_LIST \
-    FTL(FBXT_Unknown   ) \
-    FTL(FBXT_EndOfFile ) \
-    FTL(FBXT_Endline   ) \
-    FTL(FBXT_Whitespace) \
-    FTL(FBXT_Comment   ) \
-    FTL(FBXT_TypeName  ) \
-    FTL(FBXT_String    ) \
-    FTL(FBXT_Float     ) \
-    FTL(FBXT_Integer   ) \
-    FTL(FBXT_StartChild) \
-    FTL(FBXT_EndChild  ) \
-    FTL(FBXT_Comma     )
+FTL(FBXT_Unknown   ) \
+FTL(FBXT_EndOfFile ) \
+FTL(FBXT_Endline   ) \
+FTL(FBXT_Whitespace) \
+FTL(FBXT_Comment   ) \
+FTL(FBXT_TypeName  ) \
+FTL(FBXT_String    ) \
+FTL(FBXT_Float     ) \
+FTL(FBXT_Integer   ) \
+FTL(FBXT_StartChild) \
+FTL(FBXT_EndChild  ) \
+FTL(FBXT_Comma     )
 
 #define FTL(TokenName) TokenName,
 enum fbx_token_type
@@ -92,10 +92,10 @@ fbx_token_type ReadToken()
     int charCounter = 0;
     char c;
     fbx_token_type Type;
-
+    
     // always skip whitespace
     while(IsWhiteSpace(c = fgetc(global_Info.File)));
-
+    
     //comment start -- skip to end
     if (c == ';')
     {
@@ -209,7 +209,7 @@ struct FBX_Node
     char* Name;
     char** Values;
     int ValueCount;
-
+    
     FBX_Node** Children;
     int ChildCount;
 };
@@ -217,12 +217,12 @@ struct FBX_Node
 bool ReadValues(FBX_Node* node)
 {
     int startSeek = ftell(global_Info.File);
-
+    
     fbx_token_type type;
     fbx_token_type lastType;
     int valueCount = 0;
     bool hasChildren = false;
-
+    
     // scan to find value count
     while(1)
     {
@@ -249,16 +249,16 @@ bool ReadValues(FBX_Node* node)
         {
             valueCount++;
         }
-
+        
         lastType = type;
         //DebugLog("PEEK  %d [%s] %s\n", startSeek, fbx_token_type_string[type], global_Info.Token);
     }
-
+    
     // reset back top
     node->ValueCount = valueCount;
     node->Values = (char**) malloc(valueCount * sizeof(char*));
     fseek(global_Info.File, startSeek, SEEK_SET);
-
+    
     // iterate and record values
     for(int i = 0; i < valueCount; i++)
     {        
@@ -268,12 +268,12 @@ bool ReadValues(FBX_Node* node)
             i--;
             continue;
         }
-
+        
         node->Values[i] = (char*)malloc((strlen(global_Info.Token)+1) * sizeof(char));
         strcpy(node->Values[i], global_Info.Token);
         //DebugLog("VALUE %d [%s] %s\n", startSeek, fbx_token_type_string[type], node->Values[i]);
     }
-
+    
     return hasChildren;
 }
 
@@ -283,7 +283,7 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
     //DebugLog("%s[START NODE] '%s'\n", MakeSpaces(depth), parentNode->Name);
     parentNode->Children = (FBX_Node**)malloc(sizeof(FBX_Node*) * 128);
     parentNode->ChildCount = 0;
-
+    
     while(1)
     {
         fbx_token_type TokenType = ReadToken();
@@ -294,7 +294,7 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
             FBX_Node* node = (FBX_Node*) malloc(sizeof(FBX_Node));
             parentNode->Children[parentNode->ChildCount] = node;
             parentNode->ChildCount++;
-
+            
             node->Name = (char*)malloc((strlen(global_Info.Token)+1) * sizeof(char));
             strcpy(node->Name, global_Info.Token);
             
@@ -316,7 +316,7 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
                 }
             }
             //DebugLog("%s[PROPERTY   ] '%s': %s\n",  MakeSpaces(depth), node->Name, debug_valuestr, node->ValueCount);
-
+            
             // recurse this child
             if (hasChildren)
             {
@@ -355,7 +355,7 @@ FBX_Node* FBX_GetChildByName(FBX_Node* node, char* name)
             return child;
         }
     }
-
+    
     return NULL;
 }
 
@@ -365,20 +365,25 @@ FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE* Fil
     char Token[MAX_TOKEN_LENGTH];
     global_Info.File = File; 
     global_Info.Token = Token;
-
+    
     // the outer most section of properties in the fbx doc 
     // will be the root node.
     outFbxNode->Name = "Root";
-
+    
     // fill in properties and attach to the root node
     ParseChild(TempMemory, outFbxNode, 0);
     
     return outFbxNode;
 }
 
-void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
+void ProcessModelNode(memory_arena *Memory, model2 *Model, FBX_Node *modelNode)
 {
+    
     FBX_Node *vertexNode = FBX_GetChildByName(modelNode, "Vertices");
+    if (vertexNode != NULL)
+    {
+        Model->VertexAttributeCount += 1;
+    }
     Model->Vertices = (float*)PushArray(Memory, vertexNode->ValueCount, float);
     for (int i = 0; i < vertexNode->ValueCount; i++)
     {
@@ -420,7 +425,7 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
     
     Model->Indices = PushArray(Memory, triangleCount*3, uint16);
     Model->IndexCount = triangleCount*3;
-
+    
     int i = 0;
     int vertexWriteIndex = 0;
     int normalWriteIndex = 0;
@@ -442,7 +447,7 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
         normals[0] = atof(normalNode->Values[normalIndex++]);
         normals[1] = atof(normalNode->Values[normalIndex++]);
         normals[2] = atof(normalNode->Values[normalIndex++]);
-                           
+        
         indices[1] = atoi(indexNode->Values[indexIndex++]);
         vertices[3] = atof(vertexNode->Values[indices[1]*3+0]);
         vertices[4] = atof(vertexNode->Values[indices[1]*3+1]);
@@ -450,7 +455,7 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
         normals[3] = atof(normalNode->Values[normalIndex++]);
         normals[4] = atof(normalNode->Values[normalIndex++]);
         normals[5] = atof(normalNode->Values[normalIndex++]);
-
+        
         int thirdIndex = atoi(indexNode->Values[indexIndex++]);
         if (thirdIndex < 0) { quad = 0; thirdIndex = -thirdIndex-1;}
         indices[2] = thirdIndex;
@@ -460,7 +465,7 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
         normals[6] = atof(normalNode->Values[normalIndex++]);
         normals[7] = atof(normalNode->Values[normalIndex++]);
         normals[8] = atof(normalNode->Values[normalIndex++]);
-
+        
         uint16 indicesToWrite[4] = {0};
         indicesToWrite[0] = indexCount++;
         indicesToWrite[1] = indexCount++;
@@ -495,7 +500,7 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
         {
             Model->Indices[indexWriteIndex++] = indicesToWrite[1];
             Model->Indices[indexWriteIndex++] = indicesToWrite[2];
-
+            
             indices[3] = -atoi(indexNode->Values[indexIndex++])-1;
             vertices[9] = atof(vertexNode->Values[indices[3]*3+0]);
             vertices[10] = atof(vertexNode->Values[indices[3]*3+1]);
@@ -518,11 +523,11 @@ void ProcessModelNode(memory_arena *Memory, model *Model, FBX_Node *modelNode)
     }
 }
 
-model LoadModel(memory_arena *MainMemory, memory_arena *TempMemory, FILE* file)
+model2 LoadModel(memory_arena *MainMemory, memory_arena *TempMemory, FILE* file)
 {
     FBX_Node *fbxNode = ParseFBX(MainMemory, TempMemory, file);
     FBX_Node *modelNode = FBX_GetChildByName(FBX_GetChildByName(fbxNode, "Objects"), "Model");
-    model Model = {0};
+    model2 Model = {0};
     ProcessModelNode(MainMemory, &Model, modelNode);
     return Model;
 }

@@ -27,23 +27,23 @@ typedef int32_t bool32;
 #define KILOBYTES(x) 1024*x
 
 #define SWAP(x,y,T)                                        \
-        {                                                \
-            T swap = x;                                        \
-            x = y;                                        \
-            y = swap;                                        \
-        }
+{                                                \
+    T swap = x;                                        \
+    x = y;                                        \
+    y = swap;                                        \
+}
 
 #define ArrayCount(Array) (sizeof((Array)) / sizeof((Array)[0]))
 #define Max(A, B) ((A)>(B)?(A):(B))
 #define Min(A, B) ((A)<(B)?(A):(B))
 #define Clamp(A, B, C) Min(Max((A), (B)), (C))
-    
+
 #ifndef RELEASE
 #define Assert(Expression)                      \
-    if(!(Expression))                           \
-    {                                           \
-        (*(int*)0 = 0);                         \
-    }
+if(!(Expression))                           \
+{                                           \
+    (*(int*)0 = 0);                         \
+}
 
 
 #define DebugLog(Format, ...) { \
@@ -84,6 +84,8 @@ PushSize(memory_arena *Arena, size_t Size)
     return NewSpace;
 }
 
+#define PopObject(Arena, type) PopSize(Arena, sizeof(type))
+#define PopArray(Arena, Count, type) PopSize(Arena, (Count)*sizeof(type))
 void PopSize(memory_arena *Arena, size_t Size)
 {
     Assert(Arena->Used >= Size);
@@ -167,12 +169,12 @@ struct controller
             button_state Select;
         };
     };
-
+    
     stick_state LeftTrigger;
     stick_state RightTrigger;
     stick_state LeftStick;
     stick_state RightStick;
-        
+    
 };
 
 struct input
@@ -182,7 +184,7 @@ struct input
     controller Keyboard;
 };
 
-    
+
 typedef struct game_screen_buffer
 {
     void *Memory;
@@ -207,10 +209,10 @@ typedef struct platform_data
     int32 TempMemorySize;
     void* TempMemory;
     int32 TotalMemorySize;
-
+    
     input *LastInput;
     input *NewInput;
-
+    
     int WindowWidth;
     int WindowHeight;
     
