@@ -291,6 +291,48 @@ void DisableVertexAttributeBuffer(buffer_info BufferInfo)
     glDisableVertexAttribArray(BufferInfo.VertexAttribInfo.Index);
 }
 
+struct attribute_buffer
+{
+    int Size;
+    GLenum Usage;
+    void* Data;
+};
+
+struct model
+{
+    GLfloat *Vertices;
+    GLfloat *Normals;
+    GLushort *Indices;
+    GLfloat *UVs;
+    GLfloat *Colors;
+    
+    
+    //vertex buffer size and normal buffer size need to be the same so 
+    GLsizei VertexBufferSize;
+    
+    texture_material *Material;
+    
+    int IndexCount;
+    
+    GLuint VertexArrayId;
+    GLuint VertexBuffer;
+    GLuint NormalBuffer;
+    GLuint IndexBuffer;
+    GLuint ColorBuffer;
+    GLuint UVBuffer;
+    
+    union {
+        struct {
+            buffer_info VertexBufferInfo;
+            buffer_info NormalBufferInfo;
+            buffer_info IndexBufferInfo;
+            buffer_info ColorBufferInfo;
+            buffer_info UVBufferInfo;
+        };
+        buffer_info BufferInfo[5];
+    };
+};
+
 struct model2
 {
     GLfloat *Vertices;
@@ -319,13 +361,6 @@ struct model2
         };
         buffer_info VertexAttributeBuffers[5];
     };
-};
-
-struct attribute_buffer
-{
-    int Size;
-    GLenum Usage;
-    void* Data;
 };
 
 struct model3
@@ -429,41 +464,6 @@ void LoadModelGpu(model2 *Model)
     
     glBindVertexArray(0);
 }
-
-struct model
-{
-    GLfloat *Vertices;
-    GLfloat *Normals;
-    GLushort *Indices;
-    GLfloat *UVs;
-    GLfloat *Colors;
-    
-    
-    //vertex buffer size and normal buffer size need to be the same so 
-    GLsizei VertexBufferSize;
-    
-    texture_material *Material;
-    
-    int IndexCount;
-    
-    GLuint VertexArrayId;
-    GLuint VertexBuffer;
-    GLuint NormalBuffer;
-    GLuint IndexBuffer;
-    GLuint ColorBuffer;
-    GLuint UVBuffer;
-    
-    union {
-        struct {
-            buffer_info VertexBufferInfo;
-            buffer_info NormalBufferInfo;
-            buffer_info IndexBufferInfo;
-            buffer_info ColorBufferInfo;
-            buffer_info UVBufferInfo;
-        };
-        buffer_info BufferInfo[5];
-    };
-};
 
 struct skybox
 {
@@ -753,21 +753,26 @@ void EndPostprocessor(platform_data *Platform, postprocessor Postprocessor)
                            0, 0, Platform->WindowWidth, Platform->WindowHeight,
                            GL_COLOR_BUFFER_BIT, GL_LINEAR);
     
-    glBlitNamedFramebuffer(DrawBuffer, 0, 
-                           0, 0, Platform->WindowWidth, Platform->WindowHeight, 
-                           0, 0, Platform->WindowWidth, Platform->WindowHeight,
-                           GL_COLOR_BUFFER_BIT, GL_LINEAR);
-    /*
-    // Post-process scene texture into front buffer.
-    glBindVertexArray(Postprocessor.VAO);
-    glUseProgram(Postprocessor.Program);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Postprocessor.TextureFBO.ColorBufferId);
-    // Bind front buffer
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
-    */
+    const bool PostprocessorEnabled = false;
+    if (PostprocessorEnabled) 
+    {
+        // Post-process scene texture into front buffer.
+        glBindVertexArray(Postprocessor.VAO);
+        glUseProgram(Postprocessor.Program);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, Postprocessor.TextureFBO.ColorBufferId);
+        // Bind front buffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+    }
+    else
+    {
+        glBlitNamedFramebuffer(DrawBuffer, 0, 
+                               0, 0, Platform->WindowWidth, Platform->WindowHeight, 
+                               0, 0, Platform->WindowWidth, Platform->WindowHeight,
+                               GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    } 
 }
 
 #define _GRAPHICS_CPP__
