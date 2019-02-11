@@ -3,23 +3,10 @@
 
 #define OPEN_VR 0
 
+#include "assert.h"
 #include "glHelper.cpp"
-#include <stdint.h>
-
-typedef int8_t int8;
-typedef uint8_t uint8;
-typedef uint8_t byte;
-
-typedef int16_t int16;
-typedef uint16_t uint16;
-
-typedef int32_t int32;
-typedef uint32_t uint32;
-
-typedef int64_t int64;
-typedef uint64_t uint64;
-
-typedef int32_t bool32;
+#include "numerical_types.h"
+#include "memory.h"
 
 #define TERABYTES(x) 1024*GIGABYTES(x)
 #define GIGABYTES(x) 1024*MEGABYTES(x)
@@ -37,83 +24,6 @@ typedef int32_t bool32;
 #define Max(A, B) ((A)>(B)?(A):(B))
 #define Min(A, B) ((A)<(B)?(A):(B))
 #define Clamp(A, B, C) Min(Max((A), (B)), (C))
-
-#ifndef RELEASE
-#define Assert(Expression)                      \
-if(!(Expression))                           \
-{                                           \
-    (*(int*)0 = 0);                         \
-}
-
-
-#define DebugLog(Format, ...) { \
-    char* fname =  __FILE__; \
-    char* baseName = strrchr(fname, '\\'); \
-    fname = baseName ? baseName+1:fname; \
-    printf("%s:%d: " Format, fname, __LINE__, __VA_ARGS__);    \
-}
-
-#else
-#define Assert(Expression, Message) {};
-#define DebugLog(Format, ...) {};
-#endif
-
-
-struct stack
-{
-    int Count;
-    void* Base;
-};
-
-typedef struct memory_arena
-{
-    size_t Size;
-    uint8 *Base;
-    size_t Used;
-} memory_arena;
-
-#define PushObject(Arena, type) (type *)PushSize(Arena, sizeof(type))
-#define PushArray(Arena, Count, type) (type *)PushSize(Arena, (Count)*sizeof(type))
-void*
-PushSize(memory_arena *Arena, size_t Size)
-{
-    Assert((Arena->Used + Size) <= (Arena->Size));
-    void *NewSpace = Arena->Base + Arena->Used;
-    Arena->Used += Size;
-    
-    return NewSpace;
-}
-
-#define PopObject(Arena, type) PopSize(Arena, sizeof(type))
-#define PopArray(Arena, Count, type) PopSize(Arena, (Count)*sizeof(type))
-void PopSize(memory_arena *Arena, size_t Size)
-{
-    Assert(Arena->Used >= Size);
-    Arena->Size += Size;
-    Arena->Used -= Size;
-}
-
-void InitArena(memory_arena *Arena, size_t Size, uint8 *Base)
-{
-    Arena->Size = Size;
-    Arena->Base = Base;
-    Arena->Used = 0;
-}
-
-inline memory_arena
-PushArena(memory_arena *Arena, size_t Size)
-{
-    memory_arena Result = {0};
-    Result.Size = Size;
-    Result.Used = 0;
-    Result.Base = (uint8 *)PushSize(Arena, Size);
-    return Result;
-}
-
-size_t ArenaSizeRemaining(memory_arena *Arena)
-{
-    return Arena->Size - Arena->Used;
-}
 
 struct button_state 
 {

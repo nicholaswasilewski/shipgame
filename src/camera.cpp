@@ -64,19 +64,15 @@ void CameraMoveUp(camera *Camera, float dT, float speed)
 
 void TurnCamera(camera* Camera, float dX, float dY, float CameraSpeed)
 {
-    {
-        mat3 XRot = MakeRotation3x3(Camera->Up, PI*dX*CameraSpeed);
-        v3 NewForward = XRot*Camera->Forward;
-        Camera->Forward = NewForward;
-    }
-
-    {
-        mat3 YRot = MakeRotation3x3(Cross(Camera->Forward, Camera->Up), PI*dY*CameraSpeed);
-        v3 NewForward = YRot*Camera->Forward;
-        v3 NewUp = YRot*Camera->Up;
-        Camera->Forward = NewForward;
-        Camera->Up = NewUp;
-    }
+    mat3 XRot = MakeRotation3x3(Camera->Up, PI*dX*CameraSpeed);
+    v3 NewForward = XRot*Camera->Forward;
+    Camera->Forward = NewForward;
+    
+    mat3 YRot = MakeRotation3x3(Cross(Camera->Forward, Camera->Up), PI*dY*CameraSpeed);
+    NewForward = YRot*Camera->Forward;
+    v3 NewUp = YRot*Camera->Up;
+    Camera->Forward = NewForward;
+    Camera->Up = NewUp;
 }
 
 void RollCamera(camera *Camera, float dT, float speed)

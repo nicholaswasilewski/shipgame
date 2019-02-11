@@ -12,9 +12,9 @@ struct mat4
     {
         struct {
             float x0, y0, z0, w0,
-                  x1, y1, z1, w1,
-                  x2, y2, z2, w2,
-                  x3, y3, z3, w3;
+            x1, y1, z1, w1,
+            x2, y2, z2, w2,
+            x3, y3, z3, w3;
         };
         float E[4][4];
     };
@@ -26,8 +26,8 @@ struct mat3
     {
         struct {
             float x0, y0, z0,
-                x1, y1, z1,
-                x2, y2, z2;
+            x1, y1, z1,
+            x2, y2, z2;
         };
         float E[3][3];
     };
@@ -66,6 +66,12 @@ typedef struct
 {
     float x,y,z,w;
 } quaternion;
+
+quaternion Quaternion(float x, float y, float z, float w)
+{
+    quaternion Result = {x, y, z, w};
+    return Result;
+}
 
 v2 V2(float x, float y)
 {
@@ -124,7 +130,7 @@ v3 operator+(v3 u, v3 v)
         u.y + v.y,
         u.z + v.z
     };
-
+    
     return Result;
 }
 
@@ -159,7 +165,7 @@ v2 operator/(v2 v, float s)
         v.x / s,
         v.y / s
     };
-
+    
     return Result;
 }
 
@@ -220,7 +226,7 @@ v3 Cross(v3 u, v3 v)
     s.x = u.y*v.z - u.z*v.y;
     s.y = u.z*v.x - u.x*v.z;
     s.z = u.x*v.y - u.y*v.x;
-
+    
     return s;
 }
 
@@ -229,30 +235,30 @@ v3 MakeRotationVector(v2 dM, v3 f, v3 u)
     //return Cross(dM.x*Cross(f, u) + dM.y*u, f);
     v3 Result;
     Result.x = 
-    dM.x*f.y*f.y*u.x + 
-    dM.x*f.z*f.z*u.x - 
-    dM.x*f.x*f.y*u.y + 
-    dM.y*f.z*u.y - 
-    dM.y*f.y*u.z - 
-    dM.x*f.x*f.z*u.z;
+        dM.x*f.y*f.y*u.x + 
+        dM.x*f.z*f.z*u.x - 
+        dM.x*f.x*f.y*u.y + 
+        dM.y*f.z*u.y - 
+        dM.y*f.y*u.z - 
+        dM.x*f.x*f.z*u.z;
     
     Result.y = 
-    -(dM.x*f.x*f.y*u.x) -
-    dM.y*f.z*u.x + 
-    dM.x*f.x*f.x*u.y + 
-    dM.x*f.z*f.z*u.y + 
-    dM.y*f.x*u.z - 
-    dM.x*f.y*f.z*u.z;
+        -(dM.x*f.x*f.y*u.x) -
+        dM.y*f.z*u.x + 
+        dM.x*f.x*f.x*u.y + 
+        dM.x*f.z*f.z*u.y + 
+        dM.y*f.x*u.z - 
+        dM.x*f.y*f.z*u.z;
     
     Result.z = 
-    -dM.y*f.y*u.x - 
-    dM.x*f.x*f.z*u.x - 
-    dM.y*f.x*u.y - 
-    dM.x*f.y*f.z*u.y + 
-    dM.x*f.x*f.x*u.z + 
-    dM.x*f.y*f.y*u.z;
+        -dM.y*f.y*u.x - 
+        dM.x*f.x*f.z*u.x - 
+        dM.y*f.x*u.y - 
+        dM.x*f.y*f.z*u.y + 
+        dM.x*f.x*f.x*u.z + 
+        dM.x*f.y*f.y*u.z;
     
-//    dM = Normalize(dM);
+    //    dM = Normalize(dM);
     return Result;
 }
 
@@ -294,17 +300,17 @@ v3 operator*(mat3 m, v3 v)
 mat3 operator*(mat3 m1, mat3 m2)
 {
     float x0, x1, x2,
-        y0, y1, y2,
-        z0, z1, z2;
-
+    y0, y1, y2,
+    z0, z1, z2;
+    
     x0 = m1.x0*m2.x0 + m1.x1*m2.y0 + m1.x2*m2.z0;
     x1 = m1.x0*m2.x1 + m1.x1*m2.y1 + m1.x2*m2.z1;
     x2 = m1.x0*m2.x2 + m1.x1*m2.y2 + m1.x2*m2.z2;
-
+    
     y0 = m1.y0*m2.x0 + m1.y1*m2.y0 + m1.y2*m2.z0;
     y1 = m1.y0*m2.x1 + m1.y1*m2.y1 + m1.y2*m2.z1;
     y2 = m1.y0*m2.x2 + m1.y1*m2.y2 + m1.y2*m2.z2;
-
+    
     z0 = m1.z0*m2.x0 + m1.z1*m2.y0 + m1.z2*m2.z0;
     z1 = m1.z0*m2.x1 + m1.z1*m2.y1 + m1.z2*m2.z1;
     z2 = m1.z0*m2.x2 + m1.z1*m2.y2 + m1.z2*m2.z2;
@@ -320,25 +326,25 @@ mat3 operator*(mat3 m1, mat3 m2)
 mat4 operator*(mat4 m1, mat4 m2)
 {
     float x0, x1, x2, x3,
-        y0, y1, y2, y3,
-        z0, z1, z2, z3,
-        w0, w1, w2, w3;
+    y0, y1, y2, y3,
+    z0, z1, z2, z3,
+    w0, w1, w2, w3;
     
     x0 = m1.x0*m2.x0 + m1.x1*m2.y0 + m1.x2*m2.z0 + m1.x3*m2.w0;
     x1 = m1.x0*m2.x1 + m1.x1*m2.y1 + m1.x2*m2.z1 + m1.x3*m2.w1;
     x2 = m1.x0*m2.x2 + m1.x1*m2.y2 + m1.x2*m2.z2 + m1.x3*m2.w2;
     x3 = m1.x0*m2.x3 + m1.x1*m2.y3 + m1.x2*m2.z3 + m1.x3*m2.w3;
-
+    
     y0 = m1.y0*m2.x0 + m1.y1*m2.y0 + m1.y2*m2.z0 + m1.y3*m2.w0;
     y1 = m1.y0*m2.x1 + m1.y1*m2.y1 + m1.y2*m2.z1 + m1.y3*m2.w1;
     y2 = m1.y0*m2.x2 + m1.y1*m2.y2 + m1.y2*m2.z2 + m1.y3*m2.w2;
     y3 = m1.y0*m2.x3 + m1.y1*m2.y3 + m1.y2*m2.z3 + m1.y3*m2.w3;
-
+    
     z0 = m1.z0*m2.x0 + m1.z1*m2.y0 + m1.z2*m2.z0 + m1.z3*m2.w0;
     z1 = m1.z0*m2.x1 + m1.z1*m2.y1 + m1.z2*m2.z1 + m1.z3*m2.w1;
     z2 = m1.z0*m2.x2 + m1.z1*m2.y2 + m1.z2*m2.z2 + m1.z3*m2.w2;
     z3 = m1.z0*m2.x3 + m1.z1*m2.y3 + m1.z2*m2.z3 + m1.z3*m2.w3;
-
+    
     w0 = m1.w0*m2.x0 + m1.w1*m2.y0 + m1.w2*m2.z0 + m1.w3*m2.w0;
     w1 = m1.w0*m2.x1 + m1.w1*m2.y1 + m1.w2*m2.z1 + m1.w3*m2.w1;
     w2 = m1.w0*m2.x2 + m1.w1*m2.y2 + m1.w2*m2.z2 + m1.w3*m2.w2;
@@ -350,7 +356,7 @@ mat4 operator*(mat4 m1, mat4 m2)
         x2, y2, z2, w2,
         x3, y3, z3, w3
     };
-
+    
     return Result;
 }
 
@@ -361,7 +367,7 @@ v4 operator*(mat4 m, v4 v)
     Result.y = m.x1*v.x + m.y1*v.y + m.z1*v.z + m.w1*v.w;
     Result.z = m.x2*v.x + m.y2*v.y + m.z2*v.z + m.z3*v.w;
     Result.w = m.x3*v.x + m.y3*v.y + m.z3*v.z + m.w3*v.w;
-
+    
     return Result;
 }
 
@@ -388,11 +394,11 @@ mat4 MakeRotation(quaternion q)
     float xy2 = q.x*q.y*2;
     float xz2 = q.x*q.z*2;
     float xw2 = q.x*q.y*2;
- 
+    
     float yy2 = q.y*q.y*2;
     float yz2 = q.y*q.z*2;
     float yw2 = q.y*q.w*2;
-
+    
     float zz2 = q.z*q.z*2;
     float zw2 = q.z*q.w*2;
     
@@ -400,7 +406,7 @@ mat4 MakeRotation(quaternion q)
         1-yy2-zz2, xy2 - zw2, xz2 + yw2, 0,
         xy2 + zw2, 1-xx2-zz2, yz2 - xw2, 0,
         xz2 - yw2, yz2 + xw2, 1-xx2-yy2, 0,
-                0,         0,         0, 1
+        0,         0,         0, 1
     };
     return Result;
 }
@@ -410,10 +416,10 @@ mat3 MakeRotation3x3(v3 u, float theta)
     u = Normalize(u);
     float cost = cos(theta);
     float sint = sin(theta);
-
+    
     float x0,x1,x2,
-        y0, y1, y2,
-        z0, z1, z2;
+    y0, y1, y2,
+    z0, z1, z2;
     x0 = cost + u.x*u.x*(1.0f-cost);
     x1 = u.x*u.y*(1.0f-cost)-u.z*sint;
     x2 = u.x*u.z*(1.0f-cost)+u.y*sint;
@@ -421,12 +427,12 @@ mat3 MakeRotation3x3(v3 u, float theta)
     y0 = u.y*u.x*(1.0f-cost)+u.z*sint;
     y1 = cost + u.y*u.y*(1.0f-cost);
     y2 = u.y*u.z*(1.0f-cost)-u.x*sint;
-
+    
     z0 = u.z*u.x*(1.0f-cost)-u.y*sint;
     z1 = u.z*u.y*(1.0f-cost)+u.x*sint;
     z2 = cost + u.z*u.z*(1-cost);
     
-
+    
     mat3 Result = {
         x0, y0, z0,
         x1, y1, z1,
@@ -440,10 +446,10 @@ mat4 MakeRotation(v3 u, float theta)
     u = Normalize(u);
     float cost = cos(theta);
     float sint = sin(theta);
-
+    
     float x0,x1,x2,
-        y0, y1, y2,
-        z0, z1, z2;
+    y0, y1, y2,
+    z0, z1, z2;
     x0 = cost + u.x*u.x*(1.0f-cost);
     x1 = u.x*u.y*(1.0f-cost)-u.z*sint;
     x2 = u.x*u.z*(1.0f-cost)+u.y*sint;
@@ -451,19 +457,19 @@ mat4 MakeRotation(v3 u, float theta)
     y0 = u.y*u.x*(1.0f-cost)+u.z*sint;
     y1 = cost + u.y*u.y*(1.0f-cost);
     y2 = u.y*u.z*(1.0f-cost)-u.x*sint;
-
+    
     z0 = u.z*u.x*(1.0f-cost)-u.y*sint;
     z1 = u.z*u.y*(1.0f-cost)+u.x*sint;
     z2 = cost + u.z*u.z*(1-cost);
     
-
+    
     mat4 Result = {
         x0, y0, z0, 0,
         x1, y1, z1, 0,
         x2, y2, z2, 0,
         0,   0,  0, 1
     };
-
+    
     return Result;
 }
 
@@ -520,7 +526,7 @@ mat4 DirectionView(v3 Position, v3 Direction, v3 Up)
     v3 Z = Normalize(Direction);
     v3 X = Normalize(Cross(Up, Z));
     v3 Y = Cross(Z, X);
-
+    
     mat4 View = {
         X.x, Y.x, Z.x, 0,
         X.y, Y.y, Z.y, 0,
@@ -548,16 +554,16 @@ mat4 MakeOrthographicProjection(float HalfHeight, float Aspect, float Near, floa
 
 mat4 MakePerspectiveProjection(float Fov, float Aspect, float Near, float Far)
 {
-/*
-    mat4 Result = {
-        Near/400, 0.0f, 0.0f, 0.0f,
-        0.0f, Near / 300, 0.0f, 0.0f,
-        0.0f, 0.0f, -(Far+Near)/(Far-Near), -1.0f,
-        0.0f, 0.0f, -2.0f*(Near*Far)/(Far-Near), 0.0f
-    };
-    return Result;
-*/
-
+    /*
+        mat4 Result = {
+            Near/400, 0.0f, 0.0f, 0.0f,
+            0.0f, Near / 300, 0.0f, 0.0f,
+            0.0f, 0.0f, -(Far+Near)/(Far-Near), -1.0f,
+            0.0f, 0.0f, -2.0f*(Near*Far)/(Far-Near), 0.0f
+        };
+        return Result;
+    */
+    
     float yScale = 1.0f / (float)tan(Fov/2.0f);
     float xScale = yScale / Aspect;
     float nearmfar = Near - Far;
@@ -567,17 +573,17 @@ mat4 MakePerspectiveProjection(float Fov, float Aspect, float Near, float Far)
         0, 0, (Far+Near)/nearmfar, -1,
         0, 0, 2*Far*Near/nearmfar, 0
     };
-
+    
     return Result;
-/*
-    mat4 Result = {
-        1.0f / Aspect*(float)tan(Fov/2.0f), 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f / (float)tan(Fov/2.0f), 0.0f, 0.0f,
-        0.0f, 0.0f, -(Far+Near)/(Far-Near), -1.0f,
-        0.0f, 0.0f, -2.0f*(Near*Far)/(Far-Near), 0.0f
-    };
-    return Result;
-*/
+    /*
+        mat4 Result = {
+            1.0f / Aspect*(float)tan(Fov/2.0f), 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f / (float)tan(Fov/2.0f), 0.0f, 0.0f,
+            0.0f, 0.0f, -(Far+Near)/(Far-Near), -1.0f,
+            0.0f, 0.0f, -2.0f*(Near*Far)/(Far-Near), 0.0f
+        };
+        return Result;
+    */
 }
 
 #endif

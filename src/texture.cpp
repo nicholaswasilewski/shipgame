@@ -205,23 +205,19 @@ char* frontFile)
     return Result;
 }
 
-texture GenTextureFromBMP(memory_arena *Memory, char* filePath)
-{
-    BMPData bmpData = LoadBMP(Memory, filePath);
-    
+texture GenTextureFromBMPData(BMPData bmpData) {
     GLuint textureID;
     glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
+    GLenum textureType = GL_TEXTURE_2D;
+    glBindTexture(textureType, textureID);
     
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(textureType, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(textureType, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(textureType, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(textureType, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(textureType, 0, GL_RGB, bmpData.width, bmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bmpData.data);
+    glGenerateMipmap(textureType);
     
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bmpData.width, bmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bmpData.data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    
-    //free(data);
     texture Result = {
         bmpData.width,
         bmpData.height,
@@ -231,6 +227,12 @@ texture GenTextureFromBMP(memory_arena *Memory, char* filePath)
     };
     
     return Result;
+}
+
+texture GenTextureFromBMPFile(memory_arena *Memory, char* filePath)
+{
+    BMPData bmpData = LoadBMP(Memory, filePath);
+    return GenTextureFromBMPData(bmpData);
 }
 
 texture LoadDDS(memory_arena *Memory, const char * filePath)

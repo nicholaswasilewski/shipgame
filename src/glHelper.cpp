@@ -19,6 +19,8 @@ void* GetGLFuncAddress(const char* name)
 
 #define GL_MULTISAMPLE                    0x809D
 
+#define GL_VERTEX_PROGRAM_POINT_SIZE      0x8642
+#define GL_PROGRAM_POINT_SIZE             0x8642
 #define GL_TEXTURE_WRAP_R                 0x8072
 #define GL_BGR                            0x80E0
 #define GL_BGRA                           0x80E1
@@ -41,6 +43,14 @@ void* GetGLFuncAddress(const char* name)
 #define GL_LINK_STATUS                    0x8B82
 #define GL_INFO_LOG_LENGTH                0x8B84
 
+#define GL_GEOMETRY_SHADER                0x8DD9
+#define GL_GEOMETRY_VERTICES_OUT          0x8916
+#define GL_GEOMETRY_INPUT_TYPE            0x8917
+#define GL_GEOMETRY_OUTPUT_TYPE           0x8918
+
+#define GL_TESS_EVALUATION_SHADER         0x8E87
+#define GL_TESS_CONTROL_SHADER            0x8E88
+
 #define GL_READ_FRAMEBUFFER               0x8CA8
 #define GL_DRAW_FRAMEBUFFER               0x8CA9
 #define GL_FRAMEBUFFER_COMPLETE           0x8CD5
@@ -52,6 +62,9 @@ void* GetGLFuncAddress(const char* name)
 #define GL_ELEMENT_ARRAY_BUFFER           0x8893
 
 #define GL_STATIC_DRAW                    0x88E4
+#define GL_DYNAMIC_DRAW                   0x88E8
+#define GL_DYNAMIC_READ                   0x88E9
+#define GL_DYNAMIC_COPY                   0x88EA
 
 #define GL_TEXTURE0                       0x84C0
 #define GL_TEXTURE1                       0x84C1
@@ -223,7 +236,10 @@ typedef char GLchar;
 GLE(GLint, GetUniformLocation, GLuint program, const GLchar *name) \
 GLE(void, Uniform1i, GLint location, GLint v0) \
 GLE(void, Uniform1f, GLint location, GLfloat v0) \
+GLE(void, Uniform1fv, GLint location, const GLfloat* value) \
+GLE(void, Uniform2fv, GLint location, const GLfloat* value) \
 GLE(void, Uniform3f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2) \
+GLE(void, Uniform3fv, GLint location, const GLfloat* value) \
 GLE(void, Uniform4f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) \
 GLE(void, UniformMatrix4fv, GLint location, GLsizei count, GLboolean transpose, const GLfloat *value) \
 GLE(void, CompressedTexImage2D, GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data) \
@@ -252,6 +268,7 @@ GLE(void, GenBuffers, GLsizei n, GLuint *buffers) \
 GLE(void, BindBuffer, GLenum target, GLuint buffer) \
 GLE(void, DeleteBuffers, GLsizei n, const GLuint *buffer) \
 GLE(void, BufferData, GLenum target, GLsizeiptr size, const void *data, GLenum usage) \
+GLE(void, NamedBufferSubData, GLuint buffer, GLintptr offset, GLsizeiptr size, const void *data) \
 GLE(void, VertexAttribPointer, GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer) \
 GLE(void, ActiveTexture, GLenum texture) \
 GLE(void, GenFramebuffers, GLsizei n, GLuint *framebuffers) \
@@ -296,12 +313,15 @@ void LoadWGLBullshit()
 }
 #endif
 
+// A macro that defines a type of a Gl function and creates a variable that is a function pointer to a function with that signature.
 #define GLE(retType, procName, ...) typedef retType GLDECL procName##GLProc(__VA_ARGS__); static procName##GLProc * gl##procName;
 GLExtensionList
 
+// Make typedefs/function pointer vars that we will only be used sometimes.
 GLE(GLubyte*, GetStringi, GLenum name, GLuint index)
 #undef GLE
 
+// A macro that gets the address of a Gl function and assigns it to the variable declared by the previously defined macro.
 #define GLE(retType, procName, ...) gl##procName = (procName##GLProc*)GetGLFuncAddress( "gl" #procName );
 
 static void LoadGLExtensions()
@@ -349,6 +369,35 @@ void glUniformVec4f(GLuint location, v4 vec)
     glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
 }
 
+void GLErrorShowOne(char* file, int line, GLenum error) {
+    char* msg;
+    if (error == GL_INVALID_OPERATION)
+    {
+        msg = "Invalid Operation";
+    }
+    else if (error == GL_INVALID_ENUM)
+    {
+        msg = "Invalid enum";
+    }
+    else if (error == GL_INVALID_VALUE)
+    {
+        msg = "Invalid value";
+    }
+    else if (error == GL_OUT_OF_MEMORY)
+    {
+        msg = "Out of memory";
+    }
+    else if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
+    {
+        msg = "Invalid framebuffer operation";
+    }
+    else
+    {
+        msg = "Unknown GL error";
+    }
+    printf("OpenGL error: %s:%d - %d - %s\n", file, line, error, msg);
+}
+
 #define GLErrorShow() GLErrorShowInternal(__FILE__, __LINE__)
 
 void GLErrorShowInternal(char* file, int line)
@@ -356,34 +405,25 @@ void GLErrorShowInternal(char* file, int line)
     GLenum error;
     while ((error = glGetError()) != GL_NO_ERROR)
     {
-        char* msg;
-        if (error == GL_INVALID_OPERATION)
-        {
-            msg = "Invalid Operation";
-        }
-        else if (error == GL_INVALID_ENUM)
-        {
-            msg = "Invalid enum";
-        }
-        else if (error == GL_INVALID_VALUE)
-        {
-            msg = "Invalid value";
-        }
-        else if (error == GL_OUT_OF_MEMORY)
-        {
-            msg = "Out of memory";
-        }
-        else if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
-        {
-            msg = "Invalid framebuffer operation";
-        }
-        else
-        {
-            msg = "Unknown GL error";
-        }
-        printf("OpenGL error: %s:%d - %d - %s\n", file, line, error, msg);
+        GLErrorShowOne(file, line, error);
     }
 }
+
+#define GL(stmt) stmt; \
+{ \
+    GLenum error; \
+    while ((error = glGetError()) != GL_NO_ERROR) \
+    { \
+        char* file = __FILE__; \
+        int line = __LINE__; \
+        printf("-----------\n"); \
+        printf("GL Error: "#stmt "\n"); \
+        GLErrorShowOne(file, line, error); \
+        printf("-----------\n"); \
+    } \
+}
+
+
 
 void PrintGlFBOError()
 {
