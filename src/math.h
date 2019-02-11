@@ -11,6 +11,14 @@ void SeedRandom() {
     srand(time(NULL));
 }
 
+int Random(int Min, int Max) {
+    return Min + rand()%(Max-Min);
+}
+
+int Random(int Max) {
+    return Random(0, Max);
+}
+
 float Random()
 {
     return ((float)rand()) / (float)RAND_MAX;

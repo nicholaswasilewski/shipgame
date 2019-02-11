@@ -2,7 +2,7 @@
 
 in vec3 UV;
 
-vec4 Up = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+vec4 Up = vec4(0.1f, 0.0f, 0.0f, 1.0f);
 vec4 Down = vec4(0.0, 0.0f, 0.0f, 1.0f);
 
 out vec4 Color;
@@ -34,6 +34,4 @@ void main()
 	float mixValue = (y + 1.0)/2.0;
 	
 	Color = mix(Down, Up, mixValue);
-	
-//	Color = vec4(y, 0.0, 0.0, 1.0);	
 }

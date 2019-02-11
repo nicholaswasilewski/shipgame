@@ -7,6 +7,9 @@
 
 struct cool_thing_uniform_list {
     uniform MVP;
+    uniform ModelMatrix;
+    uniform ViewMatrix;
+    uniform ProjectionMatrix;
     uniform Time;
     uniform Period;
 };
@@ -15,6 +18,9 @@ cool_thing_uniform_list SetupCoolThingUniforms(game_data *Game, GLuint coolProgr
     
     cool_thing_uniform_list UniformList = {};
     UniformList.MVP = CreateUniform(coolProgram, UniformMatrix4fv, "MVP");
+    UniformList.ModelMatrix = CreateUniform(coolProgram, UniformMatrix4fv, "uModelMatrix");
+    UniformList.ViewMatrix = CreateUniform(coolProgram, UniformMatrix4fv, "uViewMatrix");
+    UniformList.ProjectionMatrix = CreateUniform(coolProgram, UniformMatrix4fv, "uProjectionMatrix");
     UniformList.Time = CreateUniform(coolProgram, Uniform1fv, "uTime");
     UniformList.Period = CreateUniform(coolProgram, Uniform1fv, "uTimePeriod");
     
@@ -23,14 +29,14 @@ cool_thing_uniform_list SetupCoolThingUniforms(game_data *Game, GLuint coolProgr
 
 GLuint CoolVAO;
 GLuint CoolProgram;
-int NumParticles = 1000;
+int NumParticles = 10000;
 int VerticesPerParticle = 4;
 int NumVertices = NumParticles*VerticesPerParticle;
 int TrianglesPerParticle = 2;
 int IndicesPerParticle = TrianglesPerParticle*3;
 int NumIndices = IndicesPerParticle*NumParticles;
 
-float TimePeriod = 5.0f;
+float TimePeriod = 10.0f;
 v3 CoolPosition = V3(0.0, 0.0, 0.0);
 
 uint32* CoolIndices;
@@ -41,6 +47,7 @@ index_buffer_info CoolIndexBuffer;
 struct CoolVertex
 {
     v3 Position;
+    v3 ParticlePosition;
     v4 Color;
     v2 Uv;
     float TimeOffset;
@@ -57,30 +64,35 @@ void InitializeCoolParticles(int ParticleCount, CoolVertex* Vertices) {
     for(int particleIndex = 0, i = 0; particleIndex < ParticleCount; particleIndex++) {
         float radius = Random(0.0f, spreadRadius);
         float theta = Random(0.0f, 2*PI);
-        v3 ParticlePosition = V3(sin(theta)*radius, 0.0f, cos(theta)*radius);
-        v4 ParticleColor = V4(Random(.25, .75), .1f, .1f, 1.0f);
+        v3 ParticlePosition = V3(sin(theta)*radius, Random(-spreadRadius, 0.0f), cos(theta)*radius);
+        v4 ParticleColor = V4(Random(.25, 1.0f), Random(.25, 1.0f), Random(.25, 1.0f), 1.0f);
         float TimeOffset = Random(0.0, TimePeriod);
         float AngularVelocity = 2.0f;
+        AngularVelocity *= Random(2)==0?-1:1;
         
         Vertices[i].Color = ParticleColor;
         Vertices[i].Uv = V2(0.0f, 0.0f);
         Vertices[i].TimeOffset = TimeOffset;
         Vertices[i].Velocity = V4(0.0, 1.0, 0.0, AngularVelocity);
+        Vertices[i].ParticlePosition = ParticlePosition;
         Vertices[i++].Position = V3(-halfRadius, halfRadius, 0.0f) + ParticlePosition;
         Vertices[i].Color = ParticleColor;
         Vertices[i].Uv = V2(1.0f, 0.0f);
         Vertices[i].TimeOffset = TimeOffset;
         Vertices[i].Velocity = V4(0.0, 1.0, 0.0, AngularVelocity);
+        Vertices[i].ParticlePosition = ParticlePosition;
         Vertices[i++].Position = V3(halfRadius, halfRadius, 0.0f) + ParticlePosition;
         Vertices[i].Color = ParticleColor;
         Vertices[i].Uv = V2(0.0f, 1.0f);
         Vertices[i].TimeOffset = TimeOffset;
         Vertices[i].Velocity = V4(0.0, 1.0, 0.0, AngularVelocity);
+        Vertices[i].ParticlePosition = ParticlePosition;
         Vertices[i++].Position = V3(-halfRadius, -halfRadius, 0.0f) + ParticlePosition;
         Vertices[i].Color = ParticleColor;
         Vertices[i].Uv = V2(1.0f, 1.0f);
         Vertices[i].TimeOffset = TimeOffset;
         Vertices[i].Velocity = V4(0.0, 1.0, 0.0, AngularVelocity);
+        Vertices[i].ParticlePosition = ParticlePosition;
         Vertices[i++].Position = V3(halfRadius, -halfRadius, 0.0f) + ParticlePosition;
     }
 }
@@ -120,6 +132,8 @@ void InitializeCoolThing(game_data *Game)
     GL(glEnableVertexAttribArray(3));
     GL(glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(CoolVertex), (GLvoid*)(&CoolVertex_->Velocity)));
     GL(glEnableVertexAttribArray(4));
+    GL(glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(CoolVertex), (GLvoid*)(&CoolVertex_->ParticlePosition)));
+    GL(glEnableVertexAttribArray(5));
     
     GL(glBindBuffer(GL_ARRAY_BUFFER, 0));
     GL(glBindVertexArray(0));
@@ -149,8 +163,14 @@ void DrawCoolThing(game_data* Game, mat4 Projection, mat4 View)
     mat4 ModelTransform = Translation * Rotation * Scale;
     mat4 MVP = Projection * View * ModelTransform;
     CoolThingUniforms.MVP.Value = (void*)(&MVP.E[0][0]);
+    CoolThingUniforms.ModelMatrix.Value = (void*)(&ModelTransform.E[0][0]);
+    CoolThingUniforms.ProjectionMatrix.Value = (void*)(&Projection.E[0][0]);
+    CoolThingUniforms.ViewMatrix.Value = (void*)(&View.E[0][0]);
     
     GL(SetUniform(CoolThingUniforms.MVP));
+    GL(SetUniform(CoolThingUniforms.ModelMatrix));
+    GL(SetUniform(CoolThingUniforms.ProjectionMatrix));
+    GL(SetUniform(CoolThingUniforms.ViewMatrix));
     GL(glUniform1f(CoolThingUniforms.Time.Location, CoolT));
     GL(glUniform1f(CoolThingUniforms.Period.Location, TimePeriod));
     glEnable (GL_BLEND);
