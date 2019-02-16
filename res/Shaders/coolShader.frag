@@ -8,8 +8,13 @@ out vec4 Color;
 
 void main()
 {
-	float blendFactor = length(vTexUv);
-	blendFactor = blendFactor;
+	vec4 white = vec4(1.0, 1.0, 1.0, 1.0);
 	vec4 black = vec4(0.0, 0.0, 0.0, 0.0);
-	Color = mix(vColor, black, blendFactor);
+	vec4 specColor = mix(white, black, normalizedTime);
+	
+	// Fake specular glow
+	float distanceBlendFactor = length(vTexUv);
+	vec4 GlowingColor = mix(specColor, vColor, smoothstep(0.2, 0.4, distanceBlendFactor));
+	// Fade color
+	Color = mix(GlowingColor, black, distanceBlendFactor);
 }

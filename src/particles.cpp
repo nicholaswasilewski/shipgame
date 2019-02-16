@@ -65,7 +65,8 @@ void InitializeCoolParticles(int ParticleCount, CoolVertex* Vertices) {
         float radius = Random(0.0f, spreadRadius);
         float theta = Random(0.0f, 2*PI);
         v3 ParticlePosition = V3(sin(theta)*radius, Random(-spreadRadius, 0.0f), cos(theta)*radius);
-        v4 ParticleColor = V4(Random(.25, 1.0f), Random(.25, 1.0f), Random(.25, 1.0f), 1.0f);
+        //v4 ParticleColor = V4(Random(.25, 1.0f), Random(.25, 1.0f), Random(.25, 1.0f), 1.0f);
+        v4 ParticleColor = V4(0.0f, 1.0f, 1.0f, 1.0f);
         float TimeOffset = Random(0.0, TimePeriod);
         float AngularVelocity = 2.0f;
         AngularVelocity *= Random(2)==0?-1:1;
