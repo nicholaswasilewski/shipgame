@@ -46,8 +46,8 @@ index_buffer_info CoolIndexBuffer;
 
 struct CoolVertex
 {
-    v3 Position;
     v3 ParticlePosition;
+    v3 VertexOffset;
     v4 Color;
     v2 Uv;
     float TimeOffset;
@@ -65,36 +65,42 @@ void InitializeCoolParticles(int ParticleCount, CoolVertex* Vertices) {
         float radius = Random(0.0f, spreadRadius);
         float theta = Random(0.0f, 2*PI);
         v3 ParticlePosition = V3(sin(theta)*radius, Random(-spreadRadius, 0.0f), cos(theta)*radius);
-        //v4 ParticleColor = V4(Random(.25, 1.0f), Random(.25, 1.0f), Random(.25, 1.0f), 1.0f);
         v4 ParticleColor = V4(0.0f, 1.0f, 1.0f, 1.0f);
         float TimeOffset = Random(0.0, TimePeriod);
         float AngularVelocity = 2.0f;
         AngularVelocity *= Random(2)==0?-1:1;
         
+        Vertices[i].ParticlePosition = ParticlePosition;
+        Vertices[i].VertexOffset = V3(-halfRadius, halfRadius, 0.0f);
         Vertices[i].Color = ParticleColor;
         Vertices[i].Uv = V2(0.0f, 0.0f);
         Vertices[i].TimeOffset = TimeOffset;
         Vertices[i].Velocity = V4(0.0, 1.0, 0.0, AngularVelocity);
+        i += 1;
+        
         Vertices[i].ParticlePosition = ParticlePosition;
-        Vertices[i++].Position = V3(-halfRadius, halfRadius, 0.0f) + ParticlePosition;
+        Vertices[i].VertexOffset = V3(halfRadius, halfRadius, 0.0f);
         Vertices[i].Color = ParticleColor;
         Vertices[i].Uv = V2(1.0f, 0.0f);
         Vertices[i].TimeOffset = TimeOffset;
         Vertices[i].Velocity = V4(0.0, 1.0, 0.0, AngularVelocity);
+        i += 1;
+        
         Vertices[i].ParticlePosition = ParticlePosition;
-        Vertices[i++].Position = V3(halfRadius, halfRadius, 0.0f) + ParticlePosition;
+        Vertices[i].VertexOffset = V3(-halfRadius, -halfRadius, 0.0f);
         Vertices[i].Color = ParticleColor;
         Vertices[i].Uv = V2(0.0f, 1.0f);
         Vertices[i].TimeOffset = TimeOffset;
         Vertices[i].Velocity = V4(0.0, 1.0, 0.0, AngularVelocity);
+        i += 1;
+        
         Vertices[i].ParticlePosition = ParticlePosition;
-        Vertices[i++].Position = V3(-halfRadius, -halfRadius, 0.0f) + ParticlePosition;
+        Vertices[i].VertexOffset = V3(halfRadius, -halfRadius, 0.0f);
         Vertices[i].Color = ParticleColor;
         Vertices[i].Uv = V2(1.0f, 1.0f);
         Vertices[i].TimeOffset = TimeOffset;
         Vertices[i].Velocity = V4(0.0, 1.0, 0.0, AngularVelocity);
-        Vertices[i].ParticlePosition = ParticlePosition;
-        Vertices[i++].Position = V3(halfRadius, -halfRadius, 0.0f) + ParticlePosition;
+        i += 1;
     }
 }
 
@@ -123,7 +129,7 @@ void InitializeCoolThing(game_data *Game)
     InitializeCoolParticles(NumParticles, CoolVertices);
     GL(glBufferData(GL_ARRAY_BUFFER, sizeof(CoolVertex)*NumVertices, CoolVertices, GL_DYNAMIC_DRAW));
     
-    GL(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(CoolVertex), (GLvoid*)(&CoolVertex_->Position)));
+    GL(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(CoolVertex), (GLvoid*)(&CoolVertex_->VertexOffset)));
     GL(glEnableVertexAttribArray(0));
     GL(glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(CoolVertex), (GLvoid*)(&CoolVertex_->Color)));
     GL(glEnableVertexAttribArray(1));
