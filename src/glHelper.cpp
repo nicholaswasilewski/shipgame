@@ -14,6 +14,19 @@ void* GetGLFuncAddress(const char* name)
 }
 
 #elif defined(WINDOWS)
+#include <GL\gl.h>
+#include <GL\glu.h>
+
+#include "wglext.h"
+
+// For some reason glext.h includes khrplatform.h.
+// I've chosen to just take the things I need out of glext instead.
+// Someday this is going to become a problem.
+// #include "glext.h"
+
+typedef ptrdiff_t GLsizeiptr;
+typedef ptrdiff_t GLintptr;
+typedef char GLchar;
 
 #define GL_INVALID_FRAMEBUFFER_OPERATION  0x0506
 
@@ -162,6 +175,7 @@ void* GetGLFuncAddress(const char* name)
 #define GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE 0x8D56
 #define GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS 0x8DA8
 #define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS 0x8CD9
+#define GL_FRAMEBUFFER_SRGB               0x8DB9
 
 #define GL_MAX_COLOR_ATTACHMENTS          0x8CDF
 #define GL_COLOR_ATTACHMENT0              0x8CE0
@@ -200,37 +214,10 @@ void* GetGLFuncAddress(const char* name)
 #define GL_MAJOR_VERSION                  0x821B
 #define GL_MINOR_VERSION                  0x821C
 #define GL_NUM_EXTENSIONS                 0x821D
-
-#define WGL_CONTEXT_MAJOR_VERSION_ARB     0x2091
-#define WGL_CONTEXT_MINOR_VERSION_ARB     0x2092
-#define WGL_CONTEXT_FLAGS_ARB             0x2094
-
-#define WGL_DRAW_TO_WINDOW_ARB            0x2001
-#define WGL_ACCELERATION_ARB              0x2003
-#define WGL_COLOR_BITS_ARB                0x2014
-#define WGL_SUPPORT_OPENGL_ARB            0x2010
-#define WGL_DOUBLE_BUFFER_ARB             0x2011
-#define WGL_PIXEL_TYPE_ARB                0x2013
-#define WGL_ALPHA_BITS_ARB                0x201B
-#define WGL_DEPTH_BITS_ARB                0x2022
-#define WGL_STENCIL_BITS_ARB              0x2023
-#define WGL_FULL_ACCELERATION_ARB         0x2027
-#define WGL_TYPE_RGBA_ARB                 0x202B
-#define WGL_SAMPLE_BUFFERS_ARB            0x2041
-#define WGL_SAMPLES_ARB                   0x2042
-
 #define GL_TEXTURE_2D_MULTISAMPLE         0x9100
-#define WGL_CONTEXT_PROFILE_MASK_ARB      0x9126
-#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB  0x00000001
 
 
 #define GLDECL WINAPI
-#include <GL\gl.h>
-#include <GL\glu.h>
-
-typedef ptrdiff_t GLsizeiptr;
-typedef ptrdiff_t GLintptr;
-typedef char GLchar;
 
 #define GLExtensionList \
 GLE(GLint, GetUniformLocation, GLuint program, const GLchar *name) \

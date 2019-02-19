@@ -580,7 +580,10 @@ Win32ProcessPendingMessages(HWND Window,
             break;
         }
     }
-}                                
+}
+
+/*int main*/
+// 
 
 int CALLBACK WinMain(
 HINSTANCE Instance,
@@ -773,6 +776,7 @@ int ShowCode)
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
         WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
         WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+        WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, GL_TRUE,
         WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
         WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
         WGL_COLOR_BITS_ARB, 32,

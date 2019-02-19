@@ -5,24 +5,26 @@
 
 // TODO: Organize this stuff so there can be multiple emitters
 
-struct cool_thing_uniform_list {
+struct particle_uniform_list {
     uniform MVP;
     uniform ModelMatrix;
     uniform ViewMatrix;
     uniform ProjectionMatrix;
     uniform Time;
     uniform Period;
+    uniform Size;
 };
-cool_thing_uniform_list CoolThingUniforms;
-cool_thing_uniform_list SetupCoolThingUniforms(game_data *Game, GLuint coolProgram) {
+particle_uniform_list CoolThingUniforms;
+particle_uniform_list SetupCoolThingUniforms(game_data *Game, GLuint coolProgram) {
     
-    cool_thing_uniform_list UniformList = {};
+    particle_uniform_list UniformList = {};
     UniformList.MVP = CreateUniform(coolProgram, UniformMatrix4fv, "MVP");
     UniformList.ModelMatrix = CreateUniform(coolProgram, UniformMatrix4fv, "uModelMatrix");
     UniformList.ViewMatrix = CreateUniform(coolProgram, UniformMatrix4fv, "uViewMatrix");
     UniformList.ProjectionMatrix = CreateUniform(coolProgram, UniformMatrix4fv, "uProjectionMatrix");
     UniformList.Time = CreateUniform(coolProgram, Uniform1fv, "uTime");
     UniformList.Period = CreateUniform(coolProgram, Uniform1fv, "uTimePeriod");
+    UniformList.Size = CreateUniform(coolProgram, Uniform1fv, "uParticleSize");
     
     return UniformList;
 }
@@ -56,9 +58,21 @@ struct CoolVertex
 CoolVertex* CoolVertex_ = (CoolVertex*)0;
 CoolVertex* CoolVertices;
 
+struct ParticleInitializer {
+    int ParticleCount;
+};
+
+struct ParticleSystem {
+    GLuint VAO;
+    GLuint Program;
+    int VertexCount;
+    int IndexCount;
+    particle_uniform_list Uniforms;
+};
+
 void InitializeCoolParticles(int ParticleCount, CoolVertex* Vertices) {
     float particleRadius = .1f;
-    float halfRadius = particleRadius/2.0f;
+    float halfRadius = 1.0f;
     float spreadRadius = .5f;
     
     for(int particleIndex = 0, i = 0; particleIndex < ParticleCount; particleIndex++) {
@@ -180,6 +194,7 @@ void DrawCoolThing(game_data* Game, mat4 Projection, mat4 View)
     GL(SetUniform(CoolThingUniforms.ViewMatrix));
     GL(glUniform1f(CoolThingUniforms.Time.Location, CoolT));
     GL(glUniform1f(CoolThingUniforms.Period.Location, TimePeriod));
+    GL(glUniform1f(CoolThingUniforms.Size.Location, 0.1f));
     glEnable (GL_BLEND);
     glBlendFunc (GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     GL(glBindVertexArray(CoolVAO));

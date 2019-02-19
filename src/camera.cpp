@@ -62,6 +62,7 @@ void CameraMoveUp(camera *Camera, float dT, float speed)
     Camera->Position = Camera->Position + speed*dT*Camera->Up;
 }
 
+// This is broken. Rotations work individually fine, but together introduce roll.
 void TurnCamera(camera* Camera, float dX, float dY, float CameraSpeed)
 {
     mat3 XRot = MakeRotation3x3(Camera->Up, PI*dX*CameraSpeed);
@@ -73,6 +74,7 @@ void TurnCamera(camera* Camera, float dX, float dY, float CameraSpeed)
     v3 NewUp = YRot*Camera->Up;
     Camera->Forward = NewForward;
     Camera->Up = NewUp;
+    
 }
 
 void RollCamera(camera *Camera, float dT, float speed)

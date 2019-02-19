@@ -2,8 +2,9 @@
 
 in vec3 UV;
 
-vec4 Up = vec4(0.1f, 0.0f, 0.0f, 1.0f);
-vec4 Down = vec4(0.0, 0.0f, 0.0f, 1.0f);
+vec3 Up = vec3(0.1, 0.1, 0.1);
+vec3 Horizon = vec3(0.0);
+vec3 Down = vec3(0.0, 0.0, 0.0);
 
 out vec4 Color;
 
@@ -27,11 +28,14 @@ float componentToSphere(vec3 v)
 
 void main()
 {
-	float x = componentToSphere(vec3(UV.x, UV.y, UV.z));
-	float y = componentToSphere(vec3(UV.y, UV.z, UV.x));
-	float z = componentToSphere(vec3(UV.z, UV.x, UV.y));
 
-	float mixValue = (y + 1.0)/2.0;
-	
-	Color = mix(Down, Up, mixValue);
+//	float x = componentToSphere(vec3(UV.x, UV.y, UV.z));
+//	float z = componentToSphere(vec3(UV.z, UV.x, UV.y));
+
+	float y = componentToSphere(vec3(UV.y, UV.z, UV.x));
+
+	float mixValue = y;
+	mixValue = smoothstep(0.00, 0.2, mixValue);
+	vec3 UpColor = mix(Horizon, Up, mixValue);
+	Color = vec4(UpColor, 1.0);
 }
