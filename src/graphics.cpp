@@ -1,5 +1,8 @@
 #ifndef _GRAPHICS_CPP__
 
+#include "platform.h"
+#include "glHelper.cpp"
+#include "matrixMath.cpp"
 #include "numerical_types.h"
 #include "memory.h"
 #include "texture.cpp"
@@ -108,16 +111,16 @@ void SetUniform(uniform Uniform)
     switch(Uniform.Type)
     {
         case Uniform1f: {
-            glUniform1f(Uniform.Location, (GLfloat)((int)Uniform.Value));
+            glUniform1f(Uniform.Location, 1, (GLfloat)((int)Uniform.Value));
         } break;
         case Uniform1fv: {
-            glUniform1fv(Uniform.Location, (GLfloat*)Uniform.Value);
+            glUniform1fv(Uniform.Location, 1, (GLfloat*)Uniform.Value);
         } break;
         case Uniform2fv: {
-            glUniform2fv(Uniform.Location, (GLfloat*)Uniform.Value);
+            glUniform2fv(Uniform.Location, 1, (GLfloat*)Uniform.Value);
         } break;
         case Uniform3fv: {
-            glUniform3fv(Uniform.Location, (GLfloat*)Uniform.Value);
+            glUniform3fv(Uniform.Location, 1, (GLfloat*)Uniform.Value);
         } break;
         case UniformMatrix4fv: {
             glUniformMatrix4fv(Uniform.Location, 1, GL_FALSE, (GLfloat*)Uniform.Value);
@@ -639,6 +642,15 @@ GLuint CompileShader(char* shaderFilePath, char* shaderCode, GLenum shaderType)
     
     return shaderID;
 }
+
+struct framebuffer_desc
+{
+    GLuint DepthBufferId;
+    GLuint RenderTextureId;
+    GLuint RenderFramebufferId;
+    GLuint ResolveTextureId;
+    GLuint ResolveFramebufferId;
+};
 
 struct framebuffer_object {
     uint32 Id;

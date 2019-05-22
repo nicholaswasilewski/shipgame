@@ -13,6 +13,15 @@ void* GetGLFuncAddress(const char* name)
     return (void*)0;
 }
 
+#elif defined(OSX)
+#include <OpenGL/gl3.h>
+#include <OpenGL/glext.h>
+#define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS 0x8CD9
+#define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT  0x83F1
+#define GL_COMPRESSED_RGBA_S3TC_DXT3_EXT  0x83F2
+#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT  0x83F3
+#define GL_COMPRESSED_RGBA_BPTC_UNORM     0x8E8C
+
 #elif defined(WINDOWS)
 #include <GL\gl.h>
 #include <GL\glu.h>
@@ -216,6 +225,8 @@ typedef char GLchar;
 #define GL_NUM_EXTENSIONS                 0x821D
 #define GL_TEXTURE_2D_MULTISAMPLE         0x9100
 
+#define WGL_CONTEXT_PROFILE_MASK_ARB      0x9126
+#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB  0x00000001
 
 #define GLDECL WINAPI
 
@@ -223,10 +234,10 @@ typedef char GLchar;
 GLE(GLint, GetUniformLocation, GLuint program, const GLchar *name) \
 GLE(void, Uniform1i, GLint location, GLint v0) \
 GLE(void, Uniform1f, GLint location, GLfloat v0) \
-GLE(void, Uniform1fv, GLint location, const GLfloat* value) \
-GLE(void, Uniform2fv, GLint location, const GLfloat* value) \
+GLE(void, Uniform1fv, GLint location, GLsizei count, const GLfloat* value) \
+GLE(void, Uniform2fv, GLint location, GLsizei count, const GLfloat* value) \
 GLE(void, Uniform3f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2) \
-GLE(void, Uniform3fv, GLint location, const GLfloat* value) \
+GLE(void, Uniform3fv, GLint location, GLsizei count, const GLfloat* value) \
 GLE(void, Uniform4f, GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) \
 GLE(void, UniformMatrix4fv, GLint location, GLsizei count, GLboolean transpose, const GLfloat *value) \
 GLE(void, CompressedTexImage2D, GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data) \
@@ -298,7 +309,6 @@ void LoadWGLBullshit()
     wglCreateContextAttribsARB = (CreateContextAttribsARBGLProc*)GetGLFuncAddress("wglCreateContextAttribsARB");
     wglChoosePixelFormatARB = (ChoosePixelFormatARBGLProc*)GetGLFuncAddress("wglChoosePixelFormatARB");
 }
-#endif
 
 // A macro that defines a type of a Gl function and creates a variable that is a function pointer to a function with that signature.
 #define GLE(retType, procName, ...) typedef retType GLDECL procName##GLProc(__VA_ARGS__); static procName##GLProc * gl##procName;
@@ -337,14 +347,7 @@ static void PrintAvailableGLExtensions()
 }
 #undef GLE
 
-struct FramebufferDesc
-{
-    GLuint DepthBufferId;
-    GLuint RenderTextureId;
-    GLuint RenderFramebufferId;
-    GLuint ResolveTextureId;
-    GLuint ResolveFramebufferId;
-};
+#endif //defined(WINDOWS)
 
 void glUniformVec3f(GLuint location, v3 vec)
 {
@@ -356,8 +359,8 @@ void glUniformVec4f(GLuint location, v4 vec)
     glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
 }
 
-void GLErrorShowOne(char* file, int line, GLenum error) {
-    char* msg;
+void GLErrorShowOne(const char* file, int line, GLenum error) {
+    const char* msg;
     if (error == GL_INVALID_OPERATION)
     {
         msg = "Invalid Operation";
@@ -387,7 +390,7 @@ void GLErrorShowOne(char* file, int line, GLenum error) {
 
 #define GLErrorShow() GLErrorShowInternal(__FILE__, __LINE__)
 
-void GLErrorShowInternal(char* file, int line)
+void GLErrorShowInternal(const char* file, int line)
 {
     GLenum error;
     while ((error = glGetError()) != GL_NO_ERROR)
@@ -401,7 +404,7 @@ void GLErrorShowInternal(char* file, int line)
     GLenum error; \
     while ((error = glGetError()) != GL_NO_ERROR) \
     { \
-        char* file = __FILE__; \
+        const char* file = __FILE__; \
         int line = __LINE__; \
         printf("-----------\n"); \
         printf("GL Error: "#stmt "\n"); \
@@ -414,7 +417,7 @@ void GLErrorShowInternal(char* file, int line)
 
 void PrintGlFBOError()
 {
-    char* msg;
+    const char* msg;
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if(status == GL_FRAMEBUFFER_COMPLETE)
     {

@@ -837,8 +837,8 @@ int ShowCode)
 #if OPEN_VR
     uint32 VRWidth;
     uint32 VRHeight;
-    FramebufferDesc LeftEyeBuffer = {0};
-    FramebufferDesc RightEyeBuffer = {0};
+    framebuffer_desc LeftEyeBuffer = {0};
+    framebuffer_desc RightEyeBuffer = {0};
     if (State.VRSystem)
     {
         if (!SetupStereoRenderTargets(State.VRSystem, &VRWidth, &VRHeight, &LeftEyeBuffer, &RightEyeBuffer))

@@ -4,7 +4,6 @@
 #define OPEN_VR 0
 
 #include "assert.h"
-#include "glHelper.cpp"
 #include "numerical_types.h"
 #include "memory.h"
 
@@ -128,8 +127,8 @@ typedef struct platform_data
     
     int VRBufferWidth;
     int VRBufferHeight;
-    FramebufferDesc *LeftEye;
-    FramebufferDesc *RightEye;
+//    framebuffer_desc *LeftEye;
+//    framebuffer_desc *RightEye;
 } platform_data;
 
 #endif

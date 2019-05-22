@@ -1,17 +1,19 @@
 #ifndef ASSERT_H__
 #define ASSERT_H__
 
+#include <assert.h>
+
 #ifndef RELEASE
 #define Assert(Expression)                      \
 if(!(Expression))                           \
 {                                           \
-    (*(int*)0 = 0);                         \
+    assert(Expression);			    \
 }
 
 
 #define DebugLog(Format, ...) { \
-    char* fname =  __FILE__; \
-    char* baseName = strrchr(fname, '\\'); \
+    const char* fname =  __FILE__; \
+    const char* baseName = strrchr(fname, '\\'); \
     fname = baseName ? baseName+1:fname; \
     printf("%s:%d: " Format, fname, __LINE__, __VA_ARGS__);    \
 }
