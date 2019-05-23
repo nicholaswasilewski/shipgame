@@ -6,11 +6,14 @@
 
 #include "platform.h"
 #include "glHelper.cpp"
+#include "game.cpp"
 
 struct osx_state
 {
     bool Running;
 };
+
+osx_state State;
 
 @interface OpenGLView : NSOpenGLView {}
 @end
@@ -18,19 +21,12 @@ struct osx_state
 @end
 
 @interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
--(void)setState:(osx_state *)NnewState;
 @end
 @implementation AppDelegate
 
-osx_state *state;
-
--(void)setState:(osx_state *)newState
-{
-    state = newState;
-}
-
 -(void)windowWillClose:(id)sender
 {
+    State.Running = false;
 }
 @end
 
@@ -40,8 +36,7 @@ int main(int argc, char** argv)
   {
     NSApplication *app = [NSApplication sharedApplication];
     AppDelegate* appDelegate = [[AppDelegate alloc] init];
-    osx_state State = {};
-    [appDelegate setState:&State];
+    State.Running = true;
     app.delegate = appDelegate;
     [app finishLaunching];
 
@@ -82,7 +77,7 @@ int main(int argc, char** argv)
     [window.contentView addSubview:view];
     [window setTitle:@"OpenGL"];
     [window makeKeyAndOrderFront:nil];
-    while (true) 
+    while (true)
     {
 	NSEvent* event;
 	while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
@@ -91,6 +86,10 @@ int main(int argc, char** argv)
 			       dequeue:YES]))
 	{
 	    [NSApp sendEvent:event];
+	}
+	if (!State.Running)
+	{
+	    break;
 	}
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
