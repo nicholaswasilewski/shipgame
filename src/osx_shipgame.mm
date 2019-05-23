@@ -145,7 +145,6 @@ int main(int argc, char** argv)
     PlatformData.MainMemory = (uint8 *)address;
     PlatformData.TempMemory = (uint8 *)PlatformData.MainMemory + PlatformData.MainMemorySize; 
 
-    // TODO: Get this from the frame/bounds data
     PlatformData.WindowWidth = frame.size.width;
     PlatformData.WindowHeight = frame.size.height;
     
@@ -189,9 +188,9 @@ int main(int argc, char** argv)
 	    FrameSecondsElapsed = OSXGetSecondsElapsed(LastTime, TimeNow);
 	    if (FrameSecondsElapsed < TargetFrameSeconds)
 	    {
-		// TODO: find sleep for milliseconds
-		//Sleep(TargetFrameSeconds-FrameSecondsElapsed);
-		mach_sleep();
+		float TimeToSleep = TargetFrameSeconds - FrameSecondsElapsed;
+		printf("%f\n", TimeToSleep);
+		usleep(TimeToSleep * 1000000);
 	    }
 	}
 
