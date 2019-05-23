@@ -31,7 +31,7 @@ enum fbx_token_type
 
 #undef FTL
 #define FTL(TokenName) #TokenName,
-char* fbx_token_type_string [] =
+const char* fbx_token_type_string [] =
 {
     FBX_TOKEN_LIST
 };
@@ -345,7 +345,7 @@ void ParseChild(memory_arena *Memory, FBX_Node *ParentNode, int Depth)
     }
 }
 
-FBX_Node* FBX_GetChildByName(FBX_Node *node, char *name)
+FBX_Node* FBX_GetChildByName(FBX_Node* node, const char* name)
 {
     for(int i = 0; i < node->ChildCount; i++)
     {
@@ -368,7 +368,7 @@ FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE *Fil
     
     // the outer most section of properties in the fbx doc 
     // will be the root node.
-    OutFbxNode->Name = "Root";
+		OutFbxNode->Name = (char*)"Root";
     
     // fill in properties and attach to the root node
     ParseChild(TempMemory, OutFbxNode, 0);
