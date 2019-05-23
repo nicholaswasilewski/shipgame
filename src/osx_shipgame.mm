@@ -1,6 +1,9 @@
 #define OSX
 
 #import <Cocoa/Cocoa.h>
+#import <Carbon/Carbon.h>
+#import <mach/mach_init.h>
+#import <mach/vm_map.h>
 
 #define GL_SILENCE_DEPRECATION
 
@@ -18,6 +21,9 @@ osx_state State;
 @interface OpenGLView : NSOpenGLView {}
 @end
 @implementation OpenGLView
+- (BOOL)acceptsFirstResponder {
+    return YES;
+}
 @end
 
 @interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
@@ -30,13 +36,37 @@ osx_state State;
 }
 @end
 
+void HandleKeyEvent(unsigned short keyCode, bool down) {
+    switch (keyCode) {
+	case kVK_Escape: {
+	    State.Running = false;
+	} break;
+    }
+}
+
+void HandleEvent(NSEvent *event) {
+    switch(event.type)
+    {
+	case NSEventTypeKeyDown: {
+	    NSLog(@"keydown");
+	    //HandleKeyEvent(event.keyCode, false);
+	} break;
+	case NSEventTypeKeyUp: {
+	    //HandleKeyEvent(event.keyCode, true);
+	} break;
+	default: {
+
+	    [NSApp sendEvent:event];
+	} break;
+    }
+}
+
 int main(int argc, char** argv)
 {
   @autoreleasepool
   {
     NSApplication *app = [NSApplication sharedApplication];
     AppDelegate* appDelegate = [[AppDelegate alloc] init];
-    State.Running = true;
     app.delegate = appDelegate;
     [app finishLaunching];
 
@@ -77,6 +107,38 @@ int main(int argc, char** argv)
     [window.contentView addSubview:view];
     [window setTitle:@"OpenGL"];
     [window makeKeyAndOrderFront:nil];
+
+    platform_data PlatformData = {0};
+    PlatformData.MainMemorySize = MEGABYTES(32);
+    PlatformData.TempMemorySize = MEGABYTES(32);
+    PlatformData.TotalMemorySize = PlatformData.MainMemorySize + 
+	PlatformData.TempMemorySize;
+    vm_address_t address = 0;
+    kern_return_t result = vm_allocate((vm_map_t)mach_task_self(),
+				       &address,
+				       PlatformData.TotalMemorySize,
+				       true /* allocate anywhere */);
+    if (result == KERN_SUCCESS) {
+	NSLog(@"Successful allocation at 0x%lx.", address);
+    } else if (result == KERN_INVALID_ADDRESS) {
+	NSLog(@"Tried to allocate invalid address 0x%lx.", address);
+	return 0;
+    }
+
+    PlatformData.MainMemory = (uint8 *)address;
+    PlatformData.TempMemory = (uint8 *)PlatformData.MainMemory + PlatformData.MainMemorySize; 
+    
+    input Inputs[2];
+    Inputs[0] = {0};
+    Inputs[1] = {0};
+    input *NewInput = &Inputs[0];
+    input *LastInput = &Inputs[1];
+    PlatformData.LastInput = LastInput;
+    PlatformData.NewInput = NewInput;
+    NewInput->dT = 0.0f;
+    State.Running = true;
+
+    [[NSRunningApplication currentApplication] activateWithOptions:NSApplicationActivateIgnoringOtherApps];
     while (true)
     {
 	NSEvent* event;
@@ -85,14 +147,14 @@ int main(int argc, char** argv)
 			       inMode:NSDefaultRunLoopMode
 			       dequeue:YES]))
 	{
-	    [NSApp sendEvent:event];
+	    HandleEvent(event);
 	}
 	if (!State.Running)
 	{
 	    break;
 	}
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+
+	UpdateAndRender(&PlatformData);
 	[context flushBuffer];
     }
   }
