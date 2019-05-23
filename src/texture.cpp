@@ -48,7 +48,7 @@ struct BMPInfoHeader {
 
 #pragma pack(pop)
 
-BMPData LoadBMP(memory_arena *Memory, char* filePath)
+BMPData LoadBMP(memory_arena *Memory, const char* filePath)
 {
     BMPData NullBMP = { 0 };
     BMPHeader bmpHeader = {0};
@@ -109,12 +109,12 @@ BMPData LoadBMP(memory_arena *Memory, char* filePath)
 
 texture GenCubeMapFromBMP(
 memory_arena *Memory,
-char* rightFile,
-char* leftFile,
-char* topFile,
-char* bottomFile,
-char* backFile,
-char* frontFile)
+const char* rightFile,
+const char* leftFile,
+const char* topFile,
+const char* bottomFile,
+const char* backFile,
+const char* frontFile)
 {
     
     GLuint textureID;
@@ -201,7 +201,7 @@ texture GenTextureFromBMPData(BMPData bmpData) {
     return Result;
 }
 
-texture GenTextureFromBMPFile(memory_arena *Memory, char* filePath)
+texture GenTextureFromBMPFile(memory_arena *Memory, const char* filePath)
 {
     BMPData bmpData = LoadBMP(Memory, filePath);
     return GenTextureFromBMPData(bmpData);
