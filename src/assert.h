@@ -4,9 +4,9 @@
 #include <assert.h>
 
 #ifndef RELEASE
-#define Assert(Expression)                      \
+#define Assert(Expression)		    \
 if(!(Expression))                           \
-{                                           \
+{					    \
     assert(Expression);			    \
 }
 
