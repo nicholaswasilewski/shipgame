@@ -189,7 +189,6 @@ int main(int argc, char** argv)
 	    if (FrameSecondsElapsed < TargetFrameSeconds)
 	    {
 		float TimeToSleep = TargetFrameSeconds - FrameSecondsElapsed;
-		printf("%f\n", TimeToSleep);
 		usleep(TimeToSleep * 1000000);
 	    }
 	}
