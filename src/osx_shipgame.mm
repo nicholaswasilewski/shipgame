@@ -2,7 +2,9 @@
 
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
+#import <mach/mach.h>
 #import <mach/mach_init.h>
+#import <mach/mach_time.h>
 #import <mach/vm_map.h>
 
 #define GL_SILENCE_DEPRECATION
@@ -36,15 +38,30 @@ osx_state State;
 }
 @end
 
-void HandleKeyEvent(unsigned short keyCode, bool down) {
-    switch (keyCode) {
-	case kVK_Escape: {
+float OSXGetSecondsElapsed(uint64 StartMachTime, uint64 EndMachTime)
+{
+
+    uint64 ElapsedMachTime = EndMachTime - StartMachTime;
+    struct mach_timebase_info TimebaseInfo;
+    mach_timebase_info(&TimebaseInfo);
+    uint64 ElapsedNanos = ElapsedMachTime * (TimebaseInfo.numer/ TimebaseInfo.denom);
+
+    return ElapsedNanos/1000000000.0f;
+}
+
+void HandleKeyEvent(unsigned short keyCode, bool down) 
+{
+    switch (keyCode) 
+    {
+	case kVK_Escape: 
+	{
 	    State.Running = false;
 	} break;
     }
 }
 
-void HandleEvent(NSEvent *event) {
+void HandleEvent(NSEvent *event) 
+{
     switch(event.type)
     {
 	case NSEventTypeKeyDown: {
@@ -127,6 +144,10 @@ int main(int argc, char** argv)
 
     PlatformData.MainMemory = (uint8 *)address;
     PlatformData.TempMemory = (uint8 *)PlatformData.MainMemory + PlatformData.MainMemorySize; 
+
+    // TODO: Get this from the frame/bounds data
+    PlatformData.WindowWidth = frame.size.width;
+    PlatformData.WindowHeight = frame.size.height;
     
     input Inputs[2];
     Inputs[0] = {0};
@@ -139,6 +160,7 @@ int main(int argc, char** argv)
     State.Running = true;
 
     [[NSRunningApplication currentApplication] activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+    uint64 LastTime = mach_absolute_time();
     while (true)
     {
 	NSEvent* event;
@@ -156,6 +178,26 @@ int main(int argc, char** argv)
 
 	UpdateAndRender(&PlatformData);
 	[context flushBuffer];
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+	uint64 TimeNow;
+	float FrameSecondsElapsed = 0;
+	float TargetFrameSeconds = 1.0f / 60.0f;
+	while(FrameSecondsElapsed < TargetFrameSeconds) 
+	{
+	    TimeNow = mach_absolute_time();
+	    FrameSecondsElapsed = OSXGetSecondsElapsed(LastTime, TimeNow);
+	    if (FrameSecondsElapsed < TargetFrameSeconds)
+	    {
+		// TODO: find sleep for milliseconds
+		//Sleep(TargetFrameSeconds-FrameSecondsElapsed);
+		mach_sleep();
+	    }
+	}
+
+	*PlatformData.LastInput = *PlatformData.NewInput;
+	PlatformData.NewInput->dT = FrameSecondsElapsed;
+	LastTime = TimeNow;
     }
   }
   return 0;
