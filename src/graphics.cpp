@@ -89,7 +89,11 @@ struct uniform
 {
     uniform_type Type;
     GLint Location;
-    void* Value;
+    union {
+	void* Value;
+	int IntValue;
+	float FloatValue;
+    };
 };
 
 struct uniform_list
@@ -98,7 +102,7 @@ struct uniform_list
     uniform* Uniforms;
 };
 
-uniform CreateUniform(GLuint shader, uniform_type type, char* name)
+uniform CreateUniform(GLuint shader, uniform_type type, const char* name)
 {
     uniform Value = { type, glGetUniformLocation(shader, name), 0 };
     return Value;
@@ -111,7 +115,7 @@ void SetUniform(uniform Uniform)
     switch(Uniform.Type)
     {
         case Uniform1f: {
-            glUniform1f(Uniform.Location, 1, (GLfloat)((int)Uniform.Value));
+            glUniform1f(Uniform.Location, (GLfloat)Uniform.FloatValue);
         } break;
         case Uniform1fv: {
             glUniform1fv(Uniform.Location, 1, (GLfloat*)Uniform.Value);
@@ -126,7 +130,11 @@ void SetUniform(uniform Uniform)
             glUniformMatrix4fv(Uniform.Location, 1, GL_FALSE, (GLfloat*)Uniform.Value);
         } break;
         case Uniform1i: {
-            glUniform1f(Uniform.Location, (int)Uniform.Value);
+            glUniform1f(Uniform.Location, (GLint)Uniform.IntValue);
+        } break;
+        default: {
+	    // Unimplemented.
+	    Assert(false);
         } break;
     }
 }
@@ -610,17 +618,17 @@ struct shader_program_sources
     {
         struct
         {
-            char* Vertex;
-            char* Fragment;
-            char* Geometry;
-            char* TesselationControl;
-            char* TesselationEvaluation;
+            const char* Vertex;
+            const char* Fragment;
+            const char* Geometry;
+            const char* TesselationControl;
+            const char* TesselationEvaluation;
         };
-        char* SourceFilePaths[SHADER_TYPE_COUNT];
+        const char* SourceFilePaths[SHADER_TYPE_COUNT];
     };
 };
 
-GLuint CompileShader(char* shaderFilePath, char* shaderCode, GLenum shaderType)
+GLuint CompileShader(const char* shaderFilePath, const char* shaderCode, GLenum shaderType)
 {
     GLint result = GL_FALSE;
     int32 infoLogLength;
@@ -784,10 +792,12 @@ void EndPostprocessor(platform_data *Platform, postprocessor Postprocessor)
 {
     GLuint ReadBuffer = Postprocessor.RBOFBO.Id;
     GLuint DrawBuffer = Postprocessor.TextureFBO.Id;
-    GL(glBlitNamedFramebuffer(ReadBuffer, DrawBuffer,
-                              0, 0, Platform->WindowWidth, Platform->WindowHeight, 
-                              0, 0, Platform->WindowWidth, Platform->WindowHeight,
-                              GL_COLOR_BUFFER_BIT, GL_LINEAR));
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, ReadBuffer);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DrawBuffer);
+    GL(glBlitFramebuffer(
+	   0, 0, Platform->WindowWidth, Platform->WindowHeight, 
+	   0, 0, Platform->WindowWidth, Platform->WindowHeight,
+	   GL_COLOR_BUFFER_BIT, GL_LINEAR));
     
     const bool PostprocessorEnabled = false;
     if (PostprocessorEnabled)
@@ -804,10 +814,12 @@ void EndPostprocessor(platform_data *Platform, postprocessor Postprocessor)
     }
     else
     {
-        GL(glBlitNamedFramebuffer(DrawBuffer, 0, 
-                                  0, 0, Platform->WindowWidth, Platform->WindowHeight, 
-                                  0, 0, Platform->WindowWidth, Platform->WindowHeight,
-                                  GL_COLOR_BUFFER_BIT, GL_LINEAR));
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, DrawBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        GL(glBlitFramebuffer(
+	       0, 0, Platform->WindowWidth, Platform->WindowHeight, 
+	       0, 0, Platform->WindowWidth, Platform->WindowHeight,
+	       GL_COLOR_BUFFER_BIT, GL_LINEAR));
     } 
 }
 
@@ -848,14 +860,14 @@ GLuint LoadShaders(memory_arena* tempArena, shader_program_sources ShaderProgram
     return programId;
 }
 
-GLuint LoadShaders(memory_arena* tempArena, char* vertexShaderFilePath, char* fragmentShaderFilePath) {
+GLuint LoadShaders(memory_arena* tempArena, const char* vertexShaderFilePath, const char* fragmentShaderFilePath) {
     shader_program_sources ShaderProgramSources = {0};
     ShaderProgramSources.Vertex = vertexShaderFilePath;
     ShaderProgramSources.Fragment = fragmentShaderFilePath;
     return LoadShaders(tempArena, ShaderProgramSources);
 }
 
-GLuint LoadShaders(memory_arena* tempArena, char* vertexShaderFilePath, char* fragmentShaderFilePath, char* geometryShaderFilePath) {
+GLuint LoadShaders(memory_arena* tempArena, const char* vertexShaderFilePath, const char* fragmentShaderFilePath, const char* geometryShaderFilePath) {
     shader_program_sources ShaderProgramSources = {0};
     ShaderProgramSources.Vertex = vertexShaderFilePath;
     ShaderProgramSources.Fragment = fragmentShaderFilePath;
