@@ -413,9 +413,7 @@ void GLErrorShowInternal(const char* file, int line)
     } \
 }
 
-
-
-void PrintGlFBOError()
+void PrintGlFBOErrorInternal(const char* FileName, int LineNumber)
 {
     const char* msg;
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -459,7 +457,14 @@ void PrintGlFBOError()
     {
         msg = "GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS";
     }
-    printf("OpenGL FBO status: %s\n", msg);
+    printf("OpenGL FBO status %s:%d: %s\n", FileName, LineNumber, msg);
 }
+
+#ifndef RELEASE
+#define PrintGlFBOError()			\
+    PrintGlFBOErrorInternal(__FILE__, __LINE__);
+#else
+#define PrintGlFBOError()
+#endif
 
 #endif
