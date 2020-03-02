@@ -112,7 +112,16 @@ void PrintMatrix(mat4 m)
            (double)m.x1, (double)m.y1, (double)m.z1, (double)m.w1,
            (double)m.x2, (double)m.y2, (double)m.z2, (double)m.w2,
            (double)m.x3, (double)m.y3, (double)m.z3, (double)m.w3);
-}    
+}
+
+void PrintMatrix3x3(mat3 m) {
+    printf("%.4f %.4f %.4f\n"
+           "%.4f %.4f %.4f\n"
+           "%.4f %.4f %.4f\n",
+           (double)m.x0, (double)m.y0, (double)m.z0,
+           (double)m.x1, (double)m.y1, (double)m.z1,
+           (double)m.x2, (double)m.y2, (double)m.z2);
+}
 
 const v3 Vec3UnitX = V3(1.0f,0.0f,0.0f);
 const v3 Vec3UnitY = V3(0.0f,1.0f,0.0f);
