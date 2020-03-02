@@ -852,7 +852,7 @@ int ShowCode)
     }
 #endif
     
-    int HardRefreshHz = 60;
+    int HardRefreshHz = 120;
     
     float GameUpdateHz = (HardRefreshHz/2.0f);
     float TargetFrameSeconds = 1.0f/GameUpdateHz;
