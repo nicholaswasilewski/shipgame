@@ -471,10 +471,10 @@ void Init(platform_data* Platform, game_data *Game)
         "../res/Textures/skybox/front.bmp");
     
     skybox_shader SkyBoxShader;
-    SkyBoxShader.Program = LoadShaders(&Game->TempArena, "../res/Shaders/skybox.vert", "../res/Shaders/skysphere.frag");
-    SkyBoxShader.M = glGetUniformLocation(SkyBoxShader.Program, "M");
-    SkyBoxShader.V = glGetUniformLocation(SkyBoxShader.Program, "V");
-    SkyBoxShader.MVP = glGetUniformLocation(SkyBoxShader.Program, "MVP");
+    SkyBoxShader.Program = LoadShaders(&Game->TempArena, "../res/Shaders/skybox.vert", "../res/Shaders/skybox.frag");
+    SkyBoxShader.M = GL(glGetUniformLocation(SkyBoxShader.Program, "M"));
+    SkyBoxShader.V = GL(glGetUniformLocation(SkyBoxShader.Program, "V"));
+    SkyBoxShader.MVP = GL(glGetUniformLocation(SkyBoxShader.Program, "MVP"));
     SkyBoxShader.SkyBox = SkyBox->Texture.Handle;
     Game->SkyBoxShader = SkyBoxShader;
     
@@ -609,10 +609,10 @@ void RenderObject(game_object2 GameObject, camera Camera, light Light, mat4 Proj
     GL(glActiveTexture(GL_TEXTURE2));
     GL(glBindTexture(GL_TEXTURE_2D, Material->EmissiveMap));
     
-    glUniform1i(Shader.Material.Diffuse, 0);
-    glUniform1i(Shader.Material.Specular, 1);
-    glUniform1f(Shader.Material.Shine, Material->Shine);
-    glUniform1i(Shader.Material.Emissive, 2);
+    GL(glUniform1i(Shader.Material.Diffuse, 0));
+    GL(glUniform1i(Shader.Material.Specular, 1));
+    GL(glUniform1f(Shader.Material.Shine, Material->Shine));
+    GL(glUniform1i(Shader.Material.Emissive, 2));
     
     DrawModel(GameObject.Model->VertexArrayId, GameObject.Model->IndexCount);
 }
@@ -642,7 +642,7 @@ void RenderObject2(game_object2 GameObject, camera Camera, light Light, mat4 Pro
 //    DrawModel(GameObject.Model);
     model2* Model = GameObject.Model;
     
-    glBindVertexArray(Model->VertexArrayId);
+    GL(glBindVertexArray(Model->VertexArrayId));
     GL(glDrawElements(GL_TRIANGLES,
                       Model->IndexCount,
                       GL_UNSIGNED_SHORT,
@@ -718,7 +718,7 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
 //    RenderObject2(Game->Monkey, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
 //    RenderObject2(Game->Box3, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
     
-    // player and water
+    // water
     if(includeWater)
     {
         RenderWater(Game->Water, Game->Camera, Game->Light, Projection, View, Game->WaterShader);
