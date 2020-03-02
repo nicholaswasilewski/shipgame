@@ -713,10 +713,10 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
     GL(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
     GL(glEnable(GL_DEPTH_TEST));
     
-//    RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+   RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
 //    RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
 //    RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-//    RenderObject2(Game->Monkey, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+   RenderObject2(Game->Monkey, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
 //    RenderObject2(Game->Box3, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
     
     // water
