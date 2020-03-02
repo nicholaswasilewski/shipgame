@@ -116,7 +116,7 @@ void PrintMatrix(mat4 m)
 
 const v3 Vec3UnitX = V3(1.0f,0.0f,0.0f);
 const v3 Vec3UnitY = V3(0.0f,1.0f,0.0f);
-const v3 Vec3UnitZ = V3(0.0f,1.0f,0.0f);
+const v3 Vec3UnitZ = V3(0.0f,0.0f,1.0f);
 
 float Length(v3 v)
 {
