@@ -478,16 +478,16 @@ void Init(platform_data* Platform, game_data *Game)
     SkyBoxShader.SkyBox = SkyBox->Texture.Handle;
     Game->SkyBoxShader = SkyBoxShader;
     
-    glGenFramebuffers(1, &Game->ReflectionFBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO);
-    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    GL(glGenFramebuffers(1, &Game->ReflectionFBO));
+    GL(glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO));
+    GL(glDrawBuffer(GL_COLOR_ATTACHMENT0));
     
-    glGenTextures(1, &Game->WaterShader.ReflectionHandle);
-    glBindTexture(GL_TEXTURE_2D, Game->WaterShader.ReflectionHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Game->WaterShader.ReflectionHandle, 0);
+    GL(glGenTextures(1, &Game->WaterShader.ReflectionHandle));
+    GL(glBindTexture(GL_TEXTURE_2D, Game->WaterShader.ReflectionHandle));
+    GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL));
+    GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Game->WaterShader.ReflectionHandle, 0));
     
     InitializeCoolThing(Game);
     PrintGlFBOError();
@@ -501,22 +501,22 @@ void RenderSkyBox(skybox SkyBox, camera Camera, light Light, mat4 Projection, ma
     View = Mat4(Mat3(View));
     mat4 MVP = Projection * View;
     
-    glDepthMask(GL_FALSE);
-    glDepthFunc(GL_LEQUAL);
+    GL(glDepthMask(GL_FALSE));
+    GL(glDepthFunc(GL_LEQUAL));
     
-    glUseProgram(Shader.Program);
-    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
-    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+    GL(glUseProgram(Shader.Program));
+    GL(glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]));
     
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, Shader.SkyBox);
+    GL(glActiveTexture(GL_TEXTURE0));
+    GL(glBindTexture(GL_TEXTURE_CUBE_MAP, Shader.SkyBox));
     
-    glBindVertexArray(SkyBox.VertexArrayId);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindVertexArray(0);
+    GL(glBindVertexArray(SkyBox.VertexArrayId));
+    GL(glDrawArrays(GL_TRIANGLES, 0, 36));
+    GL(glBindVertexArray(0));
     
-    glDepthMask(GL_TRUE);
-    glDepthFunc(GL_LESS);
+    GL(glDepthMask(GL_TRUE));
+    GL(glDepthFunc(GL_LESS));
 }
 
 void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 Projection, mat4 View, water_shader Shader)
@@ -528,31 +528,31 @@ void RenderWater(color_game_object GameObject, camera Camera, light Light, mat4 
     mat4 Model = Translation * Rotation * Scale;
     mat4 MVP = Projection * View * Model;
     
-    glUseProgram(Shader.Program);
-    glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
-    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
-    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+    GL(glUseProgram(Shader.Program));
+    GL(glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]));
     
-    glUniformVec3f(Shader.CameraPosition, Camera.Position);
+    GL(glUniformVec3f(Shader.CameraPosition, Camera.Position));
     SetPointLightUniforms(Shader.Light, Light);
     
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Shader.NormalMapHandle);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, Shader.DuDvMapHandle);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, Shader.ReflectionHandle);
-    glUniform1i(Shader.NormalMap, 0);
-    glUniform1i(Shader.DuDvMap, 1);
-    glUniform1i(Shader.ReflectionMap, 2);
+    GL(glActiveTexture(GL_TEXTURE0));
+    GL(glBindTexture(GL_TEXTURE_2D, Shader.NormalMapHandle));
+    GL(glActiveTexture(GL_TEXTURE1));
+    GL(glBindTexture(GL_TEXTURE_2D, Shader.DuDvMapHandle));
+    GL(glActiveTexture(GL_TEXTURE2));
+    GL(glBindTexture(GL_TEXTURE_2D, Shader.ReflectionHandle));
+    GL(glUniform1i(Shader.NormalMap, 0));
+    GL(glUniform1i(Shader.DuDvMap, 1));
+    GL(glUniform1i(Shader.ReflectionMap, 2));
     
     texture_color_material *Material = GameObject.ColorModel->Material;
-    glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
-    glUniformVec3f(Shader.Material.Emissive, Material->Emissive);
-    glUniformVec3f(Shader.Material.Specular, Material->Specular);
-    glUniform1f(Shader.Material.Shine, Material->Shine);
+    GL(glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse));
+    GL(glUniformVec3f(Shader.Material.Emissive, Material->Emissive));
+    GL(glUniformVec3f(Shader.Material.Specular, Material->Specular));
+    GL(glUniform1f(Shader.Material.Shine, Material->Shine));
     
-    glUniform1f(Shader.UVOffsetHandle, Shader.UVOffset);
+    GL(glUniform1f(Shader.UVOffsetHandle, Shader.UVOffset));
     
     model ObjectModel = GameObject.ColorModel->Model;
     DrawModel(ObjectModel.VertexArrayId, ObjectModel.IndexCount);
@@ -568,19 +568,19 @@ void RenderObject(game_data* Game, game_object2 GameObject, camera Camera, mat4 
     mat4 ModelTransform = Translation * Rotation * Scale;
     mat4 MVP = Projection * View * ModelTransform;
 
-    glUseProgram(Shader.Program);
-    glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &ModelTransform.E[0][0]);
-    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
-    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+    GL(glUseProgram(Shader.Program));
+    GL(glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &ModelTransform.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]));
     
-    glUniform1f(Shader.Radius, 0.5f);
-    glUniform1f(Shader.Width, 0.1f);
-    glUniform1f(Shader.FilledAngle, t);
+    GL(glUniform1f(Shader.Radius, 0.5f));
+    GL(glUniform1f(Shader.Width, 0.1f));
+    GL(glUniform1f(Shader.FilledAngle, t));
     t+= PI/100;
     if (t >= PI) {
         t = -PI;
     }
-    glUniform3f(Shader.FillColor, 1.0f, 0.0f, 0.0f);
+    GL(glUniform3f(Shader.FillColor, 1.0f, 0.0f, 0.0f));
     
     DrawModel(GameObject.Model->VertexArrayId, GameObject.Model->IndexCount);
 }
@@ -593,21 +593,21 @@ void RenderObject(game_object2 GameObject, camera Camera, light Light, mat4 Proj
     mat4 Model = Translation * Rotation * Scale;
     mat4 MVP = Projection * View * Model;
     
-    glUseProgram(Shader.Program);
-    glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]);
-    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
-    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+    GL(glUseProgram(Shader.Program));
+    GL(glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &Model.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]));
     
-    glUniformVec3f(Shader.CameraPosition, Camera.Position);
+    GL(glUniformVec3f(Shader.CameraPosition, Camera.Position));
     SetPointLightUniforms(Shader.Light, Light);
     
     texture_color_material *Material = GameObject.Model->Material;
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Material->DiffuseMap);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, Material->SpecularMap);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, Material->EmissiveMap);
+    GL(glActiveTexture(GL_TEXTURE0));
+    GL(glBindTexture(GL_TEXTURE_2D, Material->DiffuseMap));
+    GL(glActiveTexture(GL_TEXTURE1));
+    GL(glBindTexture(GL_TEXTURE_2D, Material->SpecularMap));
+    GL(glActiveTexture(GL_TEXTURE2));
+    GL(glBindTexture(GL_TEXTURE_2D, Material->EmissiveMap));
     
     glUniform1i(Shader.Material.Diffuse, 0);
     glUniform1i(Shader.Material.Specular, 1);
@@ -625,29 +625,29 @@ void RenderObject2(game_object2 GameObject, camera Camera, light Light, mat4 Pro
     mat4 ModelTransform = Translation * Rotation * Scale;
     mat4 MVP = Projection * View * ModelTransform;
 
-    glUseProgram(Shader.Program);
-    glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &ModelTransform.E[0][0]);
-    glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]);
-    glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]);
+    GL(glUseProgram(Shader.Program));
+    GL(glUniformMatrix4fv(Shader.M, 1, GL_FALSE, &ModelTransform.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.V, 1, GL_FALSE, &View.E[0][0]));
+    GL(glUniformMatrix4fv(Shader.MVP, 1, GL_FALSE, &MVP.E[0][0]));
     
-    glUniformVec3f(Shader.CameraPosition, Camera.Position);
+    GL(glUniformVec3f(Shader.CameraPosition, Camera.Position));
     SetPointLightUniforms(Shader.Light, Light);
     
     texture_color_material *Material = GameObject.Model->Material;
-    glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse);
-    glUniformVec3f(Shader.Material.Emissive, Material->Emissive);
-    glUniformVec3f(Shader.Material.Specular, Material->Specular);
-    glUniform1f(Shader.Material.Shine, Material->Shine);
+    GL(glUniformVec3f(Shader.Material.Diffuse, Material->Diffuse));
+    GL(glUniformVec3f(Shader.Material.Emissive, Material->Emissive));
+    GL(glUniformVec3f(Shader.Material.Specular, Material->Specular));
+    GL(glUniform1f(Shader.Material.Shine, Material->Shine));
     
 //    DrawModel(GameObject.Model);
     model2* Model = GameObject.Model;
     
     glBindVertexArray(Model->VertexArrayId);
-    glDrawElements(GL_TRIANGLES,
-                   Model->IndexCount,
-                   GL_UNSIGNED_SHORT,
-                   (void*)0
-                   );
+    GL(glDrawElements(GL_TRIANGLES,
+                      Model->IndexCount,
+                      GL_UNSIGNED_SHORT,
+                      (void*)0
+                      ));
 }
 
 void Update(platform_data *Platform, game_data *Game)
@@ -709,8 +709,8 @@ void Update(platform_data *Platform, game_data *Game)
 
 void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
+    GL(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+    GL(glEnable(GL_DEPTH_TEST));
     
 //    RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
 //    RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
@@ -732,23 +732,22 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
 
 void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, mat4 View, FramebufferDesc *TargetBuffer, int BufferWidth, int BufferHeight)
 {
+    GL(glEnable(GL_MULTISAMPLE));
     
-    glEnable(GL_MULTISAMPLE);
-    
-    glBindFramebuffer(GL_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
-    glViewport(0, 0, BufferWidth, BufferHeight);
+    GL(glBindFramebuffer(GL_FRAMEBUFFER, TargetBuffer->RenderFramebufferId));
+    GL(glViewport(0, 0, BufferWidth, BufferHeight));
     RenderScene(Game, Projection, View, true);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    GL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
     
-    glDisable(GL_MULTISAMPLE);
+    GL(glDisable(GL_MULTISAMPLE));
     
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, TargetBuffer->RenderFramebufferId);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TargetBuffer->ResolveFramebufferId);
-    glBlitFramebuffer(0, 0, BufferWidth, BufferHeight,
-                      0, 0, BufferWidth, BufferHeight,
-                      GL_COLOR_BUFFER_BIT, GL_LINEAR);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, TargetBuffer->RenderFramebufferId));
+    GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TargetBuffer->ResolveFramebufferId));
+    GL(glBlitFramebuffer(0, 0, BufferWidth, BufferHeight,
+                         0, 0, BufferWidth, BufferHeight,
+                         GL_COLOR_BUFFER_BIT, GL_LINEAR));
+    GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, 0));
+    GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
 }
 
 void Render(platform_data *Platform, game_data *Game)
@@ -770,7 +769,7 @@ void Render(platform_data *Platform, game_data *Game)
     
     if (Platform->LeftEye && Platform->RightEye)
     {
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        GL(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
         
         RenderToTarget(Platform, Game, Projection, LeftEyeView, Platform->LeftEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
         RenderToTarget(Platform, Game, Projection, RightEyeView, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
@@ -779,8 +778,8 @@ void Render(platform_data *Platform, game_data *Game)
     
     // render reflection
     mat4 ReflectView = GenerateReflectionCameraView(Game->Camera);
-    glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO);
-    glViewport(0, 0, 800, 600);
+    GL(glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO));
+    GL(glViewport(0, 0, 800, 600));
     RenderScene(Game, Projection, ReflectView, false);
     
     BeginPostprocessor(Platform, Game->Postprocessor);
