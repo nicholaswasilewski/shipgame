@@ -145,45 +145,45 @@ char* frontFile)
 {
     
     GLuint textureID;
-    glGenTextures(1, &textureID);
+    GL(glGenTextures(1, &textureID));
     GLuint texType = GL_TEXTURE_CUBE_MAP;
-    glBindTexture(texType, textureID);
+    GL(glBindTexture(texType, textureID));
     
     BMPData rightBmpData = LoadBMP(Memory, rightFile);
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, rightBmpData.width, rightBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, rightBmpData.data);
+    GL(glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, rightBmpData.width, rightBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, rightBmpData.data));
     //    free(rightBmpData.data);
     PopSize(Memory, rightBmpData.imageSize);
     
     BMPData leftBmpData = LoadBMP(Memory, leftFile);   
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGB, leftBmpData.width, leftBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, leftBmpData.data);
+    GL(glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGB, leftBmpData.width, leftBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, leftBmpData.data));
     //    free(leftBmpData.data);
     PopSize(Memory, leftBmpData.imageSize);
     
     BMPData topBmpData = LoadBMP(Memory, topFile);   
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGB, topBmpData.width, topBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, topBmpData.data);
+    GL(glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGB, topBmpData.width, topBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, topBmpData.data));
     //    free(topBmpData.data);
     PopSize(Memory, topBmpData.imageSize);
     
     BMPData bottomBmpData = LoadBMP(Memory, bottomFile);
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGB, bottomBmpData.width, bottomBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bottomBmpData.data);
+    GL(glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGB, bottomBmpData.width, bottomBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bottomBmpData.data));
     //    free(bottomBmpData.data);
     PopSize(Memory, bottomBmpData.imageSize);
     
     BMPData backBmpData = LoadBMP(Memory, backFile);
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGB, backBmpData.width, backBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, backBmpData.data);
+    GL(glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGB, backBmpData.width, backBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, backBmpData.data));
     //    free(backBmpData.data);
     PopSize(Memory, backBmpData.imageSize);
     
     BMPData frontBmpData = LoadBMP(Memory, frontFile);
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, frontBmpData.width, frontBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, frontBmpData.data);
+    GL(glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, frontBmpData.width, frontBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, frontBmpData.data));
     //    free(frontBmpData.data);
     PopSize(Memory, frontBmpData.imageSize);
     
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); 
+    GL(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    GL(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    GL(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    GL(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+    GL(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);) 
     
     /*
     free(rightBmpData.data);
@@ -207,16 +207,16 @@ char* frontFile)
 
 texture GenTextureFromBMPData(BMPData bmpData) {
     GLuint textureID;
-    glGenTextures(1, &textureID);
+    GL(glGenTextures(1, &textureID));
     GLenum textureType = GL_TEXTURE_2D;
-    glBindTexture(textureType, textureID);
+    GL(glBindTexture(textureType, textureID));
     
-    glTexParameteri(textureType, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(textureType, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(textureType, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(textureType, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(textureType, 0, GL_RGB, bmpData.width, bmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bmpData.data);
-    glGenerateMipmap(textureType);
+    GL(glTexParameteri(textureType, GL_TEXTURE_WRAP_S, GL_REPEAT));
+    GL(glTexParameteri(textureType, GL_TEXTURE_WRAP_T, GL_REPEAT));
+    GL(glTexParameteri(textureType, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
+    GL(glTexParameteri(textureType, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    GL(glTexImage2D(textureType, 0, GL_RGB, bmpData.width, bmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, bmpData.data));
+    GL(glGenerateMipmap(textureType));
     
     texture Result = {
         bmpData.width,
@@ -297,8 +297,8 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
     }
     
     GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
+    GL(glGenTextures(1, &textureID));
+    GL(glBindTexture(GL_TEXTURE_2D, textureID));
     
     uint32 blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
     uint32 offset = 0;
@@ -307,7 +307,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
     for(uint32 level = 0; level < mipMapCount && (w || h); ++level)
     {
         uint32 size = ((w+3)/4)*((h+3)/4)*blockSize;
-        glCompressedTexImage2D(GL_TEXTURE_2D, level, format, w, h, 0, size, buffer + offset);
+        GL(glCompressedTexImage2D(GL_TEXTURE_2D, level, format, w, h, 0, size, buffer + offset));
         offset += size;
         w /= 2;
         h /= 2;
