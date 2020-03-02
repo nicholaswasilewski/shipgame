@@ -657,31 +657,32 @@ void Update(platform_data *Platform, game_data *Game)
     controller OldKeyboard = LastInput->Keyboard;
     controller Keyboard = Input->Keyboard;
     
+    float MovementSpeed = 5.0f;
     if (Keyboard.Left.Down)
     {
-        CameraStrafe(&Game->Camera, Input->dT, -3.0f);
+        CameraStrafe(&Game->Camera, Input->dT, -MovementSpeed);
     }
     else if (Keyboard.Right.Down)        
     {
-        CameraStrafe(&Game->Camera, Input->dT, 3.0f);
+        CameraStrafe(&Game->Camera, Input->dT, MovementSpeed);
     }
     
     if (Keyboard.Forward.Down)
     {
-        CameraMoveForward(&Game->Camera, Input->dT, 3.0f);
+        CameraMoveForward(&Game->Camera, Input->dT, MovementSpeed);
     }
     else if (Keyboard.Back.Down)
     {
-        CameraMoveForward(&Game->Camera, Input->dT, -3.0f);
+        CameraMoveForward(&Game->Camera, Input->dT, -MovementSpeed);
     }
     
     if (Keyboard.Up.Down)
     {
-        CameraMoveUp(&Game->Camera, Input->dT, 3.0f);
+        CameraMoveUp(&Game->Camera, Input->dT, MovementSpeed);
     }
     else if (Keyboard.Down.Down)
     {
-        CameraMoveUp(&Game->Camera, Input->dT, -3.0f);
+        CameraMoveUp(&Game->Camera, Input->dT, -MovementSpeed);
     }
     
     if (Keyboard.UpperLeft.Down)
