@@ -8,6 +8,10 @@
 #include "texture.cpp"
 
 
+struct light_group {
+		int lights;
+};
+
 struct light
 {
     v4 Position;
@@ -87,12 +91,12 @@ enum uniform_type {
 
 struct uniform 
 {
-    uniform_type Type;
     GLint Location;
+    uniform_type Type;
     union {
-	void* Value;
-	int IntValue;
-	float FloatValue;
+		void* Value;
+		int IntValue;
+		float FloatValue;
     };
 };
 
@@ -104,12 +108,10 @@ struct uniform_list
 
 uniform CreateUniform(GLuint shader, uniform_type type, const char* name)
 {
-    uniform Value = { type, glGetUniformLocation(shader, name), 0 };
+    uniform Value = { glGetUniformLocation(shader, name), type, 0 };
     return Value;
 }
 
-// TODO: maybe do some macro wizardry here.
-// Probably don't support the non-vectorized types.
 void SetUniform(uniform Uniform)
 {
     switch(Uniform.Type)
@@ -150,7 +152,7 @@ void SetUniformList(uniform_list UniformList)
 struct mat_texture
 {
     GLenum TextureUnit;
-    texture Texture;
+    texture Texture;;
 };
 
 struct material
@@ -633,7 +635,8 @@ GLuint CompileShader(const char* shaderFilePath, const char* shaderCode, GLenum 
     GLint result = GL_FALSE;
     int32 infoLogLength;
     
-    GLuint shaderID = glCreateShader(shaderType);
+    GL(GLuint shaderID = glCreateShader(shaderType));
+		
     GL(glShaderSource(shaderID, 1, &shaderCode, 0));
     GL(glCompileShader(shaderID));
     
@@ -823,7 +826,7 @@ void EndPostprocessor(platform_data *Platform, postprocessor Postprocessor)
     } 
 }
 
-GLuint LoadShaders(memory_arena* tempArena, shader_program_sources ShaderProgramSources) {
+GLuint LoadShaders(memory_arena* TempArena, shader_program_sources ShaderProgramSources) {
     GLErrorShow();
     GLuint programId = GL(glCreateProgram());
     GLuint shaderPrograms[SHADER_TYPE_COUNT];
@@ -837,12 +840,13 @@ GLuint LoadShaders(memory_arena* tempArena, shader_program_sources ShaderProgram
             int32 shaderFileLength = ftell(shaderFile);
             rewind(shaderFile);
             int32 shaderStringLength = shaderFileLength+1;
-            char* shaderCode = PushArray(tempArena, shaderStringLength, char);
+            char* shaderCode = PushArray(TempArena, shaderStringLength, char);
             readResult = fread(shaderCode, 1, shaderFileLength, shaderFile);
             fclose(shaderFile);
             shaderCode[shaderFileLength] = '\0';
-            shaderPrograms[shaderCount++] = CompileShader(ShaderProgramSources.SourceFilePaths[i], shaderCode, ShaderTypes[i]);
-            PopArray(tempArena, shaderStringLength, char);
+            GL(shaderPrograms[shaderCount++] = CompileShader(ShaderProgramSources.SourceFilePaths[i], shaderCode, ShaderTypes[i]));
+						
+            PopArray(TempArena, shaderStringLength, char);
         }
     }
     

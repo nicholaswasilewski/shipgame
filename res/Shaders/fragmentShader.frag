@@ -43,7 +43,7 @@ void main()
     vec3 R = reflect(-L, N);
     float EyeLightAngle = max(dot(E, R), 0.0);
 
-    Color =
+	Color =
 	AmbientColor +
 	DiffuseColor*Light.Power*LightAngle/ LightDistanceSquared +
 	SpecularColor*Light.Power*pow(EyeLightAngle, Material.Shine) / LightDistanceSquared +

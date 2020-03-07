@@ -8,6 +8,9 @@
 #include "game.h"
 #include "particles.cpp"
 #include "memory.h"
+#include "hash.cpp"
+#include "entity.cpp"
+#include "unit.cpp"
 
 #include <stdlib.h>
 #include <string.h>
@@ -22,15 +25,34 @@ void Init(platform_data* Platform, game_data *Game)
               Platform->MainMemorySize,
               (uint8*)Platform->MainMemory+sizeof(game_data));
     
+/*
     GL(glClearColor(0.6, 0.4, 0.2, 0.0));
     GL(glFrontFace(GL_CCW));
     GL(glEnable(GL_CULL_FACE));
     GL(glEnable(GL_DEPTH_TEST));
     GL(glDepthFunc(GL_LESS));
     GL(glEnable(GL_FRAMEBUFFER_SRGB));
-    
+*/
+    Initialize(&Game->Renderer, &Game->MainArena);
+		Initialize(&Game->Units, &Game->MainArena);
+    entity_factory EntityFactory = {0};
+		
+		entity Boat = EntityFactory.CreateEntity();
+		unit* BoatUnit = AddEntity(&Game->Units, Boat);
+		BoatUnit->SwingSpeed = 3.0f;
+		render_component* BoatRender = AddEntity(&Game->Renderer, &Game->MainArena, Boat);
+		
+		entity Enemy = EntityFactory.CreateEntity();
+		AddEntity(&Game->Units, Enemy);
+		render_component* EnemyRender = AddEntity(&Game->Renderer, &Game->MainArena, Enemy);
+		
+		SetTarget(&Game->Units, Boat, Enemy);
+		
+    ApplyDefaultRendererState();
+    SetClearColor((color4){0.6f, 0.4f, 0.2f, 0.0f});
+		
     GLuint PostprocessorProgram = LoadShaders(&Game->TempArena, "../res/Shaders/postprocessor.vert", "../res/Shaders/postprocessor.frag");
-    
+		
     framebuffer_object RBOFBO = CreateRenderTarget(GL_RENDERBUFFER, GL_RGB, GL_RGB, GL_DEPTH24_STENCIL8, 4, Platform->WindowWidth, Platform->WindowHeight);
     framebuffer_object TextureFBO = CreateRenderTarget(GL_TEXTURE_2D, GL_RGB, GL_RGB, GL_DEPTH24_STENCIL8, 1, Platform->WindowWidth, Platform->WindowHeight);
     Game->Postprocessor = CreatePostprocessor(PostprocessorProgram, RBOFBO, TextureFBO);
@@ -324,17 +346,6 @@ void Init(platform_data* Platform, game_data *Game)
     ColorShader.Material.Shine = glGetUniformLocation(ColorShader.Program, "Material.Shine");
     Game->ColorShader = ColorShader;
     
-    circle_shader CircleShader;
-    CircleShader.Program = LoadShaders(&Game->TempArena, "../res/Shaders/circleShader.vert", "../res/Shaders/circleShader.frag");
-    CircleShader.M = glGetUniformLocation(CircleShader.Program, "M");
-    CircleShader.V = glGetUniformLocation(CircleShader.Program, "V");
-    CircleShader.MVP = glGetUniformLocation(CircleShader.Program, "MVP");
-    CircleShader.Radius = glGetUniformLocation(CircleShader.Program, "Radius");
-    CircleShader.Width = glGetUniformLocation(CircleShader.Program, "Width");
-    CircleShader.FilledAngle = glGetUniformLocation(CircleShader.Program, "FilledAngle");
-    CircleShader.FillColor = glGetUniformLocation(CircleShader.Program, "FillColor");
-    Game->CircleShader = CircleShader;
-    
     Game->QuadModel = CreateQuad();
     Game->Quad.Model = &Game->QuadModel;
     Game->Quad.Scale = V3(1.0, 1.0, 1.0);
@@ -347,27 +358,19 @@ void Init(platform_data* Platform, game_data *Game)
     Camera.Aspect = 800.0f/600.0f;
     Camera.Near = 0.001f;
     Camera.Far = 1000.0f;
-    Camera.Position = V3(0.0f, 5.0f, 5.0f);
+    Camera.Position = V3(0.0f, 5.0f, 0.0f);
     Camera.Forward = Normalize(V3(0.0f, -0.2f,-1.0f));
     Camera.Up = V3(0,1,0);
     Game->Camera = Camera;
     
     light Light = { 0 };
     Light.Position = V4(4.0f, 3.0f, -40.0f, 1.0f);
-    Light.Ambient = V3(0.1f, 0.0f, 0.0f);
+    Light.Ambient = V3(0.5f, 0.5f, 0.5f);
     Light.Diffuse = V3(0.5f, 0.0f, 0.0f);
     Light.Specular = V3(1.0f, 0.0f, 0.0f);
     Light.Power = 50.0f;
     Game->Light = Light;
-    
-    game_object2 Monkey = { 0 };
-    Monkey.Model = &Game->MonkeyModel;
-    Monkey.Scale = V3(1.0f, 1.0f, 1.0f);
-    Monkey.Position = V3(4.0f, 0.0f, -40.0f);
-    Monkey.Axis = V3(0.25f, 1.0f, .5f);
-    Monkey.Angle = 0.0f;
-    Game->Monkey = Monkey;
-    
+
     game_object2 Box2 = { 0 };
     Box2.Model = &Game->BoxModel;
     Box2.Scale = V3(0.5f, 0.5f, 0.5f);
@@ -375,7 +378,27 @@ void Init(platform_data* Platform, game_data *Game)
     Box2.Axis = V3(0.0f, 1.0f, 0.0f);
     Box2.Angle = PI*0.25f;
     Game->Box2 = Box2;
-    
+		
+		BoatRender->Position = V3(4.0f, 0.0f, -40.0f);
+		BoatRender->Scale = V3(1.0f, 1.0f, 1.0f);
+		BoatRender->Axis = V3(0.25f, 1.0f, 0.5f);
+		BoatRender->Angle = PI*0.25f;
+		BoatRender->Angle = 0.0f;
+		BoatRender->Shader.Id = ColorShader.Program;
+		BoatRender->Mesh.Id = Game->MonkeyModel.VertexArrayId;
+		BoatRender->Mesh.Primitive = GL_TRIANGLES;
+		BoatRender->Mesh.Count = Game->MonkeyModel.IndexCount;
+
+		EnemyRender->Position = V3(4.0f, 0.0f, -40.0f);
+		EnemyRender->Scale = V3(1.0f, 1.0f, 1.0f);
+		EnemyRender->Axis = V3(0.25f, 1.0f, 0.5f);
+		EnemyRender->Angle = PI*0.25f;
+		EnemyRender->Angle = 0.0f;
+		EnemyRender->Shader.Id = ColorShader.Program;
+		EnemyRender->Mesh.Id = Game->MonkeyModel.VertexArrayId;
+		EnemyRender->Mesh.Primitive = GL_TRIANGLES;
+		EnemyRender->Mesh.Count = Game->MonkeyModel.IndexCount;
+		
     game_object2 Box3 = { 0 };
     Box3.Model = &Game->BoxModel2;
     Box3.Scale = V3(0.5f, 0.5f, 0.5f);
@@ -711,18 +734,20 @@ void Update(platform_data *Platform, game_data *Game)
     }
     
     UpdateCoolThing(Input->dT, Game);
+
+	Update(&Game->Units, Input->dT);
 }
 
 void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
 {
-    GL(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
-    GL(glEnable(GL_DEPTH_TEST));
-    
-   RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-//    RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-//    RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
-   RenderObject2(Game->Monkey, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
-//    RenderObject2(Game->Box3, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+		ClearScreen(&Game->Renderer);
+		GL(glEnable(GL_DEPTH_TEST));
+				
+		//RenderObject(Game->Box2, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+		//RenderObject(Game->LightBox, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+		//RenderObject(Game->Player, Game->Camera, Game->Light, Projection, View, Game->LightTextureShader);
+		//RenderObject2(Game->Box3, Game->Camera, Game->Light, Projection, View, Game->ColorShader);
+		Draw(&Game->Renderer, &Game->MainArena, Projection, View);
     
     // water
     if(includeWater)
@@ -733,10 +758,10 @@ void RenderScene(game_data *Game, mat4 Projection, mat4 View, bool includeWater)
     // skybox comes last, to save on performance
     RenderSkyBox(Game->SkyBox, Game->Camera, Game->Light, Projection, View, Game->SkyBoxShader);
     
-    DrawCoolThing(Game, Projection, View);
+    //DrawCoolThing(Game, Projection, View);
 }
 
-void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, mat4 View, FramebufferDesc *TargetBuffer, int BufferWidth, int BufferHeight)
+void RenderToTarget(platform_data *Platform, game_data *Game, mat4 Projection, mat4 View, framebuffer_desc *TargetBuffer, int BufferWidth, int BufferHeight)
 {
     GL(glEnable(GL_MULTISAMPLE));
     
@@ -760,7 +785,8 @@ void Render(platform_data *Platform, game_data *Game)
 {
     mat4 Projection = GenerateCameraPerspective(Game->Camera);
     mat4 View = GenerateCameraView(Game->Camera);
-    
+
+		/*
 #if OPEN_VR
     float EyeDistance = 1.0f;
     camera LeftEyeCamera = Game->Camera;
@@ -781,7 +807,9 @@ void Render(platform_data *Platform, game_data *Game)
         RenderToTarget(Platform, Game, Projection, RightEyeView, Platform->RightEye, Platform->VRBufferWidth, Platform->VRBufferHeight);
     }
 #endif
-    
+		*/
+
+	ClearScreen(&Game->Renderer);
     // render reflection
     mat4 ReflectView = GenerateReflectionCameraView(Game->Camera);
     GL(glBindFramebuffer(GL_FRAMEBUFFER, Game->ReflectionFBO));
@@ -789,6 +817,7 @@ void Render(platform_data *Platform, game_data *Game)
     RenderScene(Game, Projection, ReflectView, false);
     
     BeginPostprocessor(Platform, Game->Postprocessor);
+
     RenderScene(Game, Projection, View, true);
     EndPostprocessor(Platform, Game->Postprocessor);
 }
@@ -805,6 +834,7 @@ void UpdateAndRender(platform_data *Platform)
         GLErrorShow();
         printf("End errors\n");
     }
+
     Update(Platform, Game);
     GLErrorShow();
     Render(Platform, Game);

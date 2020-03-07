@@ -46,9 +46,13 @@ typedef struct
         {
             float x,y,z;
         };
+	struct
+	{
+	    float r,g,b;
+	};
         float E[3];
     };
-} vector3, v3;
+} vector3, v3, color3;
 
 typedef struct
 {
@@ -58,9 +62,13 @@ typedef struct
         {
             float x, y, z, w;
         };
+	struct
+	{
+	    float r,g,b,a;
+	};
         float E[4];
     };
-} vector4, v4;
+} vector4, v4, color4;
 
 typedef struct
 {

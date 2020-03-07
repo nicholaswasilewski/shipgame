@@ -1,11 +1,9 @@
-struct game_object
-{
-    model *Model;
-    v3 Scale;
-    v3 Position;
-    v3 Axis;
-    float Angle;
-};
+#ifndef _GAME_H__
+#define _GAME_H__
+
+#include "graphics.cpp"
+#include "renderer.cpp"
+#include "unit.h"
 
 struct game_object2
 {
@@ -55,7 +53,6 @@ struct game_data
     game_object2 LightBox;
     
     game_object2 Box3;
-    game_object2 Monkey;
     
     GLuint CircleDataBufferBinding;
     model2 QuadModel;
@@ -72,4 +69,9 @@ struct game_data
     GLuint ReflectionFBO;
     
     postprocessor Postprocessor;
+
+    renderer Renderer;
+	units Units;
 };
+
+#endif
