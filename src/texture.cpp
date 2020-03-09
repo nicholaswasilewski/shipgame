@@ -84,7 +84,7 @@ BMPData LoadBMP(memory_arena *Memory, char* filePath)
     uint32 width, height;
     uint32 imageSize;
     uint8* data;
-    
+
     FILE * file = fopen(filePath, "rb");
     if (!file)
     {
@@ -146,9 +146,8 @@ char* frontFile)
     
     GLuint textureID;
     GL(glGenTextures(1, &textureID));
-    GLuint texType = GL_TEXTURE_CUBE_MAP;
-    GL(glBindTexture(texType, textureID));
-    
+    GL(glBindTexture(GL_TEXTURE_CUBE_MAP, textureID));
+
     BMPData rightBmpData = LoadBMP(Memory, rightFile);
     GL(glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, rightBmpData.width, rightBmpData.height, 0, GL_BGR, GL_UNSIGNED_BYTE, rightBmpData.data));
     //    free(rightBmpData.data);
@@ -197,7 +196,7 @@ char* frontFile)
     texture Result = {
         rightBmpData.width,
         rightBmpData.height,
-        texType,
+        GL_TEXTURE_CUBE_MAP,
         textureID,
         NULL
     };
@@ -243,7 +242,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
     FILE *fp = fopen(filePath, "rb");
     if (fp == 0)
     {
-        DebugLog("File not found: %s", filePath);
+        DebugLog("File not found: %s\n", filePath);
         return NullTexture;
     }
     
@@ -252,7 +251,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
     if (strncmp(fileCode, "DDS ", 4) != 0)
     {
         fclose(fp);
-        DebugLog("File is not DDS: %s", filePath);
+        DebugLog("File is not DDS: %s\n", filePath);
         return NullTexture;
     }
     
@@ -292,7 +291,7 @@ texture LoadDDS(memory_arena *Memory, const char * filePath)
     else
     {
         PopSize(Memory, bufferSize*sizeof(uint8));
-        DebugLog("File not DXT compressed: %s", filePath);
+        DebugLog("File not DXT compressed: %s\n", filePath);
         return NullTexture;
     }
     

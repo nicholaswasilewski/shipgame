@@ -214,7 +214,7 @@ struct FBX_Node
     int ChildCount;
 };
 
-bool ReadValues(FBX_Node* node)
+bool ReadValues(memory_arena *Memory, FBX_Node *Node)
 {
     int startSeek = ftell(global_Info.File);
     
@@ -255,8 +255,8 @@ bool ReadValues(FBX_Node* node)
     }
     
     // reset back top
-    node->ValueCount = valueCount;
-    node->Values = (char**) malloc(valueCount * sizeof(char*));
+    Node->ValueCount = valueCount;
+    Node->Values = (char**) PushArray(Memory, valueCount, char*);
     fseek(global_Info.File, startSeek, SEEK_SET);
     
     // iterate and record values
@@ -269,20 +269,20 @@ bool ReadValues(FBX_Node* node)
             continue;
         }
         
-        node->Values[i] = (char*)malloc((strlen(global_Info.Token)+1) * sizeof(char));
-        strcpy(node->Values[i], global_Info.Token);
-        //DebugLog("VALUE %d [%s] %s\n", startSeek, fbx_token_type_string[type], node->Values[i]);
+        Node->Values[i] = (char*) PushArray(Memory, strlen(global_Info.Token)+1, char);
+        strcpy(Node->Values[i], global_Info.Token);
+        // DebugLog("VALUE %d [%s] %s\n", startSeek, fbx_token_type_string[type], Node->Values[i]);
     }
     
     return hasChildren;
 }
 
-void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
+void ParseChild(memory_arena *Memory, FBX_Node *ParentNode, int Depth)
 {
     // TODO -- don't statically allocate 128 children.
     //DebugLog("%s[START NODE] '%s'\n", MakeSpaces(depth), parentNode->Name);
-    parentNode->Children = (FBX_Node**)malloc(sizeof(FBX_Node*) * 128);
-    parentNode->ChildCount = 0;
+    ParentNode->Children = (FBX_Node**) PushArray(Memory, 128, FBX_Node);
+    ParentNode->ChildCount = 0;
     
     while(1)
     {
@@ -291,25 +291,25 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
         {
             // a child is just any property of this node.
             // generally, one line in fbx is one child.
-            FBX_Node* node = (FBX_Node*) malloc(sizeof(FBX_Node));
-            parentNode->Children[parentNode->ChildCount] = node;
-            parentNode->ChildCount++;
+            FBX_Node *Node = (FBX_Node*) PushObject(Memory, FBX_Node);
+            ParentNode->Children[ParentNode->ChildCount] = Node;
+            ParentNode->ChildCount++;
             
-            node->Name = (char*)malloc((strlen(global_Info.Token)+1) * sizeof(char));
-            strcpy(node->Name, global_Info.Token);
+            Node->Name = (char*) PushArray(Memory, strlen(global_Info.Token)+1, char);
+            strcpy(Node->Name, global_Info.Token);
             
             // parse all values of this property
             // will fill node.Values and node.ValueCount
-            bool hasChildren = ReadValues(node);
+            bool HasChildren = ReadValues(Memory, Node);
             
             // debug out a couple values from this node
             memset(debug_valuestr, 0, sizeof(debug_valuestr));
             for(int i = 0; i < 6; i++)
             {
-                if(i < node->ValueCount)
+                if(i < Node->ValueCount)
                 {
-                    strcat(debug_valuestr, node->Values[i]);
-                    if(i != node->ValueCount - 1)
+                    strcat(debug_valuestr, Node->Values[i]);
+                    if(i != Node->ValueCount - 1)
                     {
                         strcat(debug_valuestr, ", ");
                     }
@@ -318,9 +318,9 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
             //DebugLog("%s[PROPERTY   ] '%s': %s\n",  MakeSpaces(depth), node->Name, debug_valuestr, node->ValueCount);
             
             // recurse this child
-            if (hasChildren)
+            if (HasChildren)
             {
-                ParseChild(Memory, node, depth + 1);
+                ParseChild(Memory, Node, Depth + 1);
             }
         }
         else if (TokenType == FBXT_EndChild)
@@ -345,11 +345,11 @@ void ParseChild(memory_arena *Memory, FBX_Node* parentNode, int depth)
     }
 }
 
-FBX_Node* FBX_GetChildByName(FBX_Node* node, char* name)
+FBX_Node* FBX_GetChildByName(FBX_Node *node, char *name)
 {
     for(int i = 0; i < node->ChildCount; i++)
     {
-        FBX_Node* child = node->Children[i];
+        FBX_Node *child = node->Children[i];
         if (strcmp(name, child->Name) == 0)
         {
             return child;
@@ -359,21 +359,21 @@ FBX_Node* FBX_GetChildByName(FBX_Node* node, char* name)
     return NULL;
 }
 
-FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE* File)
+FBX_Node* ParseFBX(memory_arena *MainMemory, memory_arena *TempMemory, FILE *File)
 {
-    FBX_Node *outFbxNode = PushObject(TempMemory, FBX_Node);
+    FBX_Node *OutFbxNode = PushObject(TempMemory, FBX_Node);
     char Token[MAX_TOKEN_LENGTH];
     global_Info.File = File; 
     global_Info.Token = Token;
     
     // the outer most section of properties in the fbx doc 
     // will be the root node.
-    outFbxNode->Name = "Root";
+    OutFbxNode->Name = "Root";
     
     // fill in properties and attach to the root node
-    ParseChild(TempMemory, outFbxNode, 0);
+    ParseChild(TempMemory, OutFbxNode, 0);
     
-    return outFbxNode;
+    return OutFbxNode;
 }
 
 void ProcessModelNode(memory_arena *Memory, model2 *Model, FBX_Node *modelNode)
