@@ -179,6 +179,16 @@ v3 operator/(v3 v, float s)
     return Result;
 }
 
+quaternion operator*(quaternion q, quaternion r)
+{
+    quaternion Result;
+    Result.x = r.w*q.w - r.x*q.x - r.y*q.y - r.z*q.z;
+    Result.y = r.w*q.x + r.x*q.w - r.y*q.z + r.z*q.y;
+    Result.z = r.w*q.y + r.x*q.z + r.y*q.w - r.z*q.x;
+    Result.w = r.w*q.z - r.x*q.y + r.y*q.x + r.z*q.w;
+    return Result;
+}
+
 quaternion operator/(quaternion q, float s)
 {
     quaternion Result = {
@@ -371,6 +381,26 @@ v4 operator*(mat4 m, v4 v)
     return Result;
 }
 
+quaternion QuaternionFromEulerAngles(float x, float y, float z)
+{
+    quaternion Result;
+    float c1 = cos(y/2.0f);
+    float c2 = cos(x/2.0f);
+    float c3 = cos(z/2.0f);
+    float s1 = sin(y/2.0f);
+    float s2 = sin(x/2.0f);
+    float s3 = sin(z/2.0f);
+    float c1c2 = c1*c2;
+    float s1s2 = s1*s2;
+    
+    Result.x = c1c2*s3 + s1s2*c3;
+    Result.y = s1*c2*c3 + c1*s2*s3;
+    Result.z = c1*s2*c3 - s1*c2*s3;
+    Result.w = c1c2*c3 - s1s2*s3;
+    
+    return Result;
+}
+
 quaternion QuaternionFromAxisAngle(v3 Axis, float Angle)
 {
     Axis = Normalize(Axis);
@@ -384,6 +414,16 @@ quaternion QuaternionFromAxisAngle(v3 Axis, float Angle)
         b
     };
     
+    return Result;
+}
+
+quaternion QuaternionIdentity()
+{
+    quaternion Result;
+    Result.x = 0.0f;
+    Result.y = 0.0f;
+    Result.z = 0.0f;
+    Result.w = 1.0f;
     return Result;
 }
 
@@ -516,7 +556,7 @@ mat4 MakeScale(v3 v)
     return Result;
 }
 
-mat4 Identity4x4() {
+mat4 Mat4Identity() {
     mat4 Result = MakeScale(V3(1.0f, 1.0f, 1.0f));
     return Result;
 }

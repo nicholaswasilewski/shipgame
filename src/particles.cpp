@@ -3,8 +3,7 @@
 #include "graphics.cpp"
 #include "memory.h"
 
-// TODO: Organize this stuff so there can be multiple emitters
-
+// TODO: Organize this stuff so there can be multiple particle emitters. Maybe unify drawing with other models? As soon as all models have a unified system anyway...
 struct particle_uniform_list {
     uniform MVP;
     uniform ModelMatrix;
@@ -14,6 +13,18 @@ struct particle_uniform_list {
     uniform Period;
     uniform Size;
 };
+
+struct particles {
+    int VertexCount;
+    int IndexCount;    
+    GLuint VAO;
+    GLuint Program;
+    GLuint IndexVBO;
+    particle_uniform_list Uniforms;
+};
+
+particles ParticleThing;
+
 particle_uniform_list CoolThingUniforms;
 particle_uniform_list SetupCoolThingUniforms(game_data *Game, GLuint coolProgram) {
     
@@ -60,14 +71,6 @@ CoolVertex* CoolVertices;
 
 struct ParticleInitializer {
     int ParticleCount;
-};
-
-struct ParticleSystem {
-    GLuint VAO;
-    GLuint Program;
-    int VertexCount;
-    int IndexCount;
-    particle_uniform_list Uniforms;
 };
 
 void InitializeCoolParticles(int ParticleCount, CoolVertex* Vertices) {
@@ -118,8 +121,9 @@ void InitializeCoolParticles(int ParticleCount, CoolVertex* Vertices) {
     }
 }
 
-void InitializeCoolThing(game_data *Game)
+particles InitializeCoolThing(game_data *Game)
 {
+    ParticleThing = {};
     glGenVertexArrays(1, &CoolVAO);
     glBindVertexArray(CoolVAO);
     
@@ -161,6 +165,8 @@ void InitializeCoolThing(game_data *Game)
     
     CoolProgram = LoadShaders(&Game->TempArena, "../res/Shaders/coolShader.vert", "../res/Shaders/coolShader.frag");
     CoolThingUniforms = SetupCoolThingUniforms(Game, CoolProgram);
+    
+    return ParticleThing;
 }
 float CoolT = 0.0f;
 void UpdateCoolThing(float dT, game_data *Game)
@@ -178,7 +184,7 @@ void DrawCoolThing(game_data* Game, mat4 Projection, mat4 View)
     GL(glUseProgram(CoolProgram));
     glDepthMask(false);
     //Set uniforms
-    mat4 Rotation = Identity4x4();
+    mat4 Rotation = Mat4Identity();
     mat4 Scale = MakeScale(V3(1.0f, 1.0f, 1.0f));
     mat4 Translation = MakeTranslation(CoolPosition);
     mat4 ModelTransform = Translation * Rotation * Scale;
